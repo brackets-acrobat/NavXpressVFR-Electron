@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NavXpressVFR</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="app-container">
+        <main id="left-panel">
+            <header>
+                <h1 id="app-title">NavXpressVFR</h1>
+                <div class="header-right">
+                    <div class="status-badge" id="sim-status" data-i18n="simDisconnected">MSFS Déconnecté</div>
+                    <!-- Bouton toggle bilingue FR / EN -->
+                    <button id="btn-lang-toggle" class="btn-lang" title="Changer de langue / Switch language">
+                        <span class="lang-fr lang-active">FR</span>
+                        <span class="lang-separator">|</span>
+                        <span class="lang-en">EN</span>
+                    </button>
+                </div>
+            </header>
+
+            <section id="flight-info">
+                <div class="config-section">
+                    <h3 data-i18n="flightConfig">Configuration du Vol</h3>
+
+                    <!-- Ligne 1 : ICAO Départ / ICAO Arrivée -->
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="input-icao-dep" data-i18n="icaoDep">ICAO Départ</label>
+                            <input type="text" id="input-icao-dep" maxlength="8"
+                                class="input-icao"
+                                data-i18n-placeholder="icaoPlaceholderDep"
+                                placeholder="LFQM"
+                                autocomplete="off" spellcheck="false">
+                        </div>
+                        <div class="input-group">
+                            <label for="input-icao-arr" data-i18n="icaoArr">ICAO Arrivée</label>
+                            <input type="text" id="input-icao-arr" maxlength="8"
+                                class="input-icao"
+                                data-i18n-placeholder="icaoPlaceholderArr"
+                                placeholder="LFBD"
+                                autocomplete="off" spellcheck="false">
+                        </div>
+                    </div>
+
+                    <!-- Ligne 2 : Direction vent / Vitesse vent -->
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="input-wind-dir" data-i18n="windDir">Direction Vent (°)</label>
+                            <input type="number" id="input-wind-dir" value="0" min="1" max="359" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label for="input-wind-speed" data-i18n="windSpeed">Vitesse Vent (kt)</label>
+                            <input type="number" id="input-wind-speed" value="0" min="0" max="40" step="1">
+                        </div>
+                    </div>
+
+                    <!-- Ligne 3 : Vp appareil / Déclinaison Mag -->
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="input-vp" data-i18n="trueAirspeed">Vp Appareil (kt)</label>
+                            <input type="number" id="input-vp" value="90" min="40" max="250" step="1">
+                        </div>
+                        <div class="input-group">
+                            <label for="input-decl-mag" data-i18n="declMag">Décl. Mag. (°)</label>
+                            <input type="text" id="input-decl-mag" readonly
+                                placeholder="--" value="">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3 data-i18n="addWaypoint">Ajouter un Point de Report</h3>
+                    <div class="input-grid-three">
+                        <div class="input-group">
+                            <label for="waypoint-name" data-i18n="waypointId">Identifiant / Nom</label>
+                            <input type="text" id="waypoint-name"
+                                data-i18n-placeholder="waypointIdPlaceholder"
+                                placeholder="Ex: LFQM, Dijon...">
+                        </div>
+                        <div class="input-group">
+                            <label for="waypoint-lat" data-i18n="latitude">Latitude</label>
+                            <input type="number" id="waypoint-lat" step="0.000001" placeholder="47.20">
+                        </div>
+                        <div class="input-group">
+                            <label for="waypoint-lon" data-i18n="longitude">Longitude</label>
+                            <input type="number" id="waypoint-lon" step="0.000001" placeholder="6.08">
+                        </div>
+                    </div>
+                    <button id="btn-add-waypoint" class="btn-primary" data-i18n="btnInsert">Insérer au Flight Plan</button>
+
+                    <section id="flight-actions">
+                        <div class="action-bar">
+                            <button id="btn-new-flight" class="btn-secondary" data-i18n="btnNew">✨ Nouveau</button>
+                            <button id="btn-import-lnm" class="btn-secondary" data-i18n="btnImport">📂 Importer LNMPLN</button>
+                            <button id="btn-save-flight" class="btn-secondary" data-i18n="btnSave">💾 Sauvegarder</button>
+                        </div>
+
+                        <div class="config-section">
+                            <h3 data-i18n="navLog">Log de Navigation (Legs)</h3>
+                            <div class="table-container">
+                                <table id="nav-log-table">
+                                    <thead>
+                                        <tr>
+                                            <th data-i18n="colLeg">N° leg</th>
+                                            <th data-i18n="colFrom">Depuis</th>
+                                            <th data-i18n="colTo">Vers</th>
+                                            <th data-i18n="colAlt">Alt (ft)</th>
+                                            <th data-i18n="colDist">Dist (nm)</th>
+                                            <th data-i18n="colRoute">Route</th>
+                                            <th data-i18n="colHeading">Cap (°)</th>
+                                            <th data-i18n="colGs">GS (kt)</th>
+                                            <th data-i18n="colDuration">Durée</th>
+                                            <th data-i18n="colDone">Fait</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="nav-log-body">
+                                        <tr class="empty-row">
+                                            <td colspan="10" data-i18n="emptyPlan">Aucun point dans le plan de vol</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </section>
+        </main>
+
+        <aside id="right-panel">
+            <div id="map-container" style="height: 100%; width: 100%;"></div>
+            <div id="wind-rose-container"></div>
+        </aside>
+    </div>
+
+    <!-- i18n chargé AVANT ui.js -->
+    <script src="i18n.js"></script>
+    <script src="ui.js"></script>
+</body>
+
+</html>
