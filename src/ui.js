@@ -3,12 +3,16 @@
 // Dépend de i18n.js chargé avant ce fichier
 // ============================================================
 
+// Clé API OpenAIP — à renseigner
+const OPENAIP_API_KEY = 'VOTRE_CLE_API_ICI';
+
 let flightPlan = [];
 let map;
 let flightPathLine;
 let marqueursCarte = [];
 let declinaisonMoyenneGlobale = 0.0;
 let activeLegIndex = 1; // Le leg actif (1-based, correspond au numéro affiché)
+let insertLegIndex = 0; // Index d'insertion du point tournant (position dans flightPlan)
 
 document.addEventListener('DOMContentLoaded', async () => {
   console.log("UI NavXpressVFR chargée et prête.");
@@ -66,7 +70,151 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // --- 3. BOUTON : IMPORTER .LNMPLN ---
+  // --- 3. BOUTON : CRÉER PLAN DE VOL ---
+  const btnCreate = document.getElementById('btn-create-flight');
+  const createOverlay = document.getElementById('create-flight-overlay');
+  const btnCreateCancel = document.getElementById('btn-create-cancel');
+  const btnCreateValidate = document.getElementById('btn-create-validate');
+
+  if (btnCreate && createOverlay) {
+    // Ouvrir la modale
+    btnCreate.addEventListener('click', () => {
+      document.getElementById('create-icao-dep').value = '';
+      document.getElementById('create-lat-dep').value = '';
+      document.getElementById('create-lon-dep').value = '';
+      document.getElementById('create-icao-arr').value = '';
+      document.getElementById('create-lat-arr').value = '';
+      document.getElementById('create-lon-arr').value = '';
+      document.getElementById('create-flight-error').textContent = '';
+      document.getElementById('search-status-dep').textContent = '';
+      document.getElementById('search-status-arr').textContent = '';
+      document.getElementById('search-status-dep').className = 'search-status';
+      document.getElementById('search-status-arr').className = 'search-status';
+      createOverlay.classList.add('visible');
+    });
+
+    // Fermer sur Annuler
+    btnCreateCancel.addEventListener('click', () => {
+      createOverlay.classList.remove('visible');
+    });
+
+    // Fermer en cliquant sur le fond
+    createOverlay.addEventListener('click', (e) => {
+      if (e.target === createOverlay) createOverlay.classList.remove('visible');
+    });
+
+    // Recherche OpenAIP pour un champ donné
+    async function rechercherAeroport(icao, statusEl, latEl, lonEl) {
+      const code = icao.trim().toUpperCase();
+      if (!code) return;
+
+      statusEl.className = 'search-status';
+      statusEl.textContent = currentLang === 'fr' ? 'Recherche...' : 'Searching...';
+
+      try {
+        const url = `https://api.core.openaip.net/api/airports?icaoCode=${code}&page=1&limit=1`;
+        const resp = await fetch(url, {
+          headers: { 'x-openaip-api-key': OPENAIP_API_KEY }
+        });
+
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+
+        if (!data.items || data.items.length === 0) {
+          statusEl.className = 'search-status error';
+          statusEl.textContent = currentLang === 'fr' ? 'Aéroport non trouvé' : 'Airport not found';
+          return;
+        }
+
+        const airport = data.items[0];
+        const lat = airport.geometry?.coordinates?.[1];
+        const lon = airport.geometry?.coordinates?.[0];
+        const name = airport.name || code;
+
+        if (lat !== undefined && lon !== undefined) {
+          latEl.value = lat.toFixed(6);
+          lonEl.value = lon.toFixed(6);
+          statusEl.className = 'search-status ok';
+          statusEl.textContent = name;
+        } else {
+          statusEl.className = 'search-status error';
+          statusEl.textContent = currentLang === 'fr' ? 'Coordonnées introuvables' : 'Coordinates not found';
+        }
+      } catch (err) {
+        statusEl.className = 'search-status error';
+        statusEl.textContent = currentLang === 'fr' ? 'Erreur réseau' : 'Network error';
+        console.error('OpenAIP error:', err);
+      }
+    }
+
+    // Boutons Rechercher
+    document.getElementById('btn-search-dep').addEventListener('click', () => {
+      rechercherAeroport(
+        document.getElementById('create-icao-dep').value,
+        document.getElementById('search-status-dep'),
+        document.getElementById('create-lat-dep'),
+        document.getElementById('create-lon-dep')
+      );
+    });
+
+    document.getElementById('btn-search-arr').addEventListener('click', () => {
+      rechercherAeroport(
+        document.getElementById('create-icao-arr').value,
+        document.getElementById('search-status-arr'),
+        document.getElementById('create-lat-arr'),
+        document.getElementById('create-lon-arr')
+      );
+    });
+
+    // Valider le plan de vol
+    btnCreateValidate.addEventListener('click', async () => {
+      const icaoDep = document.getElementById('create-icao-dep').value.trim().toUpperCase();
+      const latDep = parseFloat(document.getElementById('create-lat-dep').value);
+      const lonDep = parseFloat(document.getElementById('create-lon-dep').value);
+      const icaoArr = document.getElementById('create-icao-arr').value.trim().toUpperCase();
+      const latArr = parseFloat(document.getElementById('create-lat-arr').value);
+      const lonArr = parseFloat(document.getElementById('create-lon-arr').value);
+      const errEl = document.getElementById('create-flight-error');
+
+      // Validation
+      if (!icaoDep || !icaoArr) {
+        errEl.textContent = currentLang === 'fr' ? 'Veuillez renseigner les codes ICAO.' : 'Please enter ICAO codes.';
+        return;
+      }
+      if (isNaN(latDep) || isNaN(lonDep) || isNaN(latArr) || isNaN(lonArr)) {
+        errEl.textContent = currentLang === 'fr' ? 'Veuillez renseigner toutes les coordonnées.' : 'Please fill in all coordinates.';
+        return;
+      }
+
+      // Réinitialiser le plan
+      flightPlan = [];
+      activeLegIndex = 1;
+      marqueursCarte.forEach(m => map.removeLayer(m));
+      marqueursCarte = [];
+      flightPathLine.setLatLngs([]);
+
+      // Construire le plan départ → arrivée
+      flightPlan.push({ name: icaoDep, ident: icaoDep, lat: latDep, lon: lonDep });
+      flightPlan.push({ name: icaoArr, ident: icaoArr, lat: latArr, lon: lonArr });
+
+      // Injecter dans les champs ICAO de la config vol
+      document.getElementById('input-icao-dep').value = icaoDep;
+      document.getElementById('input-icao-arr').value = icaoArr;
+
+      // Tracer sur la carte
+      await calculerDeclinaisonCentroide();
+      flightPlan.forEach(point => tracerPointVisuel(point));
+      const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
+      map.fitBounds(bounds, { padding: [50, 50] });
+
+      mettreAJourLogDeNav();
+
+      // Fermer la modale
+      createOverlay.classList.remove('visible');
+    });
+  }
+
+  // --- 4. BOUTON : IMPORTER .LNMPLN ---
   const btnImport = document.getElementById('btn-import-lnm');
   if (btnImport) {
     btnImport.addEventListener('click', async () => {
@@ -98,7 +246,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         for (let i = 0; i < waypointsXML.length; i++) {
           const wp = waypointsXML[i];
           const ident = wp.getElementsByTagName("Ident")[0]?.textContent || `WP${i}`;
-          const name  = wp.getElementsByTagName("Name")[0]?.textContent  || ident;
+          const name = wp.getElementsByTagName("Name")[0]?.textContent || ident;
           const pos = wp.getElementsByTagName("Pos")[0];
 
           if (pos) {
@@ -157,49 +305,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // --- 5. BOUTON : AJOUTER UN WAYPOINT MANUELLEMENT ---
-  const btnAdd = document.getElementById('btn-add-waypoint');
-  if (btnAdd) {
-    btnAdd.addEventListener('click', async () => {
-      const nameInput = document.getElementById('waypoint-name');
-      const latInput  = document.getElementById('waypoint-lat');
-      const lonInput  = document.getElementById('waypoint-lon');
-
-      const name = nameInput.value.trim().toUpperCase();
-      const lat  = parseFloat(latInput.value);
-      const lon  = parseFloat(lonInput.value);
-
-      if (!name || isNaN(lat) || isNaN(lon)) {
-        alert(t('fillFields'));
-        return;
-      }
-
-      const newPoint = { name, lat, lon };
-      flightPlan.push(newPoint);
-      await calculerDeclinaisonCentroide();
-      tracerPointVisuel(newPoint);
-
-      if (flightPlan.length === 1) {
-        map.panTo([lat, lon]);
-      } else {
-        const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
-        map.fitBounds(bounds, { padding: [50, 50] });
-      }
-
-      mettreAJourLogDeNav();
-      nameInput.value = '';
-      latInput.value  = '';
-      lonInput.value  = '';
-    });
-  }
-
   // --- 6. Validation et recalcul en temps réel ---
 
   // Champs ICAO en lecture seule — remplis automatiquement à l'import
 
   // --- Popup d'avertissement custom ---
-  const overlay   = document.getElementById('warning-overlay');
-  const warnMsg   = document.getElementById('warning-message');
+  const overlay = document.getElementById('warning-overlay');
+  const warnMsg = document.getElementById('warning-message');
   const warnClose = document.getElementById('warning-close');
   let _pendingFocusEl = null;
 
@@ -233,11 +345,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  const inputWindDir   = document.getElementById('input-wind-dir');
+  const inputWindDir = document.getElementById('input-wind-dir');
   const inputWindSpeed = document.getElementById('input-wind-speed');
-  const inputVp        = document.getElementById('input-vp');
+  const inputVp = document.getElementById('input-vp');
 
-  if (inputWindDir)   validerAuBlur(inputWindDir,   val => isNaN(val) || val < 0 || val > 360, 'alertWindDirInvalid');
+  if (inputWindDir) validerAuBlur(inputWindDir, val => isNaN(val) || val < 0 || val > 360, 'alertWindDirInvalid');
   if (inputWindSpeed) {
     inputWindSpeed.addEventListener('blur', () => {
       const val = parseFloat(inputWindSpeed.value);
@@ -250,7 +362,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   }
-  if (inputVp)        validerAuBlur(inputVp,        val => isNaN(val) || val < 40 || val > 250,'alertVpInvalid');
+  if (inputVp) validerAuBlur(inputVp, val => isNaN(val) || val < 40 || val > 250, 'alertVpInvalid');
 
   // Recalcul au Enter sur ces champs (le blur s'en chargera pour la validation)
   [inputWindDir, inputWindSpeed, inputVp].forEach(el => {
@@ -264,7 +376,103 @@ document.addEventListener('DOMContentLoaded', async () => {
     statusBadge.textContent = t('simDisconnectedEngine');
     statusBadge.style.backgroundColor = "#e65100";
   }
+
+  // --- 8. MODALE : INSÉRER UN POINT TOURNANT ---
+  const insertOverlay = document.getElementById('insert-wp-overlay');
+  const btnInsertCancel = document.getElementById('btn-insert-wp-cancel');
+  const btnInsertValidate = document.getElementById('btn-insert-wp-validate');
+
+  if (insertOverlay) {
+    // Fermer sur Annuler
+    btnInsertCancel.addEventListener('click', () => insertOverlay.classList.remove('visible'));
+
+    // Fermer en cliquant sur le fond
+    insertOverlay.addEventListener('click', (e) => {
+      if (e.target === insertOverlay) insertOverlay.classList.remove('visible');
+    });
+
+    // Validation du nom à la frappe : lettres, chiffres, - et apostrophe uniquement
+    const inputNom = document.getElementById('insert-wp-icao');
+    inputNom.addEventListener('input', () => {
+      inputNom.value = inputNom.value.replace(/[^a-zA-Z0-9\-']/g, '');
+    });
+
+    // Validation des coords à la frappe : chiffres et point décimal uniquement
+    ['insert-wp-lat', 'insert-wp-lon'].forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener('input', () => {
+        // Garder uniquement chiffres et un seul point décimal
+        let v = el.value.replace(/[^0-9.]/g, '');
+        const parts = v.split('.');
+        if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+        el.value = v;
+      });
+    });
+
+    // Recherche OpenAIP pour le point tournant
+    document.getElementById('btn-search-wp').addEventListener('click', () => {
+      rechercherAeroport(
+        document.getElementById('insert-wp-icao').value,
+        document.getElementById('search-status-wp'),
+        document.getElementById('insert-wp-lat'),
+        document.getElementById('insert-wp-lon')
+      );
+    });
+
+    // Valider l'insertion
+    btnInsertValidate.addEventListener('click', async () => {
+      const name = document.getElementById('insert-wp-icao').value.trim();
+      const latDir = document.querySelector('input[name="lat-dir"]:checked').value;
+      const lonDir = document.querySelector('input[name="lon-dir"]:checked').value;
+      const latRaw = parseFloat(document.getElementById('insert-wp-lat').value);
+      const lonRaw = parseFloat(document.getElementById('insert-wp-lon').value);
+      const errEl = document.getElementById('insert-wp-error');
+
+      if (!name) {
+        errEl.textContent = currentLang === 'fr' ? 'Veuillez renseigner un identifiant.' : 'Please enter an identifier.';
+        return;
+      }
+      if (isNaN(latRaw) || isNaN(lonRaw)) {
+        errEl.textContent = currentLang === 'fr' ? 'Veuillez renseigner les coordonnées.' : 'Please fill in the coordinates.';
+        return;
+      }
+
+      // Appliquer le signe selon N/S et E/W
+      const lat = latDir === 'S' ? -Math.abs(latRaw) : Math.abs(latRaw);
+      const lon = lonDir === 'W' ? -Math.abs(lonRaw) : Math.abs(lonRaw);
+
+      const nouveauPoint = { name, ident: name, lat, lon };
+      flightPlan.splice(insertLegIndex, 0, nouveauPoint);
+
+      // Si le leg actif est >= insertLegIndex, le décaler d'un cran
+      if (activeLegIndex >= insertLegIndex) activeLegIndex++;
+
+      // Redessiner la carte complètement
+      marqueursCarte.forEach(m => map.removeLayer(m));
+      marqueursCarte = [];
+      flightPathLine.setLatLngs([]);
+      await calculerDeclinaisonCentroide();
+      flightPlan.forEach(point => tracerPointVisuel(point));
+      const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
+      map.fitBounds(bounds, { padding: [50, 50] });
+
+      mettreAJourLogDeNav();
+      insertOverlay.classList.remove('visible');
+    });
+  }
 });
+
+// -------------------------------------------------------
+// Calcule le prochain nom WP disponible (WP1, WP2, ...)
+// -------------------------------------------------------
+function prochainNomWP() {
+  const nums = flightPlan
+    .map(p => p.name)
+    .filter(n => /^WP\d+$/i.test(n))
+    .map(n => parseInt(n.replace(/^WP/i, ''), 10));
+  const max = nums.length > 0 ? Math.max(...nums) : 0;
+  return `WP${max + 1}`;
+}
 
 // -------------------------------------------------------
 // Rendu visuel d'un point sur la carte
@@ -363,9 +571,9 @@ function mettreAJourLogDeNav() {
     return;
   }
 
-  const vp       = parseFloat(document.getElementById('input-vp').value) || 90;
-  const dirVent  = parseFloat(document.getElementById('input-wind-dir').value) || 0;
-  const vitVent  = parseFloat(document.getElementById('input-wind-speed').value) || 0;
+  const vp = parseFloat(document.getElementById('input-vp').value) || 90;
+  const dirVent = parseFloat(document.getElementById('input-wind-dir').value) || 0;
+  const vitVent = parseFloat(document.getElementById('input-wind-speed').value) || 0;
 
   // Cas : un seul point (départ uniquement)
   if (flightPlan.length === 1) {
@@ -423,7 +631,7 @@ function mettreAJourLogDeNav() {
     const capMagDeg = (rvDeg + deriveDeg - declinaisonMoyenneGlobale + 360) % 360;
 
     // 6. Détermination de l'état du leg
-    const isDone  = i < activeLegIndex;   // legs au-dessus du leg actif = terminés
+    const isDone = i < activeLegIndex;   // legs au-dessus du leg actif = terminés
     const isActive = i === activeLegIndex; // leg actif courant
 
     // 7. Injection dans le tableau
@@ -434,6 +642,7 @@ function mettreAJourLogDeNav() {
     row.innerHTML = `
       <td><b>${i}</b></td>
       <td>${ptA.name}</td>
+      <td></td>
       <td>${ptB.name}</td>
       <td>3000</td>
       <td>${distanceNM.toFixed(1)}</td>
@@ -452,6 +661,30 @@ function mettreAJourLogDeNav() {
       row.style.fontWeight = 'bold';
       row.querySelectorAll('td').forEach(td => td.style.color = '#ffff00');
     }
+
+    // Bouton + dans la 3ème cellule (entre Depuis et Vers)
+    const btnPlus = document.createElement('button');
+    btnPlus.className = 'btn-insert-wp';
+    btnPlus.textContent = '+';
+    btnPlus.title = currentLang === 'fr' ? 'Insérer un point tournant' : 'Insert a waypoint';
+    btnPlus.addEventListener('click', () => {
+      // i = numéro du leg (1-based), l'insertion se fait à l'index i dans flightPlan
+      // (entre flightPlan[i-1] et flightPlan[i])
+      insertLegIndex = i;
+      const nomWP = prochainNomWP();
+      document.getElementById('insert-wp-icao').value = nomWP;
+      document.getElementById('insert-wp-lat').value = '';
+      document.getElementById('insert-wp-lon').value = '';
+      document.getElementById('insert-wp-error').textContent = '';
+      document.getElementById('search-status-wp').textContent = '';
+      document.getElementById('search-status-wp').className = 'search-status';
+      const subtitle = document.getElementById('insert-wp-subtitle');
+      subtitle.textContent = currentLang === 'fr'
+        ? `Insertion entre ${ptA.name} et ${ptB.name}`
+        : `Inserting between ${ptA.name} and ${ptB.name}`;
+      document.getElementById('insert-wp-overlay').classList.add('visible');
+    });
+    row.querySelectorAll('td')[2].appendChild(btnPlus);
 
     // Créer et insérer la checkbox
     const checkbox = document.createElement('input');

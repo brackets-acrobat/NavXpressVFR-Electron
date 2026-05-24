@@ -31,113 +31,96 @@
             <section id="flight-info">
                 <div id="top-row">
                     <div id="config-vol">
-                      <div class="config-section-inner">
-                        <h3 data-i18n="flightConfig">Configuration du Vol</h3>
+                        <div class="config-section-inner">
+                            <h3 data-i18n="flightConfig">Configuration du Vol</h3>
 
-                        <!-- Ligne 1 : ICAO Départ / ICAO Arrivée -->
-                        <div class="input-row-compact">
-                            <div class="input-group">
-                                <label for="input-icao-dep" data-i18n="icaoDep">ICAO Départ</label>
-                                <input type="text" id="input-icao-dep" maxlength="8"
-                                    class="input-icao"
-                                    data-i18n-placeholder="icaoPlaceholderDep"
-                                    placeholder="LFQM"
-                                    readonly
-                                    autocomplete="off" spellcheck="false">
+                            <!-- Ligne 1 : ICAO Départ / ICAO Arrivée -->
+                            <div class="input-row-compact">
+                                <div class="input-group">
+                                    <label for="input-icao-dep" data-i18n="icaoDep">ICAO Départ</label>
+                                    <input type="text" id="input-icao-dep" maxlength="8" class="input-icao"
+                                        data-i18n-placeholder="icaoPlaceholderDep" placeholder="LFQM" readonly
+                                        autocomplete="off" spellcheck="false">
+                                </div>
+                                <div class="input-group">
+                                    <label for="input-icao-arr" data-i18n="icaoArr">ICAO Arrivée</label>
+                                    <input type="text" id="input-icao-arr" maxlength="8" class="input-icao"
+                                        data-i18n-placeholder="icaoPlaceholderArr" placeholder="LFBD" readonly
+                                        autocomplete="off" spellcheck="false">
+                                </div>
                             </div>
-                            <div class="input-group">
-                                <label for="input-icao-arr" data-i18n="icaoArr">ICAO Arrivée</label>
-                                <input type="text" id="input-icao-arr" maxlength="8"
-                                    class="input-icao"
-                                    data-i18n-placeholder="icaoPlaceholderArr"
-                                    placeholder="LFBD"
-                                    readonly
-                                    autocomplete="off" spellcheck="false">
+
+                            <!-- Ligne 2 : Direction vent / Vitesse vent -->
+                            <div class="input-row-compact">
+                                <div class="input-group">
+                                    <label for="input-wind-dir" data-i18n="windDir">Dir. Vent (°)</label>
+                                    <input type="text" id="input-wind-dir" value="0" inputmode="numeric"
+                                        class="input-short" maxlength="4">
+                                </div>
+                                <div class="input-group">
+                                    <label for="input-wind-speed" data-i18n="windSpeed">Vit. Vent (kt)</label>
+                                    <input type="text" id="input-wind-speed" value="0" inputmode="numeric"
+                                        class="input-short" maxlength="4">
+                                </div>
+                            </div>
+
+                            <!-- Ligne 3 : Vp / Déclinaison Mag -->
+                            <div class="input-row-compact">
+                                <div class="input-group">
+                                    <label for="input-vp" data-i18n="trueAirspeed">Vp (kt)</label>
+                                    <input type="text" id="input-vp" value="90" inputmode="numeric" class="input-short"
+                                        maxlength="4">
+                                </div>
+                                <div class="input-group">
+                                    <label for="input-decl-mag" data-i18n="declMag">Décl. Mag. (°)</label>
+                                    <input type="text" id="input-decl-mag" readonly placeholder="--" value=""
+                                        class="input-decl">
+                                </div>
                             </div>
                         </div>
-
-                        <!-- Ligne 2 : Direction vent / Vitesse vent -->
-                        <div class="input-row-compact">
-                            <div class="input-group">
-                                <label for="input-wind-dir" data-i18n="windDir">Dir. Vent (°)</label>
-                                <input type="text" id="input-wind-dir" value="0" inputmode="numeric" class="input-short" maxlength="4">
-                            </div>
-                            <div class="input-group">
-                                <label for="input-wind-speed" data-i18n="windSpeed">Vit. Vent (kt)</label>
-                                <input type="text" id="input-wind-speed" value="0" inputmode="numeric" class="input-short" maxlength="4">
-                            </div>
-                        </div>
-
-                        <!-- Ligne 3 : Vp / Déclinaison Mag -->
-                        <div class="input-row-compact">
-                            <div class="input-group">
-                                <label for="input-vp" data-i18n="trueAirspeed">Vp (kt)</label>
-                                <input type="text" id="input-vp" value="90" inputmode="numeric" class="input-short" maxlength="4">
-                            </div>
-                            <div class="input-group">
-                                <label for="input-decl-mag" data-i18n="declMag">Décl. Mag. (°)</label>
-                                <input type="text" id="input-decl-mag" readonly placeholder="--" value="" class="input-decl">
-                            </div>
-                        </div>
-                      </div>
                     </div>
 
                     <!-- Colonne droite : boutons + boite ajouter waypoint -->
                     <div id="top-right-col">
                         <div id="top-buttons">
+                            <button id="btn-create-flight" class="btn-secondary" data-i18n="btnCreate">🗺️ Créer plan de
+                                vol</button>
                             <button id="btn-new-flight" class="btn-secondary" data-i18n="btnNew">✨ Nouveau</button>
-                            <button id="btn-import-lnm" class="btn-secondary" data-i18n="btnImport">📂 Importer LNMPLN</button>
-                            <button id="btn-save-flight" class="btn-secondary" data-i18n="btnSave">💾 Sauvegarder</button>
-                        </div>
-                        <div class="config-section">
-                            <h3 data-i18n="addWaypoint">Ajouter un Point de Report</h3>
-                            <div class="input-grid-three">
-                                <div class="input-group">
-                                    <label for="waypoint-name" data-i18n="waypointId">Identifiant / Nom</label>
-                                    <input type="text" id="waypoint-name"
-                                        data-i18n-placeholder="waypointIdPlaceholder"
-                                        placeholder="Ex: LFQM, Dijon...">
-                                </div>
-                                <div class="input-group">
-                                    <label for="waypoint-lat" data-i18n="latitude">Latitude</label>
-                                    <input type="number" id="waypoint-lat" step="0.000001" placeholder="47.20">
-                                </div>
-                                <div class="input-group">
-                                    <label for="waypoint-lon" data-i18n="longitude">Longitude</label>
-                                    <input type="number" id="waypoint-lon" step="0.000001" placeholder="6.08">
-                                </div>
-                            </div>
-                            <button id="btn-add-waypoint" class="btn-primary" data-i18n="btnInsert">Insérer au Flight Plan</button>
+                            <button id="btn-import-lnm" class="btn-secondary" data-i18n="btnImport">📂 Importer
+                                LNMPLN</button>
+                            <button id="btn-save-flight" class="btn-secondary" data-i18n="btnSave">💾
+                                Sauvegarder</button>
                         </div>
                     </div>
                 </div>
 
-                        <div class="config-section">
-                            <h3 data-i18n="navLog">Log de Navigation (Legs)</h3>
-                            <div class="table-container">
-                                <table id="nav-log-table">
-                                    <thead>
-                                        <tr>
-                                            <th data-i18n="colLeg">N° leg</th>
-                                            <th data-i18n="colFrom">Depuis</th>
-                                            <th data-i18n="colTo">Vers</th>
-                                            <th data-i18n="colAlt">Alt (ft)</th>
-                                            <th data-i18n="colDist">Dist (nm)</th>
-                                            <th data-i18n="colRoute">Route</th>
-                                            <th data-i18n="colHeading">Cap (°)</th>
-                                            <th data-i18n="colGs">GS (kt)</th>
-                                            <th data-i18n="colDuration">Durée</th>
-                                            <th data-i18n="colDone">Fait</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="nav-log-body">
-                                        <tr class="empty-row">
-                                            <td colspan="10" data-i18n="emptyPlan">Aucun point dans le plan de vol</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                <div class="config-section">
+                    <h3 data-i18n="navLog">Log de Navigation (Legs)</h3>
+                    <div class="table-container">
+                        <table id="nav-log-table">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="colLeg">N° leg</th>
+                                    <th data-i18n="colFrom">Depuis</th>
+                                    <th class="th-insert"></th>
+                                    <th data-i18n="colTo">Vers</th>
+                                    <th data-i18n="colAlt">Alt (ft)</th>
+                                    <th data-i18n="colDist">Dist (nm)</th>
+                                    <th data-i18n="colRoute">Route</th>
+                                    <th data-i18n="colHeading">Cap (°)</th>
+                                    <th data-i18n="colGs">GS (kt)</th>
+                                    <th data-i18n="colDuration">Durée</th>
+                                    <th data-i18n="colDone">Fait</th>
+                                </tr>
+                            </thead>
+                            <tbody id="nav-log-body">
+                                <tr class="empty-row">
+                                    <td colspan="10" data-i18n="emptyPlan">Aucun point dans le plan de vol</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
             </section>
         </main>
@@ -146,6 +129,117 @@
             <div id="map-container" style="height: 100%; width: 100%;"></div>
             <div id="wind-rose-container"></div>
         </aside>
+    </div>
+
+    <!-- Modale Insérer point tournant -->
+    <div id="insert-wp-overlay">
+        <div id="insert-wp-popup">
+            <h3 id="insert-wp-title" data-i18n="insertWpTitle">Insérer un point tournant</h3>
+            <p id="insert-wp-subtitle" class="insert-wp-subtitle"></p>
+
+            <div class="create-flight-section">
+                <!-- Ligne nom + bouton rechercher -->
+                <div class="insert-wp-name-row">
+                    <input type="text" id="insert-wp-icao" class="insert-wp-name-input" autocomplete="off"
+                        spellcheck="false">
+                    <button id="btn-search-wp" class="btn-search" data-i18n="btnSearch">Rechercher</button>
+                </div>
+                <span id="search-status-wp" class="search-status" style="display:block; margin-bottom:10px;"></span>
+
+                <!-- Latitude -->
+                <div class="insert-wp-coord-row">
+                    <div class="input-group" style="flex:1;">
+                        <label data-i18n="latitude">Latitude</label>
+                        <input type="text" id="insert-wp-lat" inputmode="decimal" placeholder="47.200000">
+                    </div>
+                    <div class="insert-wp-radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="lat-dir" value="N" checked> N
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="lat-dir" value="S"> S
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Longitude -->
+                <div class="insert-wp-coord-row">
+                    <div class="input-group" style="flex:1;">
+                        <label data-i18n="longitude">Longitude</label>
+                        <input type="text" id="insert-wp-lon" inputmode="decimal" placeholder="6.080000">
+                    </div>
+                    <div class="insert-wp-radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="lon-dir" value="E" checked> E
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="lon-dir" value="W"> W
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div id="insert-wp-error" class="field-error"></div>
+
+            <div class="create-flight-actions">
+                <button id="btn-insert-wp-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
+                <button id="btn-insert-wp-validate" class="btn-primary" data-i18n="btnValidate">Valider</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Créer plan de vol -->
+    <div id="create-flight-overlay">
+        <div id="create-flight-popup">
+            <h3 id="create-flight-title" data-i18n="createFlightTitle">Créer un plan de vol</h3>
+
+            <div class="create-flight-section">
+                <h4 data-i18n="createFlightDep">🛫 Départ</h4>
+                <div class="create-flight-search-row">
+                    <input type="text" id="create-icao-dep" maxlength="8" class="input-icao" placeholder="LFQM"
+                        autocomplete="off" spellcheck="false">
+                    <button id="btn-search-dep" class="btn-search" data-i18n="btnSearch">Rechercher</button>
+                    <span id="search-status-dep" class="search-status"></span>
+                </div>
+                <div class="create-flight-coords">
+                    <div class="input-group">
+                        <label data-i18n="latitude">Latitude</label>
+                        <input type="number" id="create-lat-dep" step="0.000001" placeholder="47.2000">
+                    </div>
+                    <div class="input-group">
+                        <label data-i18n="longitude">Longitude</label>
+                        <input type="number" id="create-lon-dep" step="0.000001" placeholder="6.0800">
+                    </div>
+                </div>
+            </div>
+
+            <div class="create-flight-section">
+                <h4 data-i18n="createFlightArr">🛬 Arrivée</h4>
+                <div class="create-flight-search-row">
+                    <input type="text" id="create-icao-arr" maxlength="8" class="input-icao" placeholder="LFBD"
+                        autocomplete="off" spellcheck="false">
+                    <button id="btn-search-arr" class="btn-search" data-i18n="btnSearch">Rechercher</button>
+                    <span id="search-status-arr" class="search-status"></span>
+                </div>
+                <div class="create-flight-coords">
+                    <div class="input-group">
+                        <label data-i18n="latitude">Latitude</label>
+                        <input type="number" id="create-lat-arr" step="0.000001" placeholder="44.8300">
+                    </div>
+                    <div class="input-group">
+                        <label data-i18n="longitude">Longitude</label>
+                        <input type="number" id="create-lon-arr" step="0.000001" placeholder="-0.7100">
+                    </div>
+                </div>
+            </div>
+
+            <div id="create-flight-error" class="field-error"></div>
+
+            <div class="create-flight-actions">
+                <button id="btn-create-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
+                <button id="btn-create-validate" class="btn-primary" data-i18n="btnValidate">Valider</button>
+            </div>
+        </div>
     </div>
 
     <!-- Popup d'avertissement custom -->
