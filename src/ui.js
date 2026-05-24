@@ -8,6 +8,7 @@ let map;
 let flightPathLine;
 let marqueursCarte = [];
 let declinaisonMoyenneGlobale = 0.0;
+let activeLegIndex = 1; // Le leg actif (1-based, correspond au numéro affiché)
 
 document.addEventListener('DOMContentLoaded', async () => {
   console.log("UI NavXpressVFR chargée et prête.");
@@ -53,6 +54,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (confirm(t('confirmReset'))) {
         flightPlan = [];
         declinaisonMoyenneGlobale = 0.0;
+        activeLegIndex = 1;
+        document.getElementById('input-icao-dep').value = '';
+        document.getElementById('input-icao-arr').value = '';
         marqueursCarte.forEach(m => map.removeLayer(m));
         marqueursCarte = [];
         flightPathLine.setLatLngs([]);
@@ -86,27 +90,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log(`${waypointsXML.length} waypoints détectés dans le XML.`);
 
         flightPlan = [];
+        activeLegIndex = 1;
         marqueursCarte.forEach(m => map.removeLayer(m));
         marqueursCarte = [];
         flightPathLine.setLatLngs([]);
 
         for (let i = 0; i < waypointsXML.length; i++) {
           const wp = waypointsXML[i];
-          const name = wp.getElementsByTagName("Name")[0]?.textContent
-                    || wp.getElementsByTagName("Ident")[0]?.textContent
-                    || `WP${i}`;
+          const ident = wp.getElementsByTagName("Ident")[0]?.textContent || `WP${i}`;
+          const name  = wp.getElementsByTagName("Name")[0]?.textContent  || ident;
           const pos = wp.getElementsByTagName("Pos")[0];
 
           if (pos) {
             const lat = parseFloat(pos.getAttribute("Lat"));
             const lon = parseFloat(pos.getAttribute("Lon"));
             if (!isNaN(lat) && !isNaN(lon)) {
-              flightPlan.push({ name, lat, lon });
+              flightPlan.push({ name, ident, lat, lon });
             }
           }
         }
 
         console.log("Plan de vol extrait en mémoire:", flightPlan);
+
+        // Injection des ICAO départ / arrivée dans la config vol
+        if (flightPlan.length >= 1) {
+          const inputDep = document.getElementById('input-icao-dep');
+          const inputArr = document.getElementById('input-icao-arr');
+          if (inputDep) inputDep.value = flightPlan[0].ident;
+          if (inputArr) inputArr.value = flightPlan[flightPlan.length - 1].ident;
+        }
+
         await calculerDeclinaisonCentroide();
         flightPlan.forEach(point => tracerPointVisuel(point));
 
@@ -182,20 +195,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // --- 6. Validation et recalcul en temps réel ---
 
-  // Champs ICAO : uniquement lettres et chiffres, majuscules automatiques
-  ['input-icao-dep', 'input-icao-arr'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('input', () => {
-      // Supprimer tout ce qui n'est pas alphanumérique, forcer majuscules
-      el.value = el.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-    });
-    el.addEventListener('blur', () => {
-      if (el.value.length > 0 && !/^[A-Z0-9]{1,8}$/.test(el.value)) {
-        showWarning(t('alertIcaoInvalid'), el);
-      }
-    });
-  });
+  // Champs ICAO en lecture seule — remplis automatiquement à l'import
 
   // --- Popup d'avertissement custom ---
   const overlay   = document.getElementById('warning-overlay');
@@ -422,8 +422,15 @@ function mettreAJourLogDeNav() {
     // 5. Cap magnétique
     const capMagDeg = (rvDeg + deriveDeg - declinaisonMoyenneGlobale + 360) % 360;
 
-    // 6. Injection dans le tableau
+    // 6. Détermination de l'état du leg
+    const isDone  = i < activeLegIndex;   // legs au-dessus du leg actif = terminés
+    const isActive = i === activeLegIndex; // leg actif courant
+
+    // 7. Injection dans le tableau
     const row = document.createElement('tr');
+    row.dataset.legIndex = i;
+
+    // Construire le HTML d'abord
     row.innerHTML = `
       <td><b>${i}</b></td>
       <td>${ptA.name}</td>
@@ -434,8 +441,32 @@ function mettreAJourLogDeNav() {
       <td>${Math.round(capMagDeg).toString().padStart(3, '0')}°</td>
       <td>${Math.round(gs)}</td>
       <td>${tempsFormate}</td>
-      <td><input type="checkbox"></td>
+      <td></td>
     `;
+
+    // Appliquer le style sur chaque td APRÈS innerHTML pour surpasser td { color } de styles.css
+    if (isDone) {
+      row.querySelectorAll('td').forEach(td => td.style.color = '#5d5d5d');
+    } else if (isActive) {
+      row.style.backgroundColor = '#4088DC';
+      row.style.fontWeight = 'bold';
+      row.querySelectorAll('td').forEach(td => td.style.color = '#ffff00');
+    }
+
+    // Créer et insérer la checkbox
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = isDone;
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) {
+        activeLegIndex = i + 1;
+      } else {
+        activeLegIndex = i;
+      }
+      mettreAJourLogDeNav();
+    });
+    row.querySelector('td:last-child').appendChild(checkbox);
+
     tbody.appendChild(row);
   }
 }
