@@ -14,14 +14,15 @@ const TRANSLATIONS = {
     icaoArr:                "ICAO Arrivée",
     icaoPlaceholderDep:     "LFQM",
     icaoPlaceholderArr:     "LFBD",
-    trueAirspeed:           "Vp Appareil (kt)",
+    trueAirspeed:           "Vp (kt)",
     declMag:                "Décl. Mag. (°)",
-    windDir:                "Direction Vent (°)",
-    windSpeed:              "Vitesse Vent (kt)",
+    windDir:                "Dir. Vent (°)",
+    windSpeed:              "Vit. Vent (kt)",
 
     // Validations
-    alertWindTooStrong:     "⚠️ Le vent est trop fort pour un vol VFR ! (max 40 kt)",
-    alertWindDirInvalid:    "La direction du vent doit être comprise entre 1° et 359°.",
+    alertWindTooStrong:     "⚠️ Le vent est trop fort pour un vol VFR ! La vitesse doit être comprise entre 0 et 40 kt.",
+    alertWindNegative:      "La vitesse du vent ne peut pas être négative. Elle doit être comprise entre 0 et 40 kt.",
+    alertWindDirInvalid:    "La direction du vent doit être comprise entre 0° et 360°.",
     alertVpInvalid:         "La vitesse propre doit être comprise entre 40 et 250 kt.",
     alertIcaoInvalid:       "Le code ICAO ne peut contenir que des lettres et des chiffres (8 caractères max).",
 
@@ -83,12 +84,13 @@ const TRANSLATIONS = {
     icaoPlaceholderArr:     "KJFK",
     trueAirspeed:           "TAS (kt)",
     declMag:                "Mag. Decl. (°)",
-    windDir:                "Wind Direction (°)",
-    windSpeed:              "Wind Speed (kt)",
+    windDir:                "Wind Dir. (°)",
+    windSpeed:              "Wind Spd (kt)",
 
     // Validations
-    alertWindTooStrong:     "⚠️ Wind is too strong for VFR flight! (max 40 kt)",
-    alertWindDirInvalid:    "Wind direction must be between 1° and 359°.",
+    alertWindTooStrong:     "⚠️ Wind is too strong for VFR flight! Speed must be between 0 and 40 kt.",
+    alertWindNegative:      "Wind speed cannot be negative. It must be between 0 and 40 kt.",
+    alertWindDirInvalid:    "Wind direction must be between 0° and 360°.",
     alertVpInvalid:         "True airspeed must be between 40 and 250 kt.",
     alertIcaoInvalid:       "ICAO code can only contain letters and digits (8 chars max).",
 

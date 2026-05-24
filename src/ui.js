@@ -192,57 +192,73 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     el.addEventListener('blur', () => {
       if (el.value.length > 0 && !/^[A-Z0-9]{1,8}$/.test(el.value)) {
-        alert(t('alertIcaoInvalid'));
-        el.value = '';
-        el.focus();
+        showWarning(t('alertIcaoInvalid'), el);
       }
     });
   });
 
-  // Direction vent : 1–359, recalcul au changement
-  const inputWindDir = document.getElementById('input-wind-dir');
-  if (inputWindDir) {
-    inputWindDir.addEventListener('change', () => {
-      const val = parseFloat(inputWindDir.value);
-      if (inputWindDir.value !== '' && (isNaN(val) || val < 1 || val > 359)) {
-        alert(t('alertWindDirInvalid'));
-        inputWindDir.value = 0;
-      }
-      mettreAJourLogDeNav();
-    });
-    inputWindDir.addEventListener('input', () => mettreAJourLogDeNav());
+  // --- Popup d'avertissement custom ---
+  const overlay   = document.getElementById('warning-overlay');
+  const warnMsg   = document.getElementById('warning-message');
+  const warnClose = document.getElementById('warning-close');
+  let _pendingFocusEl = null;
+
+  function showWarning(message, fieldEl) {
+    _pendingFocusEl = fieldEl;
+    warnMsg.textContent = message;
+    overlay.classList.add('visible');
   }
 
-  // Vitesse vent : 0–40, avertissement au-delà
+  warnClose.addEventListener('click', () => {
+    overlay.classList.remove('visible');
+    if (_pendingFocusEl) {
+      _pendingFocusEl.value = '';
+      setTimeout(() => { _pendingFocusEl.focus(); _pendingFocusEl = null; }, 50);
+    }
+    mettreAJourLogDeNav();
+  });
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) warnClose.click();
+  });
+
+  function validerAuBlur(el, tester, messageKey) {
+    el.addEventListener('blur', () => {
+      const val = parseFloat(el.value);
+      if (el.value !== '' && tester(val)) {
+        showWarning(t(messageKey), el);
+      } else {
+        mettreAJourLogDeNav();
+      }
+    });
+  }
+
+  const inputWindDir   = document.getElementById('input-wind-dir');
   const inputWindSpeed = document.getElementById('input-wind-speed');
+  const inputVp        = document.getElementById('input-vp');
+
+  if (inputWindDir)   validerAuBlur(inputWindDir,   val => isNaN(val) || val < 0 || val > 360, 'alertWindDirInvalid');
   if (inputWindSpeed) {
-    inputWindSpeed.addEventListener('change', () => {
+    inputWindSpeed.addEventListener('blur', () => {
       const val = parseFloat(inputWindSpeed.value);
-      if (!isNaN(val) && val > 40) {
-        alert(t('alertWindTooStrong'));
-        inputWindSpeed.value = 40;
+      if (inputWindSpeed.value !== '' && !isNaN(val) && val < 0) {
+        showWarning(t('alertWindNegative'), inputWindSpeed);
+      } else if (inputWindSpeed.value !== '' && (isNaN(val) || val > 40)) {
+        showWarning(t('alertWindTooStrong'), inputWindSpeed);
+      } else {
+        mettreAJourLogDeNav();
       }
-      if (!isNaN(val) && val < 0) inputWindSpeed.value = 0;
-      mettreAJourLogDeNav();
     });
-    inputWindSpeed.addEventListener('input', () => mettreAJourLogDeNav());
   }
+  if (inputVp)        validerAuBlur(inputVp,        val => isNaN(val) || val < 40 || val > 250,'alertVpInvalid');
 
-  // Vp appareil : 40–250
-  const inputVp = document.getElementById('input-vp');
-  if (inputVp) {
-    inputVp.addEventListener('change', () => {
-      const val = parseFloat(inputVp.value);
-      if (inputVp.value !== '' && (isNaN(val) || val < 40 || val > 250)) {
-        alert(t('alertVpInvalid'));
-        inputVp.value = 90;
-      }
-      mettreAJourLogDeNav();
+  // Recalcul au Enter sur ces champs (le blur s'en chargera pour la validation)
+  [inputWindDir, inputWindSpeed, inputVp].forEach(el => {
+    if (!el) return;
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') el.blur();
     });
-    inputVp.addEventListener('input', () => mettreAJourLogDeNav());
-  }
-
-  // --- 7. Badge statut simulateur ---
+  });
   const statusBadge = document.getElementById('sim-status');
   if (statusBadge) {
     statusBadge.textContent = t('simDisconnectedEngine');

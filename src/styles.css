@@ -109,16 +109,107 @@ h1 {
 }
 
 /* -------------------------------------------------- */
-/* Grilles de saisie — config vol                     */
+/* Rangée du haut : config-vol + boutons alignés      */
 /* -------------------------------------------------- */
-.input-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 12px;
+#top-row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 20px;
 }
 
-/* Champ ICAO : largeur contrainte à ~8 caractères */
+/* Colonne droite : boutons + boite waypoint empilés */
+#top-right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    align-items: stretch;
+}
+
+#top-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+}
+
+#top-buttons .btn-secondary {
+    flex: 1;
+    text-align: center;
+    white-space: nowrap;
+}
+
+
+#config-vol {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;     /* aligné à gauche comme les autres sections */
+    margin-bottom: 20px;
+}
+
+#config-vol > .config-section-inner {
+    background-color: #1a1a1a;
+    border: 1px solid #2d2d2d;
+    border-radius: 6px;
+    padding: 15px 20px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#config-vol > .config-section-inner h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 14px;
+    color: #00bcd4;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    align-self: flex-start;
+    width: 100%;
+}
+
+/* Labels centrés par rapport à leur champ */
+.input-row-compact .input-group label {
+    text-align: center;
+}
+
+/* Grille 2 colonnes fixes — aligne toutes les lignes parfaitement */
+.input-row-compact {
+    display: grid;
+    grid-template-columns: 9ch 9ch;
+    gap: 20px;
+    margin-bottom: 12px;
+    align-items: start;
+}
+
+.input-row-compact .input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Zone d'avertissement centrée en bas */
+#config-warnings {
+    margin-top: 8px;
+    text-align: center;
+    min-height: 18px;
+    width: 100%;
+}
+
+#config-warnings .field-error {
+    display: block;
+}
+
+/* Tous les inputs de la config vol ont la même largeur */
+#config-vol input {
+    width: 9ch;
+    max-width: 9ch;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+
 .input-icao {
     width: 100%;
     max-width: 9ch;
@@ -128,8 +219,19 @@ h1 {
     font-size: 14px !important;
 }
 
-/* Champ déclinaison : lecture seule, style normal */
-#input-decl-mag {
+.field-error {
+    color: #ff5252;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 4px;
+    min-height: 16px;
+    display: block;
+}
+
+/* Champ déclinaison : lecture seule, cyan */
+.input-decl {
+    max-width: 6ch;
+    text-align: center;
     cursor: default;
     color: #00bcd4;
     font-weight: 600;
@@ -195,8 +297,52 @@ h1 {
 }
 
 /* -------------------------------------------------- */
-/* Boutons                                            */
+/* Popup d'avertissement custom                       */
 /* -------------------------------------------------- */
+#warning-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+
+#warning-overlay.visible {
+    display: flex;
+}
+
+#warning-popup {
+    background: #1e1e1e;
+    border: 1px solid #ff5252;
+    border-radius: 8px;
+    padding: 24px 28px;
+    max-width: 320px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+
+#warning-icon {
+    font-size: 28px;
+    margin-bottom: 10px;
+}
+
+#warning-message {
+    color: #ff5252;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.5;
+    margin-bottom: 18px;
+}
+
+#warning-popup .btn-primary {
+    width: auto;
+    padding: 8px 28px;
+    margin: 0;
+}
+
+
 .btn-primary {
     background-color: #00bcd4;
     color: #121212;
