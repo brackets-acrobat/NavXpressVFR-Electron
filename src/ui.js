@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // --- 1. Initialisation de la carte Leaflet ---
   try {
-    map = L.map('map-container', { zoomControl: true }).setView([45.70, 2.03], 9);
+    map = L.map('map-container', { zoomControl: true }).setView([46.5, 2.5], 6);
 
     // --- Couches de fond ---
     const layerSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -263,8 +263,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       { key: 'topo',      layer: layerTopo,      label: '🗺️ Topo',      next: '🗺️ OSM' },
       { key: 'osm',       layer: layerOSM,       label: '🗺️ OSM',       next: '🛰️ Satellite' },
     ];
-    let currentLayerIdx = 0;
-    layers[0].layer.addTo(map);
+    let currentLayerIdx = 2;
+    layers[currentLayerIdx].layer.addTo(map);
 
     // --- Bouton déroulant de changement de fond ---
     const btnLayerToggle = L.control({ position: 'topright' });
@@ -274,7 +274,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       L.DomEvent.disableScrollPropagation(wrapper);
 
       const btn = L.DomUtil.create('button', 'btn-layer-toggle', wrapper);
-      btn.innerHTML = '🛰️ Satellite ▾';
+      btn.innerHTML = '🗺️ OSM ▾';
 
       const dropdown = L.DomUtil.create('div', 'layer-dropdown', wrapper);
       dropdown.style.display = 'none';
@@ -288,7 +288,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       options.forEach(opt => {
         const item = L.DomUtil.create('div', 'layer-dropdown-item', dropdown);
         item.innerHTML = opt.label;
-        if (opt.key === 'satellite') item.classList.add('active');
+        if (opt.key === 'osm') item.classList.add('active');
         item.addEventListener('click', () => {
           map.removeLayer(layers[currentLayerIdx].layer);
           currentLayerIdx = layers.findIndex(l => l.key === opt.key);
@@ -374,137 +374,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       return btn;
     };
     btnAirspaces.addTo(map);
-
-    // --- CLIC SUR LA CARTE : afficher les espaces aériens au point cliqué ---
-    let airspacePopup = null;
-
-    // Algorithme ray casting — détermine si un point lat/lon est dans un polygone
-    function pointDansPolygone(lat, lon, coords) {
-      // coords : tableau de [lon, lat] (format GeoJSON)
-      let inside = false;
-      for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
-        const xi = coords[i][0], yi = coords[i][1];
-        const xj = coords[j][0], yj = coords[j][1];
-        const intersect = ((yi > lat) !== (yj > lat))
-          && (lon < (xj - xi) * (lat - yi) / (yj - yi) + xi);
-        if (intersect) inside = !inside;
-      }
-      return inside;
-    }
-
-    // Vérifie si un point est dans une géométrie GeoJSON (Polygon ou MultiPolygon)
-    function pointDansGeometrie(lat, lon, geometry) {
-      if (!geometry) return false;
-      if (geometry.type === 'Polygon') {
-        // Premier ring = contour extérieur, rings suivants = trous
-        return pointDansPolygone(lat, lon, geometry.coordinates[0]);
-      }
-      if (geometry.type === 'MultiPolygon') {
-        return geometry.coordinates.some(poly => pointDansPolygone(lat, lon, poly[0]));
-      }
-      return false;
-    }
-
-    // Noms lisibles des catégories OpenAIP
-    const AIRSPACE_CAT_LABELS = {
-      fr: {
-        0:'Autre', 1:'Restreint', 2:'Danger', 3:'Interdit', 4:'CTR',
-        5:'TMZ', 6:'RMZ', 7:'TMA', 8:'TRA', 9:'TSA', 10:'FIR', 11:'UIR',
-        12:'ADIZ', 13:'ATZ', 14:'MATZ', 15:'Route aérienne', 16:'MTR',
-        17:'Alerte', 18:'Avertissement', 19:'Protégé', 20:'MOA', 21:'CTA',
-        22:'ACC', 23:'Sport/Loisir', 24:'Vol basse altitude', 25:'ATZ militaire', 26:'Vol libre'
-      },
-      en: {
-        0:'Other', 1:'Restricted', 2:'Danger', 3:'Prohibited', 4:'CTR',
-        5:'TMZ', 6:'RMZ', 7:'TMA', 8:'TRA', 9:'TSA', 10:'FIR', 11:'UIR',
-        12:'ADIZ', 13:'ATZ', 14:'MATZ', 15:'Airway', 16:'MTR',
-        17:'Alert', 18:'Warning', 19:'Protected', 20:'MOA', 21:'CTA',
-        22:'ACC', 23:'Sport/Recreational', 24:'Low Overflight', 25:'Military ATZ', 26:'Gliding'
-      }
-    };
-
-    async function interrogerEspacesAuPoint(lat, lon) {
-      if (!OPENAIP_API_KEY) return;
-
-      // Petite bbox autour du point cliqué (±0.3° ≈ ~30 km)
-      const delta = 0.3;
-      const url = `https://api.core.openaip.net/api/airspaces`
-        + `?geometry=${(lon - delta).toFixed(4)},${(lat - delta).toFixed(4)},${(lon + delta).toFixed(4)},${(lat + delta).toFixed(4)}`
-        + `&page=1&limit=100`;
-
-      try {
-        const resp = await fetch(url, { headers: { 'x-openaip-api-key': OPENAIP_API_KEY } });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json();
-        if (!data.items) return [];
-
-        // Filtrer uniquement ceux qui contiennent réellement le point
-        return data.items.filter(item => pointDansGeometrie(lat, lon, item.geometry));
-      } catch (err) {
-        console.error('[NavXpress] Erreur interrogation espaces aériens:', err);
-        return [];
-      }
-    }
-
-    function formaterLimite(limite) {
-      if (!limite) return '—';
-      const ref = limite.referenceDatum || '';
-      const unit = limite.unit || '';
-      const val = limite.value !== undefined ? limite.value : '';
-      if (val === 0 && ref === 'GND') return 'GND';
-      return `${val} ${unit} ${ref}`.trim();
-    }
-
-    map.on('click', async (e) => {
-      if (!airspacesVisible) return; // seulement si la couche est active
-
-      const { lat, lng } = e.latlng;
-
-      // Fermer un popup précédent
-      if (airspacePopup) { map.closePopup(airspacePopup); airspacePopup = null; }
-
-      // Popup de chargement
-      const labelLoading = currentLang === 'fr' ? '⏳ Recherche des espaces aériens…' : '⏳ Querying airspaces…';
-      airspacePopup = L.popup({ maxWidth: 340, className: 'airspace-info-popup' })
-        .setLatLng(e.latlng)
-        .setContent(`<div class="airspace-popup-loading">${labelLoading}</div>`)
-        .openOn(map);
-
-      const espaces = await interrogerEspacesAuPoint(lat, lng);
-
-      if (!airspacePopup.isOpen()) return; // fermé entre temps
-
-      const cats = currentLang === 'fr' ? AIRSPACE_CAT_LABELS.fr : AIRSPACE_CAT_LABELS.en;
-      const labelNone = currentLang === 'fr'
-        ? 'Aucun espace aérien à cet endroit.'
-        : 'No airspace at this location.';
-      const labelTitle = currentLang === 'fr'
-        ? `🛡️ Espaces aériens (${espaces.length})`
-        : `🛡️ Airspaces (${espaces.length})`;
-
-      let html = `<div class="airspace-popup-wrap">`;
-      html += `<div class="airspace-popup-title">${labelTitle}</div>`;
-
-      if (espaces.length === 0) {
-        html += `<div class="airspace-popup-none">${labelNone}</div>`;
-      } else {
-        espaces.forEach(item => {
-          const cat = item.category ?? 0;
-          const catLabel = cats[cat] || cats[0];
-          const icao = item.icaoClass ? ` · ${item.icaoClass}` : '';
-          const lower = formaterLimite(item.lowerLimit);
-          const upper = formaterLimite(item.upperLimit);
-          html += `<div class="airspace-popup-item">`;
-          html += `<div class="airspace-popup-name">${item.name || '—'}</div>`;
-          html += `<div class="airspace-popup-meta">${catLabel}${icao}</div>`;
-          html += `<div class="airspace-popup-limits">▼ ${lower} &nbsp;·&nbsp; ▲ ${upper}</div>`;
-          html += `</div>`;
-        });
-      }
-      html += `</div>`;
-
-      airspacePopup.setContent(html);
-    });
 
     console.log("Carte Leaflet initialisée avec succès.");
   } catch (mapError) {
