@@ -7,12 +7,18 @@
 const OPENAIP_API_KEY = 'VOTRE_CLE_API_ICI';
 
 let flightPlan = [];
+let legAltitudes = []; // Altitude par leg (index 1-based : legAltitudes[i] = altitude du leg i)
 let map;
-let flightPathLine;
-let marqueursCarte = [];
+let segmentsCarte = []; // Un L.polyline par leg (remplace flightPathLine unique)
+let marqueursCarte = []; // Marqueurs waypoints (cercles orange)
 let declinaisonMoyenneGlobale = 0.0;
 let activeLegIndex = 1; // Le leg actif (1-based, correspond au numéro affiché)
 let insertLegIndex = 0; // Index d'insertion du point tournant (position dans flightPlan)
+
+const ALT_MIN = 500;
+const ALT_MAX = 15000;
+const ALT_DEFAULT = 3000;
+const ALT_STEP = 500;
 
 document.addEventListener('DOMContentLoaded', async () => {
   console.log("UI NavXpressVFR chargée et prête.");
@@ -39,13 +45,80 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // --- 1. Initialisation de la carte Leaflet ---
   try {
-    map = L.map('map-container').setView([45.70, 2.03], 9);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    map = L.map('map-container', { zoomControl: true }).setView([45.70, 2.03], 9);
+
+    // --- Couches de fond ---
+    const layerSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Tiles &copy; Esri',
       maxZoom: 19
-    }).addTo(map);
+    });
 
-    flightPathLine = L.polyline([], { color: '#ff1744', weight: 3, opacity: 0.8 }).addTo(map);
+    const layerTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
+      maxZoom: 17
+    });
+
+    const layerOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19
+    });
+
+    const layers = [
+      { key: 'satellite', layer: layerSatellite, label: '🛰️ Satellite', next: '🗺️ Topo' },
+      { key: 'topo',      layer: layerTopo,      label: '🗺️ Topo',      next: '🗺️ OSM' },
+      { key: 'osm',       layer: layerOSM,       label: '🗺️ OSM',       next: '🛰️ Satellite' },
+    ];
+    let currentLayerIdx = 0;
+    layers[0].layer.addTo(map);
+
+    // --- Bouton déroulant de changement de fond ---
+    const btnLayerToggle = L.control({ position: 'topright' });
+    btnLayerToggle.onAdd = function() {
+      const wrapper = L.DomUtil.create('div', 'layer-toggle-wrapper');
+      L.DomEvent.disableClickPropagation(wrapper);
+      L.DomEvent.disableScrollPropagation(wrapper);
+
+      const btn = L.DomUtil.create('button', 'btn-layer-toggle', wrapper);
+      btn.innerHTML = '🛰️ Satellite ▾';
+
+      const dropdown = L.DomUtil.create('div', 'layer-dropdown', wrapper);
+      dropdown.style.display = 'none';
+
+      const options = [
+        { key: 'satellite', label: '🛰️ Satellite' },
+        { key: 'topo',      label: '🗺️ Topo' },
+        { key: 'osm',       label: '🗺️ OSM' },
+      ];
+
+      options.forEach(opt => {
+        const item = L.DomUtil.create('div', 'layer-dropdown-item', dropdown);
+        item.innerHTML = opt.label;
+        if (opt.key === 'satellite') item.classList.add('active');
+        item.addEventListener('click', () => {
+          map.removeLayer(layers[currentLayerIdx].layer);
+          currentLayerIdx = layers.findIndex(l => l.key === opt.key);
+          layers[currentLayerIdx].layer.addTo(map);
+          btn.innerHTML = opt.label + ' ▾';
+          dropdown.querySelectorAll('.layer-dropdown-item').forEach(el => el.classList.remove('active'));
+          item.classList.add('active');
+          dropdown.style.display = 'none';
+        });
+      });
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+      });
+
+      // Fermer si clic ailleurs
+      document.addEventListener('click', (e) => {
+        if (!wrapper.contains(e.target)) dropdown.style.display = 'none';
+      });
+
+      return wrapper;
+    };
+    btnLayerToggle.addTo(map);
+
     console.log("Carte Leaflet initialisée avec succès.");
   } catch (mapError) {
     console.error("Erreur d'initialisation de la carte:", mapError);
@@ -53,22 +126,121 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // --- 2. BOUTON : NOUVEAU (reset) ---
   const btnNew = document.getElementById('btn-new-flight');
+  const confirmResetOverlay = document.getElementById('confirm-reset-overlay');
+  const btnConfirmResetOk = document.getElementById('btn-confirm-reset-ok');
+  const btnConfirmResetCancel = document.getElementById('btn-confirm-reset-cancel');
+
+  function doReset() {
+    flightPlan = [];
+    legAltitudes = [];
+    declinaisonMoyenneGlobale = 0.0;
+    activeLegIndex = 1;
+    document.getElementById('input-icao-dep').value = '';
+    document.getElementById('input-icao-arr').value = '';
+    marqueursCarte.forEach(m => map.removeLayer(m));
+    marqueursCarte = [];
+    supprimerSegmentsCarte();
+    actualiserAffichageDeclinaison();
+    mettreAJourLogDeNav();
+  }
+
   if (btnNew) {
     btnNew.addEventListener('click', () => {
-      if (confirm(t('confirmReset'))) {
-        flightPlan = [];
-        declinaisonMoyenneGlobale = 0.0;
-        activeLegIndex = 1;
-        document.getElementById('input-icao-dep').value = '';
-        document.getElementById('input-icao-arr').value = '';
-        marqueursCarte.forEach(m => map.removeLayer(m));
-        marqueursCarte = [];
-        flightPathLine.setLatLngs([]);
-        actualiserAffichageDeclinaison();
-        mettreAJourLogDeNav();
-      }
+      confirmResetOverlay.style.display = 'flex';
     });
   }
+
+  btnConfirmResetOk.addEventListener('click', () => {
+    confirmResetOverlay.style.display = 'none';
+    doReset();
+  });
+
+  btnConfirmResetCancel.addEventListener('click', () => {
+    confirmResetOverlay.style.display = 'none';
+  });
+
+  confirmResetOverlay.addEventListener('click', (e) => {
+    if (e.target === confirmResetOverlay) confirmResetOverlay.style.display = 'none';
+  });
+
+  // --- Modale : confirmation suppression leg — listeners (scope DOMContentLoaded) ---
+  document.getElementById('btn-confirm-delete-ok').addEventListener('click', () => {
+    document.getElementById('confirm-delete-overlay').style.display = 'none';
+    if (window._deleteLegCallback) { window._deleteLegCallback(); window._deleteLegCallback = null; }
+  });
+
+  document.getElementById('btn-confirm-delete-cancel').addEventListener('click', () => {
+    document.getElementById('confirm-delete-overlay').style.display = 'none';
+    window._deleteLegCallback = null;
+  });
+
+  document.getElementById('confirm-delete-overlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('confirm-delete-overlay')) {
+      document.getElementById('confirm-delete-overlay').style.display = 'none';
+      window._deleteLegCallback = null;
+    }
+  });
+
+  // --- Modale : édition leg — listeners ---
+  window._editLegIndex = null;
+
+  document.getElementById('btn-edit-leg-cancel').addEventListener('click', () => {
+    document.getElementById('edit-leg-overlay').style.display = 'none';
+  });
+
+  document.getElementById('edit-leg-overlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('edit-leg-overlay'))
+      document.getElementById('edit-leg-overlay').style.display = 'none';
+  });
+
+  document.getElementById('btn-edit-leg-validate').addEventListener('click', () => {
+    const legIndex = window._editLegIndex;
+    if (legIndex === null) return;
+    const errEl = document.getElementById('edit-leg-error');
+    errEl.textContent = '';
+
+    // Lire et valider les champs
+    function readPoint(nameId, latId, latRadio, lonId, lonRadio) {
+      const name = document.getElementById(nameId).value.trim();
+      const latRaw = parseFloat(document.getElementById(latId).value);
+      const lonRaw = parseFloat(document.getElementById(lonId).value);
+      const latDir = document.querySelector(`input[name="${latRadio}"]:checked`)?.value || 'N';
+      const lonDir = document.querySelector(`input[name="${lonRadio}"]:checked`)?.value || 'E';
+      if (!name || isNaN(latRaw) || isNaN(lonRaw)) return null;
+      if (latRaw < 0 || latRaw > 90 || lonRaw < 0 || lonRaw > 180) return null;
+      return {
+        name, ident: name,
+        lat: latDir === 'N' ? latRaw : -latRaw,
+        lon: lonDir === 'E' ? lonRaw : -lonRaw
+      };
+    }
+
+    const newDep = readPoint('edit-leg-dep-name', 'edit-leg-dep-lat', 'edit-dep-lat-dir', 'edit-leg-dep-lon', 'edit-dep-lon-dir');
+    const newArr = readPoint('edit-leg-arr-name', 'edit-leg-arr-lat', 'edit-arr-lat-dir', 'edit-leg-arr-lon', 'edit-arr-lon-dir');
+
+    if (!newDep || !newArr) {
+      errEl.textContent = t('fillFields');
+      return;
+    }
+
+    // Appliquer — les deux points sont partagés avec les legs adjacents
+    flightPlan[legIndex - 1] = { ...flightPlan[legIndex - 1], ...newDep };
+    flightPlan[legIndex]     = { ...flightPlan[legIndex],     ...newArr };
+
+    document.getElementById('edit-leg-overlay').style.display = 'none';
+
+    // Recalculer et redessiner toute la carte
+    marqueursCarte.forEach(m => map.removeLayer(m));
+    marqueursCarte = [];
+    supprimerSegmentsCarte();
+    flightPlan.forEach((p, idx) => tracerPointVisuel(p, idx));
+    redessinerSegments();
+    if (flightPlan.length > 1) {
+      const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
+      map.fitBounds(bounds, { padding: [50, 50], animate: false });
+    }
+    mettreAJourLogDeNav();
+  });
 
   // --- 3. BOUTON : CRÉER PLAN DE VOL ---
   const btnCreate = document.getElementById('btn-create-flight');
@@ -166,36 +338,91 @@ document.addEventListener('DOMContentLoaded', async () => {
       );
     });
 
+    // Validation chiffres décimaux uniquement sur les champs coord de la modale création
+    ['create-lat-dep', 'create-lon-dep', 'create-lat-arr', 'create-lon-arr'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', () => {
+        let v = el.value.replace(/[^0-9.]/g, '');
+        const parts = v.split('.');
+        if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+        el.value = v;
+      });
+    });
+
     // Valider le plan de vol
     btnCreateValidate.addEventListener('click', async () => {
       const icaoDep = document.getElementById('create-icao-dep').value.trim().toUpperCase();
-      const latDep = parseFloat(document.getElementById('create-lat-dep').value);
-      const lonDep = parseFloat(document.getElementById('create-lon-dep').value);
+      const latDepRaw = parseFloat(document.getElementById('create-lat-dep').value);
+      const lonDepRaw = parseFloat(document.getElementById('create-lon-dep').value);
       const icaoArr = document.getElementById('create-icao-arr').value.trim().toUpperCase();
-      const latArr = parseFloat(document.getElementById('create-lat-arr').value);
-      const lonArr = parseFloat(document.getElementById('create-lon-arr').value);
+      const latArrRaw = parseFloat(document.getElementById('create-lat-arr').value);
+      const lonArrRaw = parseFloat(document.getElementById('create-lon-arr').value);
       const errEl = document.getElementById('create-flight-error');
+
+      // Lecture des directions (radios)
+      const depLatDir = document.querySelector('input[name="dep-lat-dir"]:checked').value;
+      const depLonDir = document.querySelector('input[name="dep-lon-dir"]:checked').value;
+      const arrLatDir = document.querySelector('input[name="arr-lat-dir"]:checked').value;
+      const arrLonDir = document.querySelector('input[name="arr-lon-dir"]:checked').value;
+
+      // Application du signe selon N/S et E/W
+      const latDep = depLatDir === 'S' ? -Math.abs(latDepRaw) : Math.abs(latDepRaw);
+      const lonDep = depLonDir === 'W' ? -Math.abs(lonDepRaw) : Math.abs(lonDepRaw);
+      const latArr = arrLatDir === 'S' ? -Math.abs(latArrRaw) : Math.abs(latArrRaw);
+      const lonArr = arrLonDir === 'W' ? -Math.abs(lonArrRaw) : Math.abs(lonArrRaw);
 
       // Validation
       if (!icaoDep || !icaoArr) {
         errEl.textContent = currentLang === 'fr' ? 'Veuillez renseigner les codes ICAO.' : 'Please enter ICAO codes.';
         return;
       }
-      if (isNaN(latDep) || isNaN(lonDep) || isNaN(latArr) || isNaN(lonArr)) {
+      if (isNaN(latDepRaw) || isNaN(lonDepRaw) || isNaN(latArrRaw) || isNaN(lonArrRaw)) {
         errEl.textContent = currentLang === 'fr' ? 'Veuillez renseigner toutes les coordonnées.' : 'Please fill in all coordinates.';
         return;
       }
 
       // Réinitialiser le plan
       flightPlan = [];
+      legAltitudes = [];
       activeLegIndex = 1;
       marqueursCarte.forEach(m => map.removeLayer(m));
       marqueursCarte = [];
-      flightPathLine.setLatLngs([]);
+      supprimerSegmentsCarte();
 
-      // Construire le plan départ → arrivée
-      flightPlan.push({ name: icaoDep, ident: icaoDep, lat: latDep, lon: lonDep });
-      flightPlan.push({ name: icaoArr, ident: icaoArr, lat: latArr, lon: lonArr });
+      // Détecter vol local (départ == arrivée) → triangle équilatéral ~10 nm
+      const isVolLocal = (icaoDep === icaoArr) ||
+        (Math.abs(latDep - latArr) < 0.0001 && Math.abs(lonDep - lonArr) < 0.0001);
+
+      if (isVolLocal) {
+        const NM_PAR_DEGRE_LAT = 60.0;
+        const coteNM = 10.0;
+        const hauteurNM = coteNM * Math.sqrt(3) / 2;
+        const demiBaseNM = coteNM / 2;
+        const facteurLon = Math.cos(latDep * Math.PI / 180);
+
+        const wp1 = {
+          name: 'WP1', ident: 'WP1',
+          lat: latDep + (hauteurNM / 3) / NM_PAR_DEGRE_LAT,
+          lon: lonDep - demiBaseNM / (NM_PAR_DEGRE_LAT * facteurLon)
+        };
+        const wp2 = {
+          name: 'WP2', ident: 'WP2',
+          lat: latDep + (hauteurNM / 3) / NM_PAR_DEGRE_LAT,
+          lon: lonDep + demiBaseNM / (NM_PAR_DEGRE_LAT * facteurLon)
+        };
+
+        flightPlan.push({ name: icaoDep, ident: icaoDep, lat: latDep, lon: lonDep });
+        flightPlan.push(wp1);
+        flightPlan.push(wp2);
+        flightPlan.push({ name: icaoArr, ident: icaoArr, lat: latArr, lon: lonArr });
+        legAltitudes = [undefined, ALT_DEFAULT, ALT_DEFAULT, ALT_DEFAULT];
+      } else {
+        // Vol normal départ → arrivée
+        flightPlan.push({ name: icaoDep, ident: icaoDep, lat: latDep, lon: lonDep });
+        flightPlan.push({ name: icaoArr, ident: icaoArr, lat: latArr, lon: lonArr });
+        legAltitudes = [undefined, ALT_DEFAULT];
+      }
 
       // Injecter dans les champs ICAO de la config vol
       document.getElementById('input-icao-dep').value = icaoDep;
@@ -203,7 +430,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Tracer sur la carte
       await calculerDeclinaisonCentroide();
-      flightPlan.forEach(point => tracerPointVisuel(point));
+      flightPlan.forEach((p, idx) => tracerPointVisuel(p, idx));
+      redessinerSegments();
       const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
       map.fitBounds(bounds, { padding: [50, 50] });
 
@@ -238,10 +466,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log(`${waypointsXML.length} waypoints détectés dans le XML.`);
 
         flightPlan = [];
+        legAltitudes = [];
         activeLegIndex = 1;
         marqueursCarte.forEach(m => map.removeLayer(m));
         marqueursCarte = [];
-        flightPathLine.setLatLngs([]);
+        supprimerSegmentsCarte();
 
         for (let i = 0; i < waypointsXML.length; i++) {
           const wp = waypointsXML[i];
@@ -260,6 +489,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         console.log("Plan de vol extrait en mémoire:", flightPlan);
 
+        // Initialiser les altitudes à ALT_DEFAULT pour chaque leg importé
+        legAltitudes = [undefined]; // index 0 inutilisé
+        for (let i = 1; i < flightPlan.length; i++) legAltitudes.push(ALT_DEFAULT);
+
         // Injection des ICAO départ / arrivée dans la config vol
         if (flightPlan.length >= 1) {
           const inputDep = document.getElementById('input-icao-dep');
@@ -269,7 +502,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         await calculerDeclinaisonCentroide();
-        flightPlan.forEach(point => tracerPointVisuel(point));
+        flightPlan.forEach((p, idx) => tracerPointVisuel(p, idx));
+        redessinerSegments();
 
         if (flightPlan.length > 0) {
           const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
@@ -444,15 +678,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       const nouveauPoint = { name, ident: name, lat, lon };
       flightPlan.splice(insertLegIndex, 0, nouveauPoint);
 
+      // Insérer une altitude par défaut pour le nouveau leg à insertLegIndex
+      // Le nouveau leg prend l'altitude du leg suivant (ou ALT_DEFAULT si absent)
+      const altVoisin = legAltitudes[insertLegIndex] ?? ALT_DEFAULT;
+      legAltitudes.splice(insertLegIndex, 0, altVoisin);
+
       // Si le leg actif est >= insertLegIndex, le décaler d'un cran
       if (activeLegIndex >= insertLegIndex) activeLegIndex++;
 
       // Redessiner la carte complètement
       marqueursCarte.forEach(m => map.removeLayer(m));
       marqueursCarte = [];
-      flightPathLine.setLatLngs([]);
+      supprimerSegmentsCarte();
       await calculerDeclinaisonCentroide();
-      flightPlan.forEach(point => tracerPointVisuel(point));
+      flightPlan.forEach((p, idx) => tracerPointVisuel(p, idx));
+      redessinerSegments();
       const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
       map.fitBounds(bounds, { padding: [50, 50] });
 
@@ -460,6 +700,94 @@ document.addEventListener('DOMContentLoaded', async () => {
       insertOverlay.classList.remove('visible');
     });
   }
+
+  // --- 9. MODALE : ALTITUDE ---
+  const altOverlay = document.getElementById('alt-overlay');
+  const altInput = document.getElementById('alt-input');
+  const altLegNum = document.getElementById('alt-leg-num');
+  const altError = document.getElementById('alt-error');
+  let altEditingLegIndex = 0; // index 1-based du leg en cours d'édition
+
+  document.getElementById('btn-alt-cancel').addEventListener('click', () => {
+    altOverlay.classList.remove('visible');
+  });
+
+  altOverlay.addEventListener('click', (e) => {
+    if (e.target === altOverlay) altOverlay.classList.remove('visible');
+  });
+
+  document.getElementById('btn-alt-minus').addEventListener('click', () => {
+    const val = parseInt(altInput.value) || ALT_DEFAULT;
+    const newVal = Math.max(ALT_MIN, val - ALT_STEP);
+    altInput.value = newVal;
+    altError.textContent = '';
+  });
+
+  document.getElementById('btn-alt-plus').addEventListener('click', () => {
+    const val = parseInt(altInput.value) || ALT_DEFAULT;
+    const newVal = Math.min(ALT_MAX, val + ALT_STEP);
+    altInput.value = newVal;
+    altError.textContent = '';
+  });
+
+  // Validation saisie manuelle : chiffres uniquement
+  altInput.addEventListener('input', () => {
+    altInput.value = altInput.value.replace(/[^0-9]/g, '');
+    altError.textContent = '';
+  });
+
+  document.getElementById('btn-alt-validate').addEventListener('click', () => {
+    const val = parseInt(altInput.value);
+    if (isNaN(val) || val < ALT_MIN || val > ALT_MAX) {
+      altError.textContent = currentLang === 'fr'
+        ? `Altitude entre ${ALT_MIN} et ${ALT_MAX} ft.`
+        : `Altitude between ${ALT_MIN} and ${ALT_MAX} ft.`;
+      return;
+    }
+    legAltitudes[altEditingLegIndex] = val;
+    altOverlay.classList.remove('visible');
+    mettreAJourLogDeNav();
+  });
+
+
+  // --- 10. MODALE : CONFIRMATION WAYPOINT (scission / déplacement) ---
+  const wpConfirmOverlay = document.getElementById('wp-confirm-overlay');
+
+  document.getElementById('btn-wp-confirm-cancel').addEventListener('click', () => {
+    wpConfirmOverlay.classList.remove('visible');
+    // Nettoyer le marqueur temporaire si présent
+    if (marqueurTemporaire) {
+      map.removeLayer(marqueurTemporaire);
+      marqueurTemporaire = null;
+    }
+    _confirmCallback = null;
+  });
+
+  wpConfirmOverlay.addEventListener('click', (e) => {
+    if (e.target === wpConfirmOverlay) {
+      document.getElementById('btn-wp-confirm-cancel').click();
+    }
+  });
+
+  document.getElementById('btn-wp-confirm-validate').addEventListener('click', () => {
+    if (_confirmCallback) _confirmCallback();
+  });
+
+  // Valider avec Entrée sur le champ nom
+  document.getElementById('wp-confirm-name').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('btn-wp-confirm-validate').click();
+  });
+
+  // Fonction appelée depuis mettreAJourLogDeNav pour ouvrir la modale
+  window.ouvrirModaleAltitude = (legIndex) => {
+    altEditingLegIndex = legIndex;
+    altLegNum.textContent = legIndex;
+    altInput.value = legAltitudes[legIndex] ?? ALT_DEFAULT;
+    altError.textContent = '';
+    altOverlay.classList.add('visible');
+    setTimeout(() => altInput.select(), 50);
+  };
+
 });
 
 // -------------------------------------------------------
@@ -475,27 +803,245 @@ function prochainNomWP() {
 }
 
 // -------------------------------------------------------
-// Rendu visuel d'un point sur la carte
+// Supprime tous les segments de route de la carte
 // -------------------------------------------------------
-function tracerPointVisuel(point) {
+function supprimerSegmentsCarte() {
+  segmentsCarte.forEach(seg => map.removeLayer(seg));
+  segmentsCarte = [];
+}
+
+// -------------------------------------------------------
+// Redessine tous les segments de route (un polyline par leg)
+// avec interactivité clic → scission
+// -------------------------------------------------------
+function redessinerSegments() {
+  supprimerSegmentsCarte();
+  if (flightPlan.length < 2) return;
+
+  for (let i = 1; i < flightPlan.length; i++) {
+    const ptA = flightPlan[i - 1];
+    const ptB = flightPlan[i];
+    const legIndex = i;
+
+    const seg = L.polyline(
+      [[ptA.lat, ptA.lon], [ptB.lat, ptB.lon]],
+      { color: '#ff1744', weight: 3, opacity: 0.6 }
+    ).addTo(map);
+
+    // Curseur main + survol
+    seg.on('mouseover', () => {
+      seg.setStyle({ weight: 3, color: '#ff6d00' });
+      map.getContainer().style.cursor = 'crosshair';
+    });
+    seg.on('mouseout', () => {
+      seg.setStyle({ weight: 3, color: '#ff1744' });
+      map.getContainer().style.cursor = '';
+    });
+
+    // Mousedown sur le segment → démarrage drag immédiat
+    seg.on('mousedown', (e) => {
+      L.DomEvent.stopPropagation(e);
+      L.DomEvent.preventDefault(e);
+      initierDragScission(e.latlng, legIndex, e.originalEvent);
+    });
+
+    segmentsCarte.push(seg);
+  }
+}
+
+// -------------------------------------------------------
+// Scission : crée un marqueur draggable temporaire
+// -------------------------------------------------------
+let marqueurTemporaire = null; // Marqueur en cours de drag
+
+function initierDragScission(latlng, legIndex, originalMouseEvent) {
+  // Supprimer un éventuel marqueur temporaire précédent
+  if (marqueurTemporaire) {
+    map.removeLayer(marqueurTemporaire);
+    marqueurTemporaire = null;
+  }
+
+  // Désactiver le drag de la carte pendant notre drag
+  map.dragging.disable();
+
+  // Créer le marqueur à la position du clic
+  marqueurTemporaire = L.marker(latlng, {
+    draggable: false, // on gère le drag manuellement via les events DOM
+    icon: L.divIcon({
+      className: '',
+      html: '<div style="width:14px;height:14px;background:#00bcd4;border:2px solid #fff;border-radius:50%;box-shadow:0 0 6px rgba(0,188,212,0.8);"></div>',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    })
+  }).addTo(map);
+
+  map.getContainer().style.cursor = 'grabbing';
+
+  // Suivi du drag via les événements DOM natifs sur le container de la carte
+  function onMouseMove(e) {
+    const containerRect = map.getContainer().getBoundingClientRect();
+    const point = L.point(e.clientX - containerRect.left, e.clientY - containerRect.top);
+    const newLatLng = map.containerPointToLatLng(point);
+    marqueurTemporaire.setLatLng(newLatLng);
+  }
+
+  function onMouseUp(e) {
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+
+    map.dragging.enable();
+    map.getContainer().style.cursor = '';
+
+    const pos = marqueurTemporaire.getLatLng();
+    ouvrirModaleConfirmation(pos, legIndex, null);
+  }
+
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+// -------------------------------------------------------
+// Rendu visuel d'un point sur la carte (avec drag si ni départ ni arrivée)
+// -------------------------------------------------------
+function tracerPointVisuel(point, indexDansFlightPlan) {
   if (!map) return;
 
+  const isDraggable = indexDansFlightPlan !== undefined
+    && indexDansFlightPlan > 0
+    && indexDansFlightPlan < flightPlan.length - 1;
+
   const stylePointVFR = {
-    radius: 5,
-    fillColor: "#ff7043",
+    radius: isDraggable ? 7 : 5,
+    fillColor: isDraggable ? "#ff7043" : "#888",
     color: "#ffffff",
-    weight: 1.5,
+    weight: isDraggable ? 2 : 1.5,
     opacity: 1,
     fillOpacity: 0.9
   };
 
-  const popupText = `<b>${point.name}</b>`;
   const marqueur = L.circleMarker([point.lat, point.lon], stylePointVFR)
     .addTo(map)
-    .bindPopup(popupText);
+    .bindPopup(`<b>${point.name}</b>`);
+
+  if (isDraggable) {
+    marqueur.on('mouseover', () => {
+      map.getContainer().style.cursor = 'grab';
+    });
+    marqueur.on('mouseout', () => {
+      map.getContainer().style.cursor = '';
+    });
+
+    // Mousedown → drag DOM natif immédiat, sans créer d'étape intermédiaire
+    marqueur.on('mousedown', (e) => {
+      L.DomEvent.stopPropagation(e);
+      L.DomEvent.preventDefault(e);
+
+      map.dragging.disable();
+      map.getContainer().style.cursor = 'grabbing';
+      marqueur.setStyle({ opacity: 0.4, fillOpacity: 0.4 });
+
+      function onMouseMove(ev) {
+        const containerRect = map.getContainer().getBoundingClientRect();
+        const pt = L.point(ev.clientX - containerRect.left, ev.clientY - containerRect.top);
+        const newLatLng = map.containerPointToLatLng(pt);
+        marqueur.setLatLng(newLatLng);
+      }
+
+      function onMouseUp(ev) {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+
+        map.dragging.enable();
+        map.getContainer().style.cursor = '';
+        marqueur.setStyle({ opacity: 1, fillOpacity: 0.9 });
+
+        const pos = marqueur.getLatLng();
+        ouvrirModaleConfirmation(pos, null, indexDansFlightPlan);
+      }
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+  }
 
   marqueursCarte.push(marqueur);
-  flightPathLine.addLatLng([point.lat, point.lon]);
+}
+
+// -------------------------------------------------------
+// Modale de confirmation (scission ou déplacement)
+// insertLeg   : index du leg scindé (scission), ou null si déplacement
+// moveIndex   : index dans flightPlan du point déplacé, ou null si scission
+// -------------------------------------------------------
+let _confirmCallback = null;
+
+function ouvrirModaleConfirmation(latlng, insertLeg, moveIndex) {
+  const overlay = document.getElementById('wp-confirm-overlay');
+  const titleEl = document.getElementById('wp-confirm-title');
+  const nameInput = document.getElementById('wp-confirm-name');
+  const latEl = document.getElementById('wp-confirm-lat');
+  const lonEl = document.getElementById('wp-confirm-lon');
+  const errEl = document.getElementById('wp-confirm-error');
+
+  // Titre selon le contexte
+  if (moveIndex !== null) {
+    titleEl.textContent = currentLang === 'fr'
+      ? `Déplacer ${flightPlan[moveIndex].name}`
+      : `Move ${flightPlan[moveIndex].name}`;
+    nameInput.value = flightPlan[moveIndex].name;
+  } else {
+    titleEl.textContent = currentLang === 'fr' ? 'Nouveau point de report' : 'New waypoint';
+    nameInput.value = prochainNomWP();
+  }
+
+  latEl.value = latlng.lat.toFixed(6);
+  lonEl.value = latlng.lng.toFixed(6);
+  errEl.textContent = '';
+
+  overlay.classList.add('visible');
+  setTimeout(() => nameInput.focus(), 50);
+
+  // Stocker le callback selon le mode
+  _confirmCallback = async () => {
+    const name = nameInput.value.trim();
+    if (!name) {
+      errEl.textContent = currentLang === 'fr' ? 'Veuillez renseigner un identifiant.' : 'Please enter an identifier.';
+      return;
+    }
+
+    overlay.classList.remove('visible');
+
+    if (moveIndex !== null) {
+      // Déplacement : mise à jour des coordonnées du point existant
+      flightPlan[moveIndex].lat = latlng.lat;
+      flightPlan[moveIndex].lon = latlng.lng;
+      flightPlan[moveIndex].name = name;
+      flightPlan[moveIndex].ident = name;
+    } else {
+      // Scission : insertion du nouveau point dans le plan
+      const nouveauPoint = { name, ident: name, lat: latlng.lat, lon: latlng.lng };
+      flightPlan.splice(insertLeg, 0, nouveauPoint);
+      const altVoisin = legAltitudes[insertLeg] ?? ALT_DEFAULT;
+      legAltitudes.splice(insertLeg, 0, altVoisin);
+      if (activeLegIndex >= insertLeg) activeLegIndex++;
+    }
+
+    // Nettoyer le marqueur temporaire si présent
+    if (marqueurTemporaire) {
+      map.removeLayer(marqueurTemporaire);
+      marqueurTemporaire = null;
+    }
+
+    // Redessiner carte complète
+    marqueursCarte.forEach(m => map.removeLayer(m));
+    marqueursCarte = [];
+    supprimerSegmentsCarte();
+    await calculerDeclinaisonCentroide();
+    flightPlan.forEach((p, idx) => tracerPointVisuel(p, idx));
+    redessinerSegments();
+    const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
+    map.fitBounds(bounds, { padding: [50, 50] });
+    mettreAJourLogDeNav();
+  };
 }
 
 // -------------------------------------------------------
@@ -539,6 +1085,70 @@ async function calculerDeclinaisonCentroide() {
 }
 
 // -------------------------------------------------------
+// Modale édition leg (scope global — appelée depuis mettreAJourLogDeNav)
+// -------------------------------------------------------
+function ouvrirModaleEditLeg(legIndex) {
+  const ptA = flightPlan[legIndex - 1];
+  const ptB = flightPlan[legIndex];
+
+  // Remplir le sous-titre
+  document.getElementById('edit-leg-subtitle').textContent =
+    TRANSLATIONS[currentLang].editLegSubtitle(legIndex);
+
+  // Helper : valeur absolue + direction radio
+  function fillCoord(latId, latRadioName, lonId, lonRadioName, pt) {
+    document.getElementById(latId).value = Math.abs(pt.lat).toFixed(6);
+    document.getElementById(lonId).value = Math.abs(pt.lon).toFixed(6);
+    document.querySelectorAll(`input[name="${latRadioName}"]`).forEach(r => {
+      r.checked = (r.value === (pt.lat >= 0 ? 'N' : 'S'));
+    });
+    document.querySelectorAll(`input[name="${lonRadioName}"]`).forEach(r => {
+      r.checked = (r.value === (pt.lon >= 0 ? 'E' : 'W'));
+    });
+  }
+
+  document.getElementById('edit-leg-dep-name').value = ptA.name;
+  fillCoord('edit-leg-dep-lat', 'edit-dep-lat-dir', 'edit-leg-dep-lon', 'edit-dep-lon-dir', ptA);
+
+  document.getElementById('edit-leg-arr-name').value = ptB.name;
+  fillCoord('edit-leg-arr-lat', 'edit-arr-lat-dir', 'edit-leg-arr-lon', 'edit-arr-lon-dir', ptB);
+
+  document.getElementById('edit-leg-error').textContent = '';
+
+  // Stocker l'index courant pour la validation
+  window._editLegIndex = legIndex;
+  document.getElementById('edit-leg-overlay').style.display = 'flex';
+}
+
+// -------------------------------------------------------
+// Modale suppression leg (scope global — appelée depuis mettreAJourLogDeNav)
+// -------------------------------------------------------
+window._deleteLegCallback = null;
+
+function ouvrirModaleDeleteLeg(legIndex) {
+  const ptA = flightPlan[legIndex - 1];
+  const ptB = flightPlan[legIndex];
+  const msg = TRANSLATIONS[currentLang].deleteLegMsg(ptA.name, ptB.name);
+  document.getElementById('confirm-delete-msg').textContent = msg;
+  window._deleteLegCallback = () => {
+    flightPlan.splice(legIndex, 1);
+    legAltitudes.splice(legIndex, 1);
+    if (activeLegIndex > flightPlan.length - 1) activeLegIndex = Math.max(1, flightPlan.length - 1);
+    marqueursCarte.forEach(m => map.removeLayer(m));
+    marqueursCarte = [];
+    supprimerSegmentsCarte();
+    flightPlan.forEach((p, idx) => tracerPointVisuel(p, idx));
+    redessinerSegments();
+    if (flightPlan.length > 1) {
+      const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
+      map.fitBounds(bounds, { padding: [50, 50], animate: false });
+    }
+    mettreAJourLogDeNav();
+  };
+  document.getElementById('confirm-delete-overlay').style.display = 'flex';
+}
+
+// -------------------------------------------------------
 // Affichage de la déclinaison dans le titre
 // -------------------------------------------------------
 function actualiserAffichageDeclinaison() {
@@ -567,7 +1177,7 @@ function mettreAJourLogDeNav() {
   tbody.innerHTML = '';
 
   if (flightPlan.length === 0) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="10">${t('emptyPlan')}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="12">${t('emptyPlan')}</td></tr>`;
     return;
   }
 
@@ -634,6 +1244,9 @@ function mettreAJourLogDeNav() {
     const isDone = i < activeLegIndex;   // legs au-dessus du leg actif = terminés
     const isActive = i === activeLegIndex; // leg actif courant
 
+    // 6b. Altitude du leg
+    const altLeg = legAltitudes[i] ?? ALT_DEFAULT;
+
     // 7. Injection dans le tableau
     const row = document.createElement('tr');
     row.dataset.legIndex = i;
@@ -644,12 +1257,13 @@ function mettreAJourLogDeNav() {
       <td>${ptA.name}</td>
       <td></td>
       <td>${ptB.name}</td>
-      <td>3000</td>
+      <td><span class="alt-val">${altLeg}</span> <button class="btn-edit-alt" onclick="window.ouvrirModaleAltitude(${i})" title="${currentLang === 'fr' ? 'Modifier l\'altitude' : 'Edit altitude'}">✏️</button></td>
       <td>${distanceNM.toFixed(1)}</td>
       <td>${Math.round(rvDeg).toString().padStart(3, '0')}°</td>
       <td>${Math.round(capMagDeg).toString().padStart(3, '0')}°</td>
       <td>${Math.round(gs)}</td>
       <td>${tempsFormate}</td>
+      <td></td>
       <td></td>
     `;
 
@@ -698,7 +1312,27 @@ function mettreAJourLogDeNav() {
       }
       mettreAJourLogDeNav();
     });
-    row.querySelector('td:last-child').appendChild(checkbox);
+    row.querySelector('td:nth-last-child(2)').appendChild(checkbox);
+
+    // Bouton éditer leg — désactivé si le leg touche un aéroport fixe (1er ou dernier point)
+    const toucheAeroport = (i === 1) || (i === flightPlan.length - 1);
+    const btnEdit = document.createElement('button');
+    btnEdit.className = 'btn-edit-leg';
+    btnEdit.textContent = '✏️';
+    btnEdit.title = currentLang === 'fr' ? 'Éditer ce leg' : 'Edit this leg';
+    btnEdit.disabled = toucheAeroport;
+    btnEdit.addEventListener('click', () => ouvrirModaleEditLeg(i));
+    row.querySelector('td:last-child').appendChild(btnEdit);
+
+    // Bouton supprimer leg — désactivé s'il ne reste que 2 points
+    const canDelete = flightPlan.length > 2;
+    const btnDelete = document.createElement('button');
+    btnDelete.className = 'btn-delete-leg';
+    btnDelete.textContent = '🗑️';
+    btnDelete.title = currentLang === 'fr' ? 'Supprimer ce leg' : 'Delete this leg';
+    btnDelete.disabled = !canDelete;
+    btnDelete.addEventListener('click', () => ouvrirModaleDeleteLeg(i));
+    row.querySelector('td:last-child').appendChild(btnDelete);
 
     tbody.appendChild(row);
   }

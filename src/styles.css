@@ -16,7 +16,8 @@ body {
 }
 
 #left-panel {
-    flex: 1;
+    flex: 0 0 60%;
+    min-width: 380px;
     padding: 20px;
     box-sizing: border-box;
     border-right: 1px solid #2d2d2d;
@@ -24,7 +25,8 @@ body {
 }
 
 #right-panel {
-    width: 450px;
+    flex: 0 0 40%;
+    min-width: 480px;
     display: flex;
     flex-direction: column;
     background-color: #1a1a1a;
@@ -462,6 +464,7 @@ tr:hover {
     letter-spacing: 0.5px;
 }
 
+/* Anciennes classes conservées pour compatibilité éventuelle */
 .create-flight-section {
     background-color: #222;
     border: 1px solid #2d2d2d;
@@ -477,16 +480,58 @@ tr:hover {
     font-weight: 600;
 }
 
-.create-flight-search-row {
+/* -------------------------------------------------- */
+/* Modale Créer plan de vol — classes cf-*            */
+/* -------------------------------------------------- */
+.cf-section {
+    background-color: #222;
+    border: 1px solid #2d2d2d;
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+}
+
+.cf-section h4 {
+    margin: 0 0 12px 0;
+    color: #e0e0e0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.cf-search-row {
     display: flex;
     align-items: center;
     gap: 8px;
     margin-bottom: 12px;
 }
 
-.create-flight-search-row .input-icao {
+.cf-search-row .input-icao {
     width: 9ch;
     flex-shrink: 0;
+}
+
+/* Ligne coord + boutons radio — miroir de insert-wp-coord-row */
+.cf-coord-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.cf-radio-group {
+    display: flex;
+    gap: 10px;
+    padding-bottom: 9px;
+    flex-shrink: 0;
+}
+
+/* Suppression des spinners sur les inputs coord de la modale création */
+#create-lat-dep,
+#create-lon-dep,
+#create-lat-arr,
+#create-lon-arr {
+    -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 .btn-search {
@@ -687,4 +732,261 @@ tr:hover {
 #insert-wp-lon {
     -moz-appearance: textfield;
     appearance: textfield;
+}
+/* -------------------------------------------------- */
+/* Bouton crayon — édition altitude dans le tableau   */
+/* -------------------------------------------------- */
+.btn-edit-alt {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0 0 0 5px;
+    line-height: 1;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    vertical-align: middle;
+}
+
+.btn-edit-alt:hover {
+    opacity: 1;
+}
+
+/* -------------------------------------------------- */
+/* Modale Altitude                                    */
+/* -------------------------------------------------- */
+#alt-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.70);
+    z-index: 9998;
+    align-items: center;
+    justify-content: center;
+}
+
+#alt-overlay.visible {
+    display: flex;
+}
+
+#alt-popup {
+    background: #1a1a1a;
+    border: 1px solid #00bcd4;
+    border-radius: 10px;
+    padding: 24px 28px;
+    width: 300px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
+}
+
+#alt-popup h3 {
+    margin: 0 0 20px 0;
+    color: #00bcd4;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.alt-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.btn-alt-step {
+    background-color: #262626;
+    border: 1px solid #3d3d3d;
+    border-radius: 4px;
+    color: #00bcd4;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+}
+
+.btn-alt-step:hover {
+    background-color: #333;
+    border-color: #00bcd4;
+}
+
+#alt-input {
+    width: 7ch;
+    text-align: center;
+    background-color: #262626;
+    border: 1px solid #3d3d3d;
+    border-radius: 4px;
+    color: #fff;
+    padding: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    outline: none;
+    transition: border-color 0.2s;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+#alt-input:focus {
+    border-color: #00bcd4;
+}
+
+.alt-unit {
+    font-size: 13px;
+    color: #888;
+}
+
+/* -------------------------------------------------- */
+/* Modale confirmation waypoint (scission / drag)     */
+/* -------------------------------------------------- */
+#wp-confirm-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.70);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+
+#wp-confirm-overlay.visible {
+    display: flex;
+}
+
+#wp-confirm-popup {
+    background: #1a1a1a;
+    border: 1px solid #00bcd4;
+    border-radius: 10px;
+    padding: 24px 28px;
+    width: 340px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
+}
+
+#wp-confirm-popup h3 {
+    margin: 0 0 16px 0;
+    color: #00bcd4;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Champs coordonnées en lecture seule — style distinct */
+.input-coords-readonly {
+    background-color: #1a1a1a;
+    border: 1px solid #2d2d2d;
+    border-radius: 4px;
+    color: #00bcd4;
+    padding: 7px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    width: 100%;
+    box-sizing: border-box;
+    cursor: default;
+}
+
+/* -------------------------------------------------- */
+/* Bouton flottant changement fond de carte           */
+/* -------------------------------------------------- */
+.layer-toggle-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.btn-layer-toggle {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+    border: 1px solid #00bcd4;
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    transition: background-color 0.2s, color 0.2s;
+    white-space: nowrap;
+}
+
+.btn-layer-toggle:hover {
+    background-color: #00bcd4;
+    color: #121212;
+}
+
+.layer-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background-color: #1a1a1a;
+    border: 1px solid #00bcd4;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.7);
+    min-width: 140px;
+    z-index: 1000;
+}
+
+.layer-dropdown-item {
+    padding: 9px 14px;
+    font-size: 13px;
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.layer-dropdown-item:hover {
+    background-color: #2a2a2a;
+}
+
+.layer-dropdown-item.active {
+    color: #00bcd4;
+    font-weight: 600;
+}
+
+/* -------------------------------------------------- */
+/* Bouton suppression leg                             */
+/* -------------------------------------------------- */
+.btn-delete-leg {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    opacity: 0.6;
+    transition: opacity 0.15s, background-color 0.15s;
+}
+
+.btn-delete-leg:hover:not(:disabled) {
+    opacity: 1;
+    background-color: rgba(255, 23, 68, 0.15);
+}
+
+.btn-delete-leg:disabled {
+    opacity: 0.2;
+    cursor: not-allowed;
+}
+
+/* -------------------------------------------------- */
+/* Bouton édition leg                                 */
+/* -------------------------------------------------- */
+.btn-edit-leg {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    opacity: 0.6;
+    transition: opacity 0.15s, background-color 0.15s;
+    margin-right: 2px;
+}
+
+.btn-edit-leg:hover:not(:disabled) {
+    opacity: 1;
+    background-color: rgba(0, 188, 212, 0.15);
+}
+
+.btn-edit-leg:disabled {
+    opacity: 0.2;
+    cursor: not-allowed;
 }

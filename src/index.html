@@ -111,11 +111,12 @@
                                     <th data-i18n="colGs">GS (kt)</th>
                                     <th data-i18n="colDuration">Durée</th>
                                     <th data-i18n="colDone">Fait</th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody id="nav-log-body">
                                 <tr class="empty-row">
-                                    <td colspan="10" data-i18n="emptyPlan">Aucun point dans le plan de vol</td>
+                                    <td colspan="12" data-i18n="emptyPlan">Aucun point dans le plan de vol</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -132,6 +133,77 @@
     </div>
 
     <!-- Modale Insérer point tournant -->
+    <!-- Modale édition leg -->
+    <div id="edit-leg-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.70); z-index:9999; align-items:center; justify-content:center;">
+        <div id="edit-leg-popup" style="background:#1a1a1a; border:1px solid #00bcd4; border-radius:10px; padding:28px 32px; width:420px; box-shadow:0 8px 40px rgba(0,0,0,0.7);">
+            <h3 id="edit-leg-title" style="margin:0 0 4px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="editLegTitle">Éditer le leg</h3>
+            <p id="edit-leg-subtitle" style="color:#888; font-size:12px; margin:0 0 18px 0;"></p>
+
+            <!-- Départ -->
+            <div style="margin-bottom:16px;">
+                <h4 style="color:#00bcd4; font-size:12px; text-transform:uppercase; margin:0 0 10px 0;" data-i18n="editLegDep">🛫 Point de départ</h4>
+                <div class="insert-wp-name-row" style="margin-bottom:8px;">
+                    <input type="text" id="edit-leg-dep-name" class="insert-wp-name-input" autocomplete="off" spellcheck="false" placeholder="Nom / Ident">
+                </div>
+                <div class="insert-wp-coord-row">
+                    <div class="input-group" style="flex:1;">
+                        <label data-i18n="latitude">Latitude</label>
+                        <input type="text" id="edit-leg-dep-lat" inputmode="decimal" placeholder="47.200000">
+                    </div>
+                    <div class="insert-wp-radio-group">
+                        <label class="radio-label"><input type="radio" name="edit-dep-lat-dir" value="N" checked> N</label>
+                        <label class="radio-label"><input type="radio" name="edit-dep-lat-dir" value="S"> S</label>
+                    </div>
+                </div>
+                <div class="insert-wp-coord-row" style="margin-top:6px;">
+                    <div class="input-group" style="flex:1;">
+                        <label data-i18n="longitude">Longitude</label>
+                        <input type="text" id="edit-leg-dep-lon" inputmode="decimal" placeholder="6.080000">
+                    </div>
+                    <div class="insert-wp-radio-group">
+                        <label class="radio-label"><input type="radio" name="edit-dep-lon-dir" value="E" checked> E</label>
+                        <label class="radio-label"><input type="radio" name="edit-dep-lon-dir" value="W"> W</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Arrivée -->
+            <div style="margin-bottom:16px;">
+                <h4 style="color:#00bcd4; font-size:12px; text-transform:uppercase; margin:0 0 10px 0;" data-i18n="editLegArr">🛬 Point d'arrivée</h4>
+                <div class="insert-wp-name-row" style="margin-bottom:8px;">
+                    <input type="text" id="edit-leg-arr-name" class="insert-wp-name-input" autocomplete="off" spellcheck="false" placeholder="Nom / Ident">
+                </div>
+                <div class="insert-wp-coord-row">
+                    <div class="input-group" style="flex:1;">
+                        <label data-i18n="latitude">Latitude</label>
+                        <input type="text" id="edit-leg-arr-lat" inputmode="decimal" placeholder="47.200000">
+                    </div>
+                    <div class="insert-wp-radio-group">
+                        <label class="radio-label"><input type="radio" name="edit-arr-lat-dir" value="N" checked> N</label>
+                        <label class="radio-label"><input type="radio" name="edit-arr-lat-dir" value="S"> S</label>
+                    </div>
+                </div>
+                <div class="insert-wp-coord-row" style="margin-top:6px;">
+                    <div class="input-group" style="flex:1;">
+                        <label data-i18n="longitude">Longitude</label>
+                        <input type="text" id="edit-leg-arr-lon" inputmode="decimal" placeholder="6.080000">
+                    </div>
+                    <div class="insert-wp-radio-group">
+                        <label class="radio-label"><input type="radio" name="edit-arr-lon-dir" value="E" checked> E</label>
+                        <label class="radio-label"><input type="radio" name="edit-arr-lon-dir" value="W"> W</label>
+                    </div>
+                </div>
+            </div>
+
+            <div id="edit-leg-error" class="field-error"></div>
+
+            <div class="create-flight-actions">
+                <button id="btn-edit-leg-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
+                <button id="btn-edit-leg-validate" class="btn-primary" data-i18n="btnValidate">Valider</button>
+            </div>
+        </div>
+    </div>
+
     <div id="insert-wp-overlay">
         <div id="insert-wp-popup">
             <h3 id="insert-wp-title" data-i18n="insertWpTitle">Insérer un point tournant</h3>
@@ -193,42 +265,72 @@
         <div id="create-flight-popup">
             <h3 id="create-flight-title" data-i18n="createFlightTitle">Créer un plan de vol</h3>
 
-            <div class="create-flight-section">
+            <!-- Section Départ -->
+            <div class="cf-section">
                 <h4 data-i18n="createFlightDep">🛫 Départ</h4>
-                <div class="create-flight-search-row">
+                <div class="cf-search-row">
                     <input type="text" id="create-icao-dep" maxlength="8" class="input-icao" placeholder="LFQM"
                         autocomplete="off" spellcheck="false">
                     <button id="btn-search-dep" class="btn-search" data-i18n="btnSearch">Rechercher</button>
                     <span id="search-status-dep" class="search-status"></span>
                 </div>
-                <div class="create-flight-coords">
-                    <div class="input-group">
+
+                <!-- Latitude départ -->
+                <div class="cf-coord-row">
+                    <div class="input-group" style="flex:1;">
                         <label data-i18n="latitude">Latitude</label>
-                        <input type="number" id="create-lat-dep" step="0.000001" placeholder="47.2000">
+                        <input type="text" id="create-lat-dep" inputmode="decimal" placeholder="47.200000">
                     </div>
-                    <div class="input-group">
+                    <div class="cf-radio-group">
+                        <label class="radio-label"><input type="radio" name="dep-lat-dir" value="N" checked> N</label>
+                        <label class="radio-label"><input type="radio" name="dep-lat-dir" value="S"> S</label>
+                    </div>
+                </div>
+
+                <!-- Longitude départ -->
+                <div class="cf-coord-row">
+                    <div class="input-group" style="flex:1;">
                         <label data-i18n="longitude">Longitude</label>
-                        <input type="number" id="create-lon-dep" step="0.000001" placeholder="6.0800">
+                        <input type="text" id="create-lon-dep" inputmode="decimal" placeholder="6.080000">
+                    </div>
+                    <div class="cf-radio-group">
+                        <label class="radio-label"><input type="radio" name="dep-lon-dir" value="E" checked> E</label>
+                        <label class="radio-label"><input type="radio" name="dep-lon-dir" value="W"> W</label>
                     </div>
                 </div>
             </div>
 
-            <div class="create-flight-section">
+            <!-- Section Arrivée -->
+            <div class="cf-section">
                 <h4 data-i18n="createFlightArr">🛬 Arrivée</h4>
-                <div class="create-flight-search-row">
-                    <input type="text" id="create-icao-arr" maxlength="8" class="input-icao" placeholder="LFBD"
+                <div class="cf-search-row">
+                    <input type="text" id="create-icao-arr" maxlength="8" class="input-icao" placeholder="LFMN"
                         autocomplete="off" spellcheck="false">
                     <button id="btn-search-arr" class="btn-search" data-i18n="btnSearch">Rechercher</button>
                     <span id="search-status-arr" class="search-status"></span>
                 </div>
-                <div class="create-flight-coords">
-                    <div class="input-group">
+
+                <!-- Latitude arrivée -->
+                <div class="cf-coord-row">
+                    <div class="input-group" style="flex:1;">
                         <label data-i18n="latitude">Latitude</label>
-                        <input type="number" id="create-lat-arr" step="0.000001" placeholder="44.8300">
+                        <input type="text" id="create-lat-arr" inputmode="decimal" placeholder="43.658411">
                     </div>
-                    <div class="input-group">
+                    <div class="cf-radio-group">
+                        <label class="radio-label"><input type="radio" name="arr-lat-dir" value="N" checked> N</label>
+                        <label class="radio-label"><input type="radio" name="arr-lat-dir" value="S"> S</label>
+                    </div>
+                </div>
+
+                <!-- Longitude arrivée -->
+                <div class="cf-coord-row">
+                    <div class="input-group" style="flex:1;">
                         <label data-i18n="longitude">Longitude</label>
-                        <input type="number" id="create-lon-arr" step="0.000001" placeholder="-0.7100">
+                        <input type="text" id="create-lon-arr" inputmode="decimal" placeholder="7.215872">
+                    </div>
+                    <div class="cf-radio-group">
+                        <label class="radio-label"><input type="radio" name="arr-lon-dir" value="E" checked> E</label>
+                        <label class="radio-label"><input type="radio" name="arr-lon-dir" value="W"> W</label>
                     </div>
                 </div>
             </div>
@@ -242,12 +344,84 @@
         </div>
     </div>
 
+    <!-- Modale Altitude -->
+    <div id="alt-overlay">
+        <div id="alt-popup">
+            <h3 id="alt-title">Altitude — Leg <span id="alt-leg-num"></span></h3>
+            <div class="alt-display">
+                <button id="btn-alt-minus" class="btn-alt-step">−500</button>
+                <input type="text" id="alt-input" inputmode="numeric" maxlength="5">
+                <span class="alt-unit">ft</span>
+                <button id="btn-alt-plus" class="btn-alt-step">+500</button>
+            </div>
+            <div id="alt-error" class="field-error" style="text-align:center; min-height:16px;"></div>
+            <div class="create-flight-actions">
+                <button id="btn-alt-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
+                <button id="btn-alt-validate" class="btn-primary" data-i18n="btnValidate">Valider</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale confirmation waypoint (scission ligne ou déplacement point) -->
+    <div id="wp-confirm-overlay">
+        <div id="wp-confirm-popup">
+            <h3 id="wp-confirm-title">Nouveau point de report</h3>
+            <div class="cf-section">
+                <div class="input-group" style="margin-bottom:12px;">
+                    <label id="wp-confirm-name-label">Identifiant / Nom</label>
+                    <input type="text" id="wp-confirm-name" class="insert-wp-name-input" autocomplete="off" spellcheck="false">
+                </div>
+                <div class="cf-coord-row">
+                    <div class="input-group" style="flex:1;">
+                        <label data-i18n="latitude">Latitude</label>
+                        <input type="text" id="wp-confirm-lat" class="input-coords-readonly" readonly>
+                    </div>
+                </div>
+                <div class="cf-coord-row">
+                    <div class="input-group" style="flex:1;">
+                        <label data-i18n="longitude">Longitude</label>
+                        <input type="text" id="wp-confirm-lon" class="input-coords-readonly" readonly>
+                    </div>
+                </div>
+            </div>
+            <div id="wp-confirm-error" class="field-error" style="text-align:center; min-height:16px;"></div>
+            <div class="create-flight-actions">
+                <button id="btn-wp-confirm-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
+                <button id="btn-wp-confirm-validate" class="btn-primary" data-i18n="btnValidate">Valider</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Popup d'avertissement custom -->
     <div id="warning-overlay">
         <div id="warning-popup">
             <div id="warning-icon">⚠️</div>
             <div id="warning-message"></div>
             <button id="warning-close" class="btn-primary">OK</button>
+        </div>
+    </div>
+
+    <!-- Modale confirmation suppression leg -->
+    <div id="confirm-delete-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.70); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#1a1a1a; border:1px solid #ff1744; border-radius:10px; padding:28px 32px; width:340px; box-shadow:0 8px 40px rgba(0,0,0,0.7);">
+            <h3 style="margin:0 0 16px 0; color:#ff1744; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="deleteLegTitle">Supprimer le leg</h3>
+            <p id="confirm-delete-msg" style="color:#e0e0e0; font-size:14px; margin:0 0 20px 0;"></p>
+            <div style="display:flex; gap:10px;">
+                <button id="btn-confirm-delete-cancel" class="btn-secondary" style="flex:1; text-align:center;" data-i18n="btnCancel">Annuler</button>
+                <button id="btn-confirm-delete-ok" style="flex:2; background:#ff1744; color:#fff; border:none; border-radius:4px; padding:8px; font-size:13px; font-weight:600; cursor:pointer;" data-i18n="deleteLegConfirm">Supprimer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale confirmation Nouveau plan de vol -->
+    <div id="confirm-reset-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.70); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#1a1a1a; border:1px solid #00bcd4; border-radius:10px; padding:28px 32px; width:340px; box-shadow:0 8px 40px rgba(0,0,0,0.7);">
+            <h3 style="margin:0 0 16px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="confirmResetTitle">Nouveau plan de vol</h3>
+            <p style="color:#e0e0e0; font-size:14px; margin:0 0 20px 0;" data-i18n="confirmReset"></p>
+            <div style="display:flex; gap:10px;">
+                <button id="btn-confirm-reset-cancel" class="btn-secondary" style="flex:1; text-align:center;" data-i18n="btnCancel">Annuler</button>
+                <button id="btn-confirm-reset-ok" class="btn-primary" style="flex:2; margin-bottom:0;">OK</button>
+            </div>
         </div>
     </div>
 

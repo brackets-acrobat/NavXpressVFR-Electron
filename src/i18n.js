@@ -55,7 +55,15 @@ const TRANSLATIONS = {
     departure: "DÉPART",
 
     // Alerts & confirms
+    confirmResetTitle: "Nouveau plan de vol",
     confirmReset: "Voulez-vous vraiment réinitialiser le plan de vol actuel ?",
+    editLegTitle: "Éditer le leg",
+    editLegDep: "🛫 Point de départ",
+    editLegArr: "🛬 Point d'arrivée",
+    editLegSubtitle: (n) => `Leg n°${n}`,
+    deleteLegTitle: "Supprimer le leg",
+    deleteLegConfirm: "Supprimer",
+    deleteLegMsg: (from, to) => `Supprimer le leg ${from} → ${to} ?`,
     noWaypointsInFile: "Aucun waypoint trouvé dans ce fichier .lnmpln",
     parseError: "Erreur lors de l'analyse du fichier Little Navmap : ",
     fillFields: "Veuillez remplir correctement les champs.",
@@ -135,7 +143,15 @@ const TRANSLATIONS = {
     departure: "DEPARTURE",
 
     // Alerts & confirms
+    confirmResetTitle: "New flight plan",
     confirmReset: "Are you sure you want to reset the current flight plan?",
+    editLegTitle: "Edit leg",
+    editLegDep: "🛫 Departure point",
+    editLegArr: "🛬 Arrival point",
+    editLegSubtitle: (n) => `Leg #${n}`,
+    deleteLegTitle: "Delete leg",
+    deleteLegConfirm: "Delete",
+    deleteLegMsg: (from, to) => `Delete leg ${from} → ${to}?`,
     noWaypointsInFile: "No waypoints found in this .lnmpln file.",
     parseError: "Error parsing the Little Navmap file: ",
     fillFields: "Please fill in all fields correctly.",
