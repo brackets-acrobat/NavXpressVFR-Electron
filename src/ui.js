@@ -214,6 +214,152 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // --- Bouton + Modales : Import OurAirports ---
+  const btnImportOA       = document.getElementById('btn-import-ourairports');
+  const oaConfirmOverlay  = document.getElementById('oa-confirm-overlay');
+  const btnOaConfirmCancel = document.getElementById('btn-oa-confirm-cancel');
+  const btnOaConfirmOk    = document.getElementById('btn-oa-confirm-ok');
+  const oaProgressOverlay = document.getElementById('oa-progress-overlay');
+  const oaProgressList    = document.getElementById('oa-progress-list');
+  const oaProgressBarFill = document.getElementById('oa-progress-bar-fill');
+  const oaProgressCount   = document.getElementById('oa-progress-count');
+  const oaProgressSummary = document.getElementById('oa-progress-summary');
+  const btnOaProgressClose = document.getElementById('btn-oa-progress-close');
+
+  let _oaImportInProgress = false;
+  let _oaProgressUnsub = null;
+
+  function applyI18nIn(el) {
+    if (!el) return;
+    el.querySelectorAll('[data-i18n]').forEach(n => {
+      n.textContent = t(n.getAttribute('data-i18n'));
+    });
+  }
+
+  async function lancerImportOurAirports() {
+    if (_oaImportInProgress) return;
+    _oaImportInProgress = true;
+
+    // Réinitialiser la modale de progression
+    applyI18nIn(oaProgressOverlay);
+    oaProgressList.innerHTML = '';
+    oaProgressBarFill.style.width = '0%';
+    oaProgressCount.textContent = '0 / 0';
+    oaProgressSummary.textContent = '';
+    oaProgressSummary.style.color = '#888';
+    btnOaProgressClose.disabled = true;
+    oaProgressOverlay.classList.add('visible');
+
+    // Map name -> <li> pour mise à jour rapide
+    const itemByName = new Map();
+    let totalFiles = 0;
+    let doneCount = 0;
+
+    // S'abonner aux events de progression
+    if (_oaProgressUnsub) { try { _oaProgressUnsub(); } catch(_) {} }
+    _oaProgressUnsub = window.api.onOurAirportsProgress((data) => {
+      if (data.type === 'start') {
+        totalFiles = data.total;
+        doneCount = 0;
+        oaProgressCount.textContent = `0 / ${totalFiles}`;
+        oaProgressList.innerHTML = '';
+        itemByName.clear();
+        data.files.forEach(name => {
+          const li = document.createElement('li');
+          li.style.padding = '4px 8px';
+          li.style.color = '#888';
+          li.textContent = `⏸️ ${name}`;
+          oaProgressList.appendChild(li);
+          itemByName.set(name, li);
+        });
+      } else if (data.type === 'file-start') {
+        const li = itemByName.get(data.name);
+        if (li) {
+          li.style.color = '#00bcd4';
+          li.textContent = t('oaProgressDownloading')(data.name);
+        }
+      } else if (data.type === 'file-done') {
+        const li = itemByName.get(data.name);
+        if (li) {
+          li.style.color = '#00e676';
+          li.textContent = t('oaProgressFileOk')(data.name, data.count);
+        }
+        doneCount++;
+        oaProgressCount.textContent = `${doneCount} / ${totalFiles}`;
+        oaProgressBarFill.style.width = Math.round((doneCount / totalFiles) * 100) + '%';
+      } else if (data.type === 'file-error') {
+        const li = itemByName.get(data.name);
+        if (li) {
+          li.style.color = '#ff5252';
+          li.textContent = t('oaProgressFileError')(data.name) + ' — ' + data.error;
+        }
+        doneCount++;
+        oaProgressCount.textContent = `${doneCount} / ${totalFiles}`;
+        oaProgressBarFill.style.width = Math.round((doneCount / totalFiles) * 100) + '%';
+      } else if (data.type === 'done') {
+        const okCount = data.results.filter(r => r.ok).length;
+        const allOk = okCount === data.results.length;
+        oaProgressSummary.style.color = allOk ? '#00e676' : '#ffb300';
+        oaProgressSummary.innerHTML =
+          `<div>${t('oaProgressDone')(okCount, data.results.length)}</div>` +
+          `<div style="margin-top:4px; color:#888; font-size:11px; white-space:pre-wrap;">${t('oaProgressDoneDir')(data.dir)}</div>`;
+        btnOaProgressClose.disabled = false;
+      }
+    });
+
+    try {
+      await window.api.importerOurAirports();
+    } catch (err) {
+      console.error('Import OurAirports échec:', err);
+      oaProgressSummary.style.color = '#ff5252';
+      oaProgressSummary.textContent = '❌ ' + err.message;
+      btnOaProgressClose.disabled = false;
+    } finally {
+      _oaImportInProgress = false;
+    }
+  }
+
+  if (btnImportOA) {
+    btnImportOA.addEventListener('click', async () => {
+      let existe = false;
+      try { existe = await window.api.ourAirportsExiste(); } catch (_) {}
+      if (existe) {
+        applyI18nIn(oaConfirmOverlay);
+        oaConfirmOverlay.classList.add('visible');
+      } else {
+        await lancerImportOurAirports();
+      }
+    });
+  }
+
+  if (btnOaConfirmCancel) {
+    btnOaConfirmCancel.addEventListener('click', () => oaConfirmOverlay.classList.remove('visible'));
+  }
+  if (oaConfirmOverlay) {
+    oaConfirmOverlay.addEventListener('click', (e) => {
+      if (e.target === oaConfirmOverlay) oaConfirmOverlay.classList.remove('visible');
+    });
+  }
+  if (btnOaConfirmOk) {
+    btnOaConfirmOk.addEventListener('click', async () => {
+      oaConfirmOverlay.classList.remove('visible');
+      await lancerImportOurAirports();
+    });
+  }
+
+  if (btnOaProgressClose) {
+    btnOaProgressClose.addEventListener('click', () => {
+      if (!btnOaProgressClose.disabled) oaProgressOverlay.classList.remove('visible');
+    });
+  }
+  if (oaProgressOverlay) {
+    oaProgressOverlay.addEventListener('click', (e) => {
+      if (e.target === oaProgressOverlay && !btnOaProgressClose.disabled) {
+        oaProgressOverlay.classList.remove('visible');
+      }
+    });
+  }
+
   // --- Initialisation du système i18n ---
   initI18n();
 
@@ -1006,74 +1152,60 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // -------------------------------------------------------
-// Recherche OpenAIP — fonction globale (utilisée par toutes les modales)
+// Recherche aéroport — utilise la base OurAirports locale
+// (utilisée par toutes les modales)
 // -------------------------------------------------------
 async function rechercherAeroport(icao, statusEl, latEl, lonEl) {
   const code = icao.trim().toUpperCase();
   if (!code) return;
 
-  // Clé absente → message dans le statut, on laisse la main à l'utilisateur
-  if (!OPENAIP_API_KEY) {
-    statusEl.className = 'search-status error';
-    statusEl.textContent = t('apiKeyMissing');
-    return;
-  }
-
   statusEl.className = 'search-status';
   statusEl.textContent = t('searchSearching');
 
   try {
-    const url = `https://api.core.openaip.net/api/airports?icaoCode=${code}&page=1&limit=1`;
-    const resp = await fetch(url, {
-      headers: { 'x-openaip-api-key': OPENAIP_API_KEY }
-    });
+    const res = await window.api.rechercherAeroportOA(code);
 
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = await resp.json();
-
-    if (!data.items || data.items.length === 0) {
+    if (!res || !res.found) {
       statusEl.className = 'search-status error';
-      statusEl.textContent = t('searchNotFound');
+      if (res && res.reason === 'no-data') {
+        statusEl.textContent = t('oaDataMissing');
+      } else if (res && res.reason === 'no-coords') {
+        statusEl.textContent = t('searchCoordsNotFound');
+      } else {
+        statusEl.textContent = t('searchNotFound');
+      }
       return;
     }
 
-    const airport = data.items[0];
-    const lat = airport.geometry?.coordinates?.[1];
-    const lon = airport.geometry?.coordinates?.[0];
-    const name = airport.name || code;
+    const { lat, lon, name } = res;
 
-    if (lat !== undefined && lon !== undefined) {
-      // Injection des coordonnées (valeur absolue — les radios N/S/E/W gèrent le signe)
-      latEl.value = Math.abs(lat).toFixed(6);
-      lonEl.value = Math.abs(lon).toFixed(6);
+    // Injection des coordonnées (valeur absolue — les radios N/S/E/W gèrent le signe)
+    latEl.value = Math.abs(lat).toFixed(6);
+    lonEl.value = Math.abs(lon).toFixed(6);
 
-      // Mettre à jour les radios N/S et E/W si présentes dans le même formulaire
-      const latRadioName = latEl.closest('form, div')
-        ?.querySelector('input[type="radio"][value="N"], input[type="radio"][value="S"]')
-        ?.name;
-      const lonRadioName = lonEl.closest('form, div')
-        ?.querySelector('input[type="radio"][value="E"], input[type="radio"][value="W"]')
-        ?.name;
+    // Mettre à jour les radios N/S et E/W si présentes dans le même formulaire
+    const latRadioName = latEl.closest('form, div')
+      ?.querySelector('input[type="radio"][value="N"], input[type="radio"][value="S"]')
+      ?.name;
+    const lonRadioName = lonEl.closest('form, div')
+      ?.querySelector('input[type="radio"][value="E"], input[type="radio"][value="W"]')
+      ?.name;
 
-      if (latRadioName) {
-        const latDir = lat >= 0 ? 'N' : 'S';
-        document.querySelector(`input[name="${latRadioName}"][value="${latDir}"]`).checked = true;
-      }
-      if (lonRadioName) {
-        const lonDir = lon >= 0 ? 'E' : 'W';
-        document.querySelector(`input[name="${lonRadioName}"][value="${lonDir}"]`).checked = true;
-      }
-
-      statusEl.className = 'search-status ok';
-      statusEl.textContent = name;
-    } else {
-      statusEl.className = 'search-status error';
-      statusEl.textContent = t('searchCoordsNotFound');
+    if (latRadioName) {
+      const latDir = lat >= 0 ? 'N' : 'S';
+      document.querySelector(`input[name="${latRadioName}"][value="${latDir}"]`).checked = true;
     }
+    if (lonRadioName) {
+      const lonDir = lon >= 0 ? 'E' : 'W';
+      document.querySelector(`input[name="${lonRadioName}"][value="${lonDir}"]`).checked = true;
+    }
+
+    statusEl.className = 'search-status ok';
+    statusEl.textContent = name || code;
   } catch (err) {
     statusEl.className = 'search-status error';
     statusEl.textContent = t('searchNetworkError');
-    console.error('OpenAIP error:', err);
+    console.error('OurAirports search error:', err);
   }
 }
 

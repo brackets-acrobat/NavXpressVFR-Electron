@@ -111,6 +111,21 @@ const TRANSLATIONS = {
     searchNotFound: "Aéroport non trouvé",
     searchCoordsNotFound: "Coordonnées introuvables",
     searchNetworkError: "Erreur réseau",
+
+    // Import données OurAirports
+    btnImportOurAirports: "🌐 Importer données OurAirports",
+    btnClose: "Fermer",
+    oaConfirmOverwriteTitle: "Remplacer les données ?",
+    oaConfirmOverwriteMsg: "Des données OurAirports sont déjà présentes. Voulez-vous les remplacer par la dernière version disponible ?",
+    oaConfirmOverwriteBtn: "Remplacer",
+    oaProgressTitle: "Import OurAirports",
+    oaProgressSubtitle: "Téléchargement des données aéronautiques…",
+    oaProgressDownloading: (name) => `⏳ Téléchargement de ${name}…`,
+    oaProgressFileOk: (name, count) => `✅ ${name} — ${count.toLocaleString('fr-FR')} entrées`,
+    oaProgressFileError: (name) => `❌ ${name} — échec`,
+    oaProgressDone: (ok, total) => `Terminé : ${ok}/${total} fichiers importés.`,
+    oaProgressDoneDir: (dir) => `Fichiers JSON enregistrés dans :\n${dir}`,
+    oaDataMissing: "⚠️ Cliquez d'abord sur 'Importer données OurAirports'",
   },
 
   en: {
@@ -221,6 +236,21 @@ const TRANSLATIONS = {
     searchNotFound: "Airport not found",
     searchCoordsNotFound: "Coordinates not found",
     searchNetworkError: "Network error",
+
+    // OurAirports data import
+    btnImportOurAirports: "🌐 Import OurAirports data",
+    btnClose: "Close",
+    oaConfirmOverwriteTitle: "Replace data?",
+    oaConfirmOverwriteMsg: "OurAirports data is already present. Do you want to replace it with the latest available version?",
+    oaConfirmOverwriteBtn: "Replace",
+    oaProgressTitle: "OurAirports import",
+    oaProgressSubtitle: "Downloading aeronautical data…",
+    oaProgressDownloading: (name) => `⏳ Downloading ${name}…`,
+    oaProgressFileOk: (name, count) => `✅ ${name} — ${count.toLocaleString('en-US')} entries`,
+    oaProgressFileError: (name) => `❌ ${name} — failed`,
+    oaProgressDone: (ok, total) => `Done: ${ok}/${total} files imported.`,
+    oaProgressDoneDir: (dir) => `JSON files saved in:\n${dir}`,
+    oaDataMissing: "⚠️ Click 'Import OurAirports data' first",
   }
 };
 

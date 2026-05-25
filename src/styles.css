@@ -145,20 +145,35 @@ h1 {
 #top-buttons-row2 {
     display: flex;
     flex-direction: row;
+    gap: 8px;
 }
 
 #top-buttons-row2 .btn-api {
     flex: 1;
     text-align: center;
     white-space: nowrap;
-    border-color: #ffb300;
-    color: #ffb300;
+    border-color: #00bcd4;
+    color: #00bcd4;
 }
 
 #top-buttons-row2 .btn-api:hover {
-    background-color: #ffb300;
+    background-color: #00bcd4;
     color: #121212;
-    border-color: #ffb300;
+    border-color: #00bcd4;
+}
+
+#top-buttons-row2 .btn-ourairports {
+    flex: 1;
+    text-align: center;
+    white-space: nowrap;
+    border-color: #00bcd4;
+    color: #00bcd4;
+}
+
+#top-buttons-row2 .btn-ourairports:hover {
+    background-color: #00bcd4;
+    color: #121212;
+    border-color: #00bcd4;
 }
 
 
