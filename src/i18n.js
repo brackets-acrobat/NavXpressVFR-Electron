@@ -89,6 +89,28 @@ const TRANSLATIONS = {
     btnSearch: "Rechercher",
     btnCancel: "Annuler",
     btnValidate: "Valider",
+
+    // Modale API OpenAIP
+    btnApiOpenAIP: "🔑 Ajouter API OpenAIP",
+    apiModalTitle: "Clé API OpenAIP",
+    apiModalLabel: "Clé API",
+    apiModalPlaceholder: "Collez votre clé API ici",
+    apiModalMaskedHint: "Une clé est déjà enregistrée. Saisissez une nouvelle clé pour la remplacer.",
+    btnTestKey: "Tester la clé",
+    apiTestOk: "✅ Clé valide !",
+    apiTestFail: "❌ Clé invalide ou erreur réseau.",
+    apiTestLoading: "⏳ Test en cours...",
+    apiSaveSuccess: "✅ Clé sauvegardée avec succès.",
+    apiSaveError: "❌ Erreur lors de la sauvegarde.",
+    apiEmptyKey: "Veuillez saisir une clé API.",
+    apiConfirmOverwriteTitle: "Remplacer la clé API ?",
+    apiConfirmOverwriteMsg: "Une clé OpenAIP est déjà enregistrée. Voulez-vous la remplacer par la nouvelle clé ?",
+    apiConfirmOverwriteBtn: "Remplacer",
+    apiKeyMissing: "⚠️ Clé API OpenAIP non configurée",
+    searchSearching: "Recherche...",
+    searchNotFound: "Aéroport non trouvé",
+    searchCoordsNotFound: "Coordonnées introuvables",
+    searchNetworkError: "Erreur réseau",
   },
 
   en: {
@@ -177,6 +199,28 @@ const TRANSLATIONS = {
     btnSearch: "Search",
     btnCancel: "Cancel",
     btnValidate: "Validate",
+
+    // OpenAIP API modal
+    btnApiOpenAIP: "🔑 Add OpenAIP API",
+    apiModalTitle: "OpenAIP API Key",
+    apiModalLabel: "API Key",
+    apiModalPlaceholder: "Paste your API key here",
+    apiModalMaskedHint: "A key is already saved. Enter a new key to replace it.",
+    btnTestKey: "Test key",
+    apiTestOk: "✅ Key is valid!",
+    apiTestFail: "❌ Invalid key or network error.",
+    apiTestLoading: "⏳ Testing...",
+    apiSaveSuccess: "✅ Key saved successfully.",
+    apiSaveError: "❌ Error while saving.",
+    apiEmptyKey: "Please enter an API key.",
+    apiConfirmOverwriteTitle: "Replace API key?",
+    apiConfirmOverwriteMsg: "An OpenAIP key is already saved. Do you want to replace it with the new key?",
+    apiConfirmOverwriteBtn: "Replace",
+    apiKeyMissing: "⚠️ OpenAIP API key not configured",
+    searchSearching: "Searching...",
+    searchNotFound: "Airport not found",
+    searchCoordsNotFound: "Coordinates not found",
+    searchNetworkError: "Network error",
   }
 };
 

@@ -3,8 +3,8 @@
 // Dépend de i18n.js chargé avant ce fichier
 // ============================================================
 
-// Clé API OpenAIP — à renseigner
-const OPENAIP_API_KEY = 'VOTRE_CLE_API_ICI';
+// Clé API OpenAIP — chargée depuis le fichier de configuration au démarrage
+let OPENAIP_API_KEY = '';
 
 let flightPlan = [];
 let legAltitudes = []; // Altitude par leg (index 1-based : legAltitudes[i] = altitude du leg i)
@@ -23,6 +23,197 @@ const ALT_STEP = 500;
 document.addEventListener('DOMContentLoaded', async () => {
   console.log("UI NavXpressVFR chargée et prête.");
 
+  // --- Chargement silencieux de la clé OpenAIP ---
+  try {
+    const savedKey = await window.api.lireCleOpenAIP();
+    if (savedKey) {
+      OPENAIP_API_KEY = savedKey;
+      console.log("🔑 Clé OpenAIP chargée depuis le fichier de configuration.");
+    }
+  } catch (err) {
+    console.warn("Impossible de lire la clé OpenAIP:", err);
+  }
+
+  // --- Bouton + Modale : API OpenAIP ---
+  const btnApiOpenAIP   = document.getElementById('btn-api-openaip');
+  const apiOverlay      = document.getElementById('api-openaip-overlay');
+  const apiInput        = document.getElementById('api-openaip-input');
+  const apiHint         = document.getElementById('api-openaip-hint');
+  const apiTestResult   = document.getElementById('api-test-result');
+  const apiError        = document.getElementById('api-openaip-error');
+  const btnApiVisibility = document.getElementById('btn-api-toggle-visibility');
+  const btnApiTest      = document.getElementById('btn-api-test');
+  const btnApiCancel    = document.getElementById('btn-api-cancel');
+  const btnApiValidate  = document.getElementById('btn-api-validate');
+
+  if (btnApiOpenAIP) {
+    btnApiOpenAIP.addEventListener('click', () => {
+      // Réinitialiser la modale
+      apiInput.value = '';
+      apiInput.type = 'password';
+      btnApiVisibility.textContent = '👁️';
+      apiTestResult.textContent = '';
+      apiError.textContent = '';
+
+      // Si une clé existe déjà, afficher le hint et masquer la valeur
+      if (OPENAIP_API_KEY) {
+        apiHint.style.display = 'block';
+        apiHint.textContent = t('apiModalMaskedHint');
+        apiInput.placeholder = '••••••••••••••••••••••••••••••••';
+      } else {
+        apiHint.style.display = 'none';
+        apiInput.placeholder = t('apiModalPlaceholder');
+      }
+
+      apiOverlay.classList.add('visible');
+      setTimeout(() => apiInput.focus(), 80);
+    });
+  }
+
+  // Toggle visibilité clé
+  if (btnApiVisibility) {
+    btnApiVisibility.addEventListener('click', () => {
+      if (apiInput.type === 'password') {
+        apiInput.type = 'text';
+        btnApiVisibility.textContent = '🙈';
+      } else {
+        apiInput.type = 'password';
+        btnApiVisibility.textContent = '👁️';
+      }
+    });
+  }
+
+  // Tester la clé
+  if (btnApiTest) {
+    btnApiTest.addEventListener('click', async () => {
+      const keyToTest = apiInput.value.trim() || OPENAIP_API_KEY;
+      if (!keyToTest) {
+        apiTestResult.style.color = '#ff5252';
+        apiTestResult.textContent = t('apiEmptyKey');
+        return;
+      }
+      apiTestResult.style.color = '#aaa';
+      apiTestResult.textContent = t('apiTestLoading');
+      btnApiTest.disabled = true;
+      try {
+        const resp = await fetch(
+          'https://api.core.openaip.net/api/airports?page=1&limit=1',
+          { headers: { 'x-openaip-api-key': keyToTest } }
+        );
+        if (resp.ok) {
+          apiTestResult.style.color = '#00e676';
+          apiTestResult.textContent = t('apiTestOk');
+        } else {
+          apiTestResult.style.color = '#ff5252';
+          apiTestResult.textContent = t('apiTestFail');
+        }
+      } catch (err) {
+        apiTestResult.style.color = '#ff5252';
+        apiTestResult.textContent = t('apiTestFail');
+      } finally {
+        btnApiTest.disabled = false;
+      }
+    });
+  }
+
+  // Annuler
+  if (btnApiCancel) {
+    btnApiCancel.addEventListener('click', () => apiOverlay.classList.remove('visible'));
+  }
+  if (apiOverlay) {
+    apiOverlay.addEventListener('click', (e) => {
+      if (e.target === apiOverlay) apiOverlay.classList.remove('visible');
+    });
+  }
+
+  // --- Modale de confirmation d'écrasement ---
+  const apiConfirmOverlay = document.getElementById('api-confirm-overlay');
+  const btnApiConfirmCancel = document.getElementById('btn-api-confirm-cancel');
+  const btnApiConfirmOk = document.getElementById('btn-api-confirm-ok');
+  let _pendingNewApiKey = null;
+
+  async function doSaveApiKey(key) {
+    apiError.style.color = '#aaa';
+    apiError.textContent = currentLang === 'fr' ? '⏳ Sauvegarde...' : '⏳ Saving...';
+    try {
+      const result = await window.api.sauvegarderCleOpenAIP(key);
+      const ok = (result === true) || (result && result.ok === true);
+      if (ok) {
+        OPENAIP_API_KEY = key;
+        apiError.style.color = '#00e676';
+        apiError.textContent = t('apiSaveSuccess');
+        setTimeout(() => {
+          apiOverlay.classList.remove('visible');
+          apiError.textContent = '';
+        }, 1200);
+      } else {
+        const msg = result && result.error ? result.error : t('apiSaveError');
+        apiError.style.color = '#ff5252';
+        apiError.textContent = '❌ ' + msg;
+      }
+    } catch (err) {
+      console.error('doSaveApiKey error:', err);
+      apiError.style.color = '#ff5252';
+      apiError.textContent = '❌ ' + err.message;
+    }
+  }
+
+  if (btnApiConfirmCancel) {
+    btnApiConfirmCancel.addEventListener('click', () => {
+      apiConfirmOverlay.classList.remove('visible');
+      _pendingNewApiKey = null;
+    });
+  }
+  if (apiConfirmOverlay) {
+    apiConfirmOverlay.addEventListener('click', (e) => {
+      if (e.target === apiConfirmOverlay) {
+        apiConfirmOverlay.classList.remove('visible');
+        _pendingNewApiKey = null;
+      }
+    });
+  }
+  if (btnApiConfirmOk) {
+    btnApiConfirmOk.addEventListener('click', async () => {
+      apiConfirmOverlay.classList.remove('visible');
+      if (_pendingNewApiKey) {
+        await doSaveApiKey(_pendingNewApiKey);
+        _pendingNewApiKey = null;
+      }
+    });
+  }
+
+  // Valider (sauvegarder) — avec confirmation si une clé existe déjà
+  if (btnApiValidate) {
+    btnApiValidate.addEventListener('click', async () => {
+      const newKey = apiInput.value.trim();
+      apiError.textContent = '';
+
+      // Champ vide + clé existante → fermer sans modifier
+      if (!newKey && OPENAIP_API_KEY) {
+        apiOverlay.classList.remove('visible');
+        return;
+      }
+      if (!newKey) {
+        apiError.style.color = '#ff5252';
+        apiError.textContent = t('apiEmptyKey');
+        return;
+      }
+
+      // Une ancienne clé existe → demander confirmation
+      if (OPENAIP_API_KEY) {
+        _pendingNewApiKey = newKey;
+        // Appliquer les traductions sur la modale de confirmation
+        apiConfirmOverlay.querySelectorAll('[data-i18n]').forEach(el => {
+          el.textContent = t(el.getAttribute('data-i18n'));
+        });
+        apiConfirmOverlay.classList.add('visible');
+      } else {
+        // Pas d'ancienne clé → sauvegarder directement
+        await doSaveApiKey(newKey);
+      }
+    });
+  }
+
   // --- Initialisation du système i18n ---
   initI18n();
 
@@ -40,6 +231,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (statusBadge) statusBadge.textContent = t('simDisconnectedEngine');
       // Mettre à jour la déclinaison dans le titre
       actualiserAffichageDeclinaison();
+      // Màj label bouton espaces aériens
+      if (window._btnAirspacesLeaflet && !window._btnAirspacesLeaflet.disabled) {
+        window._btnAirspacesLeaflet.innerHTML = newLang === 'fr' ? '🛡️ Espaces aériens' : '🛡️ Airspaces';
+      }
     });
   }
 
@@ -118,6 +313,198 @@ document.addEventListener('DOMContentLoaded', async () => {
       return wrapper;
     };
     btnLayerToggle.addTo(map);
+
+    // --- BOUTON ESPACES AÉRIENS (topleft) — couche TileLayer OpenAIP ---
+    // On utilise l'API Tiles d'OpenAIP : couche PNG transparente, complète,
+    // aucune limite de pagination. URL recommandée par OpenAIP officiel.
+    let airspacesVisible = false;
+    let airspaceTileLayer = null;
+
+    function creerCoucheEspacesAeriens() {
+      // La clé API est injectée automatiquement par le main process via
+      // session.defaultSession.webRequest.onBeforeSendHeaders — pas besoin
+      // de l'exposer dans l'URL côté renderer.
+      // Subdomains a/b/c confirmés par le forum officiel OpenAIP.
+      // Pas de tms:true (tuiles XYZ standard, pas TMS).
+      return L.tileLayer(
+        'https://{s}.api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png',
+        {
+          subdomains: ['a', 'b', 'c'],
+          attribution: '&copy; <a href="https://www.openaip.net">OpenAIP</a>',
+          opacity: 0.85,
+          maxZoom: 14,
+          minZoom: 4,
+          tileSize: 256
+        }
+      );
+    }
+
+    // Contrôle Leaflet — bouton espaces aériens (topleft)
+    const btnAirspaces = L.control({ position: 'topleft' });
+    btnAirspaces.onAdd = function () {
+      const btn = L.DomUtil.create('button', 'btn-airspaces');
+      btn.innerHTML = currentLang === 'fr' ? '🛡️ Espaces aériens' : '🛡️ Airspaces';
+      btn.title = currentLang === 'fr'
+        ? 'Afficher / masquer les espaces aériens'
+        : 'Show / hide airspaces';
+
+      L.DomEvent.disableClickPropagation(btn);
+      L.DomEvent.on(btn, 'click', () => {
+        if (!OPENAIP_API_KEY) {
+          alert(t('apiKeyMissing'));
+          return;
+        }
+        if (!airspacesVisible) {
+          airspaceTileLayer = creerCoucheEspacesAeriens();
+          airspaceTileLayer.addTo(map);
+          airspacesVisible = true;
+          btn.classList.add('active');
+        } else {
+          if (airspaceTileLayer) {
+            map.removeLayer(airspaceTileLayer);
+            airspaceTileLayer = null;
+          }
+          airspacesVisible = false;
+          btn.classList.remove('active');
+        }
+      });
+
+      // Stocker une référence pour màj de la langue
+      window._btnAirspacesLeaflet = btn;
+      return btn;
+    };
+    btnAirspaces.addTo(map);
+
+    // --- CLIC SUR LA CARTE : afficher les espaces aériens au point cliqué ---
+    let airspacePopup = null;
+
+    // Algorithme ray casting — détermine si un point lat/lon est dans un polygone
+    function pointDansPolygone(lat, lon, coords) {
+      // coords : tableau de [lon, lat] (format GeoJSON)
+      let inside = false;
+      for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
+        const xi = coords[i][0], yi = coords[i][1];
+        const xj = coords[j][0], yj = coords[j][1];
+        const intersect = ((yi > lat) !== (yj > lat))
+          && (lon < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    }
+
+    // Vérifie si un point est dans une géométrie GeoJSON (Polygon ou MultiPolygon)
+    function pointDansGeometrie(lat, lon, geometry) {
+      if (!geometry) return false;
+      if (geometry.type === 'Polygon') {
+        // Premier ring = contour extérieur, rings suivants = trous
+        return pointDansPolygone(lat, lon, geometry.coordinates[0]);
+      }
+      if (geometry.type === 'MultiPolygon') {
+        return geometry.coordinates.some(poly => pointDansPolygone(lat, lon, poly[0]));
+      }
+      return false;
+    }
+
+    // Noms lisibles des catégories OpenAIP
+    const AIRSPACE_CAT_LABELS = {
+      fr: {
+        0:'Autre', 1:'Restreint', 2:'Danger', 3:'Interdit', 4:'CTR',
+        5:'TMZ', 6:'RMZ', 7:'TMA', 8:'TRA', 9:'TSA', 10:'FIR', 11:'UIR',
+        12:'ADIZ', 13:'ATZ', 14:'MATZ', 15:'Route aérienne', 16:'MTR',
+        17:'Alerte', 18:'Avertissement', 19:'Protégé', 20:'MOA', 21:'CTA',
+        22:'ACC', 23:'Sport/Loisir', 24:'Vol basse altitude', 25:'ATZ militaire', 26:'Vol libre'
+      },
+      en: {
+        0:'Other', 1:'Restricted', 2:'Danger', 3:'Prohibited', 4:'CTR',
+        5:'TMZ', 6:'RMZ', 7:'TMA', 8:'TRA', 9:'TSA', 10:'FIR', 11:'UIR',
+        12:'ADIZ', 13:'ATZ', 14:'MATZ', 15:'Airway', 16:'MTR',
+        17:'Alert', 18:'Warning', 19:'Protected', 20:'MOA', 21:'CTA',
+        22:'ACC', 23:'Sport/Recreational', 24:'Low Overflight', 25:'Military ATZ', 26:'Gliding'
+      }
+    };
+
+    async function interrogerEspacesAuPoint(lat, lon) {
+      if (!OPENAIP_API_KEY) return;
+
+      // Petite bbox autour du point cliqué (±0.3° ≈ ~30 km)
+      const delta = 0.3;
+      const url = `https://api.core.openaip.net/api/airspaces`
+        + `?geometry=${(lon - delta).toFixed(4)},${(lat - delta).toFixed(4)},${(lon + delta).toFixed(4)},${(lat + delta).toFixed(4)}`
+        + `&page=1&limit=100`;
+
+      try {
+        const resp = await fetch(url, { headers: { 'x-openaip-api-key': OPENAIP_API_KEY } });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        if (!data.items) return [];
+
+        // Filtrer uniquement ceux qui contiennent réellement le point
+        return data.items.filter(item => pointDansGeometrie(lat, lon, item.geometry));
+      } catch (err) {
+        console.error('[NavXpress] Erreur interrogation espaces aériens:', err);
+        return [];
+      }
+    }
+
+    function formaterLimite(limite) {
+      if (!limite) return '—';
+      const ref = limite.referenceDatum || '';
+      const unit = limite.unit || '';
+      const val = limite.value !== undefined ? limite.value : '';
+      if (val === 0 && ref === 'GND') return 'GND';
+      return `${val} ${unit} ${ref}`.trim();
+    }
+
+    map.on('click', async (e) => {
+      if (!airspacesVisible) return; // seulement si la couche est active
+
+      const { lat, lng } = e.latlng;
+
+      // Fermer un popup précédent
+      if (airspacePopup) { map.closePopup(airspacePopup); airspacePopup = null; }
+
+      // Popup de chargement
+      const labelLoading = currentLang === 'fr' ? '⏳ Recherche des espaces aériens…' : '⏳ Querying airspaces…';
+      airspacePopup = L.popup({ maxWidth: 340, className: 'airspace-info-popup' })
+        .setLatLng(e.latlng)
+        .setContent(`<div class="airspace-popup-loading">${labelLoading}</div>`)
+        .openOn(map);
+
+      const espaces = await interrogerEspacesAuPoint(lat, lng);
+
+      if (!airspacePopup.isOpen()) return; // fermé entre temps
+
+      const cats = currentLang === 'fr' ? AIRSPACE_CAT_LABELS.fr : AIRSPACE_CAT_LABELS.en;
+      const labelNone = currentLang === 'fr'
+        ? 'Aucun espace aérien à cet endroit.'
+        : 'No airspace at this location.';
+      const labelTitle = currentLang === 'fr'
+        ? `🛡️ Espaces aériens (${espaces.length})`
+        : `🛡️ Airspaces (${espaces.length})`;
+
+      let html = `<div class="airspace-popup-wrap">`;
+      html += `<div class="airspace-popup-title">${labelTitle}</div>`;
+
+      if (espaces.length === 0) {
+        html += `<div class="airspace-popup-none">${labelNone}</div>`;
+      } else {
+        espaces.forEach(item => {
+          const cat = item.category ?? 0;
+          const catLabel = cats[cat] || cats[0];
+          const icao = item.icaoClass ? ` · ${item.icaoClass}` : '';
+          const lower = formaterLimite(item.lowerLimit);
+          const upper = formaterLimite(item.upperLimit);
+          html += `<div class="airspace-popup-item">`;
+          html += `<div class="airspace-popup-name">${item.name || '—'}</div>`;
+          html += `<div class="airspace-popup-meta">${catLabel}${icao}</div>`;
+          html += `<div class="airspace-popup-limits">▼ ${lower} &nbsp;·&nbsp; ▲ ${upper}</div>`;
+          html += `</div>`;
+        });
+      }
+      html += `</div>`;
+
+      airspacePopup.setContent(html);
+    });
 
     console.log("Carte Leaflet initialisée avec succès.");
   } catch (mapError) {
@@ -275,51 +662,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (e.target === createOverlay) createOverlay.classList.remove('visible');
     });
 
-    // Recherche OpenAIP pour un champ donné
-    async function rechercherAeroport(icao, statusEl, latEl, lonEl) {
-      const code = icao.trim().toUpperCase();
-      if (!code) return;
-
-      statusEl.className = 'search-status';
-      statusEl.textContent = currentLang === 'fr' ? 'Recherche...' : 'Searching...';
-
-      try {
-        const url = `https://api.core.openaip.net/api/airports?icaoCode=${code}&page=1&limit=1`;
-        const resp = await fetch(url, {
-          headers: { 'x-openaip-api-key': OPENAIP_API_KEY }
-        });
-
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json();
-
-        if (!data.items || data.items.length === 0) {
-          statusEl.className = 'search-status error';
-          statusEl.textContent = currentLang === 'fr' ? 'Aéroport non trouvé' : 'Airport not found';
-          return;
-        }
-
-        const airport = data.items[0];
-        const lat = airport.geometry?.coordinates?.[1];
-        const lon = airport.geometry?.coordinates?.[0];
-        const name = airport.name || code;
-
-        if (lat !== undefined && lon !== undefined) {
-          latEl.value = lat.toFixed(6);
-          lonEl.value = lon.toFixed(6);
-          statusEl.className = 'search-status ok';
-          statusEl.textContent = name;
-        } else {
-          statusEl.className = 'search-status error';
-          statusEl.textContent = currentLang === 'fr' ? 'Coordonnées introuvables' : 'Coordinates not found';
-        }
-      } catch (err) {
-        statusEl.className = 'search-status error';
-        statusEl.textContent = currentLang === 'fr' ? 'Erreur réseau' : 'Network error';
-        console.error('OpenAIP error:', err);
-      }
-    }
-
     // Boutons Rechercher
+    const searchDepInput = document.getElementById('create-icao-dep');
+    const searchArrInput = document.getElementById('create-icao-arr');
+
     document.getElementById('btn-search-dep').addEventListener('click', () => {
       rechercherAeroport(
         document.getElementById('create-icao-dep').value,
@@ -643,7 +989,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
 
-    // Recherche OpenAIP pour le point tournant
+    // Recherche OpenAIP pour le point tournant (bouton)
     document.getElementById('btn-search-wp').addEventListener('click', () => {
       rechercherAeroport(
         document.getElementById('insert-wp-icao').value,
@@ -789,6 +1135,78 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
 });
+
+// -------------------------------------------------------
+// Recherche OpenAIP — fonction globale (utilisée par toutes les modales)
+// -------------------------------------------------------
+async function rechercherAeroport(icao, statusEl, latEl, lonEl) {
+  const code = icao.trim().toUpperCase();
+  if (!code) return;
+
+  // Clé absente → message dans le statut, on laisse la main à l'utilisateur
+  if (!OPENAIP_API_KEY) {
+    statusEl.className = 'search-status error';
+    statusEl.textContent = t('apiKeyMissing');
+    return;
+  }
+
+  statusEl.className = 'search-status';
+  statusEl.textContent = t('searchSearching');
+
+  try {
+    const url = `https://api.core.openaip.net/api/airports?icaoCode=${code}&page=1&limit=1`;
+    const resp = await fetch(url, {
+      headers: { 'x-openaip-api-key': OPENAIP_API_KEY }
+    });
+
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+
+    if (!data.items || data.items.length === 0) {
+      statusEl.className = 'search-status error';
+      statusEl.textContent = t('searchNotFound');
+      return;
+    }
+
+    const airport = data.items[0];
+    const lat = airport.geometry?.coordinates?.[1];
+    const lon = airport.geometry?.coordinates?.[0];
+    const name = airport.name || code;
+
+    if (lat !== undefined && lon !== undefined) {
+      // Injection des coordonnées (valeur absolue — les radios N/S/E/W gèrent le signe)
+      latEl.value = Math.abs(lat).toFixed(6);
+      lonEl.value = Math.abs(lon).toFixed(6);
+
+      // Mettre à jour les radios N/S et E/W si présentes dans le même formulaire
+      const latRadioName = latEl.closest('form, div')
+        ?.querySelector('input[type="radio"][value="N"], input[type="radio"][value="S"]')
+        ?.name;
+      const lonRadioName = lonEl.closest('form, div')
+        ?.querySelector('input[type="radio"][value="E"], input[type="radio"][value="W"]')
+        ?.name;
+
+      if (latRadioName) {
+        const latDir = lat >= 0 ? 'N' : 'S';
+        document.querySelector(`input[name="${latRadioName}"][value="${latDir}"]`).checked = true;
+      }
+      if (lonRadioName) {
+        const lonDir = lon >= 0 ? 'E' : 'W';
+        document.querySelector(`input[name="${lonRadioName}"][value="${lonDir}"]`).checked = true;
+      }
+
+      statusEl.className = 'search-status ok';
+      statusEl.textContent = name;
+    } else {
+      statusEl.className = 'search-status error';
+      statusEl.textContent = t('searchCoordsNotFound');
+    }
+  } catch (err) {
+    statusEl.className = 'search-status error';
+    statusEl.textContent = t('searchNetworkError');
+    console.error('OpenAIP error:', err);
+  }
+}
 
 // -------------------------------------------------------
 // Calcule le prochain nom WP disponible (WP1, WP2, ...)

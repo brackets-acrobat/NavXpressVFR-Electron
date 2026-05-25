@@ -1,7 +1,28 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const geomagnetism = require('geomagnetism'); // Le NOUVEAU module magnétique fiable
+
+// --- CHEMINS DE STOCKAGE ---
+function getNavXpressDirs() {
+  const docs = app.getPath('documents');
+  const root    = path.join(docs, 'NavXpressVFR');
+  const apiDir  = path.join(root, 'API');
+  const fpDir   = path.join(root, 'Flight plans');
+  return { root, apiDir, fpDir };
+}
+
+function getApiKeyPath() {
+  return path.join(getNavXpressDirs().apiDir, 'openaip.json');
+}
+
+function ensureNavXpressDirs() {
+  const { root, apiDir, fpDir } = getNavXpressDirs();
+  [root, apiDir, fpDir].forEach(dir => {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  });
+}
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -12,6 +33,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: false,
       preload: path.join(__dirname, 'preload.js')
     }
   });
@@ -77,8 +99,59 @@ ipcMain.handle('sauvegarder-dialogue', async (event, planDonnees) => {
   }
 });
 
+// 4. Lire la clé OpenAIP depuis le fichier JSON
+ipcMain.handle('lire-cle-openaip', async () => {
+  try {
+    ensureNavXpressDirs();
+    const filePath = getApiKeyPath();
+    if (!fs.existsSync(filePath)) return null;
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const data = JSON.parse(raw);
+    return data.apiKey || null;
+  } catch (err) {
+    console.error("Erreur lecture clé OpenAIP:", err);
+    return null;
+  }
+});
+
+// 5. Sauvegarder la clé OpenAIP dans le fichier JSON
+ipcMain.handle('sauvegarder-cle-openaip', async (event, apiKey) => {
+  try {
+    ensureNavXpressDirs();
+    const filePath = getApiKeyPath();
+    console.log('[NavXpress] Sauvegarde clé dans :', filePath);
+    const data = {
+      apiKey: apiKey.trim(),
+      savedAt: new Date().toISOString()
+    };
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    console.log('[NavXpress] Clé sauvegardée avec succès.');
+    return { ok: true };
+  } catch (err) {
+    console.error("Erreur sauvegarde clé OpenAIP:", err);
+    return { ok: false, error: err.message };
+  }
+});
+
 // --- ENREGISTREMENT DE L'APP ---
 app.whenReady().then(() => {
+  // Intercepte les requêtes vers les tuiles OpenAIP pour injecter la clé API
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['https://*.api.tiles.openaip.net/*'] },
+    (details, callback) => {
+      try {
+        const filePath = getApiKeyPath();
+        if (fs.existsSync(filePath)) {
+          const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+          if (data.apiKey) {
+            details.requestHeaders['x-openaip-api-key'] = data.apiKey;
+          }
+        }
+      } catch (e) { /* silencieux */ }
+      callback({ requestHeaders: details.requestHeaders });
+    }
+  );
+
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

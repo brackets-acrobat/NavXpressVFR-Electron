@@ -142,6 +142,25 @@ h1 {
     white-space: nowrap;
 }
 
+#top-buttons-row2 {
+    display: flex;
+    flex-direction: row;
+}
+
+#top-buttons-row2 .btn-api {
+    flex: 1;
+    text-align: center;
+    white-space: nowrap;
+    border-color: #ffb300;
+    color: #ffb300;
+}
+
+#top-buttons-row2 .btn-api:hover {
+    background-color: #ffb300;
+    color: #121212;
+    border-color: #ffb300;
+}
+
 
 #config-vol {
     display: flex;
@@ -989,4 +1008,160 @@ tr:hover {
 .btn-edit-leg:disabled {
     opacity: 0.2;
     cursor: not-allowed;
+}
+
+/* -------------------------------------------------- */
+/* Classes génériques de modales                      */
+/* -------------------------------------------------- */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.70);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.modal-overlay.visible {
+    display: flex;
+    pointer-events: auto;
+}
+
+.modal-popup {
+    background: #1a1a1a;
+    border: 1px solid #00bcd4;
+    border-radius: 10px;
+    padding: 28px 32px;
+    width: 440px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
+}
+
+/* -------------------------------------------------- */
+/* Bouton espaces aériens (Leaflet topleft)           */
+/* -------------------------------------------------- */
+.btn-airspaces {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+    border: 1px solid #00bcd4;
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+    display: block;
+}
+
+.btn-airspaces:hover {
+    background-color: #00bcd4;
+    color: #121212;
+}
+
+.btn-airspaces.active {
+    background-color: #00bcd4;
+    color: #121212;
+    border-color: #00bcd4;
+}
+
+.btn-airspaces:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+/* Tooltip espaces aériens */
+.airspace-tooltip {
+    background-color: #1a1a1a !important;
+    border: 1px solid #3d3d3d !important;
+    color: #e0e0e0 !important;
+    font-size: 12px !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.6) !important;
+    padding: 6px 10px !important;
+    line-height: 1.6 !important;
+}
+
+.airspace-tooltip::before {
+    display: none !important;
+}
+
+/* -------------------------------------------------- */
+/* Popup info espaces aériens (clic carte)            */
+/* -------------------------------------------------- */
+.airspace-info-popup .leaflet-popup-content-wrapper {
+    background-color: #1a1a1a !important;
+    border: 1px solid #00bcd4 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.7) !important;
+    padding: 0 !important;
+}
+
+.airspace-info-popup .leaflet-popup-tip-container {
+    display: none !important;
+}
+
+.airspace-info-popup .leaflet-popup-content {
+    margin: 0 !important;
+    width: auto !important;
+}
+
+.airspace-popup-wrap {
+    padding: 12px 14px;
+    min-width: 220px;
+    max-width: 320px;
+}
+
+.airspace-popup-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #00bcd4;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #2d2d2d;
+}
+
+.airspace-popup-loading {
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #888;
+}
+
+.airspace-popup-none {
+    font-size: 13px;
+    color: #666;
+    font-style: italic;
+}
+
+.airspace-popup-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.airspace-popup-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.airspace-popup-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e0e0e0;
+    margin-bottom: 3px;
+}
+
+.airspace-popup-meta {
+    font-size: 11px;
+    color: #00bcd4;
+    margin-bottom: 3px;
+}
+
+.airspace-popup-limits {
+    font-size: 11px;
+    color: #888;
+    font-family: monospace;
 }
