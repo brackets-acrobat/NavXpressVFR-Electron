@@ -4,6 +4,13 @@ const fs = require('fs');
 const os = require('os');
 const https = require('https');
 const geomagnetism = require('geomagnetism'); // Le NOUVEAU module magnétique fiable
+const {
+  open: scOpen,
+  Protocol: SCProtocol,
+  SimConnectDataType: SCDataType,
+  SimConnectPeriod: SCPeriod,
+  SimConnectConstants: SCConst,
+} = require('node-simconnect');
 
 // --- CHEMINS DE STOCKAGE ---
 function getNavXpressDirs() {
@@ -129,9 +136,9 @@ function parseCSV(text) {
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
-    width: 1250,
+    width: 1280,
     height: 850,
-    minWidth: 1000,
+    minWidth: 1280,
     minHeight: 700,
     webPreferences: {
       nodeIntegration: false,
@@ -183,22 +190,49 @@ ipcMain.handle('ouvrir-dialogue-lnm', async () => {
   }
 });
 
-// 3. Écouteur pour Sauvegarder un fichier
-ipcMain.handle('sauvegarder-dialogue', async (event, planDonnees) => {
+// 3a. Sauvegarder un plan de vol au format natif .navxpv
+ipcMain.handle('sauvegarder-navxpv', async (event, planData) => {
+  ensureNavXpressDirs();
+  const { fpDir } = getNavXpressDirs();
   const result = await dialog.showSaveDialog({
-    title: "Sauvegarder le plan de vol",
-    defaultPath: "flightplan.lnmpln",
-    filters: [{ name: 'Fichiers Little Navmap', extensions: ['lnmpln'] }]
+    title: "Sauvegarder le plan de vol (.navxpv)",
+    defaultPath: path.join(fpDir, 'flightplan.navxpv'),
+    filters: [{ name: 'Plan de vol NavXpressVFR', extensions: ['navxpv'] }]
   });
 
-  if (result.canceled || !result.filePath) return false;
+  if (result.canceled || !result.filePath) return { ok: false, canceled: true };
 
   try {
-    fs.writeFileSync(result.filePath, planDonnees, 'utf-8');
-    return true;
+    // planData est un objet JS reçu du renderer — on le sérialise ici en JSON
+    const json = JSON.stringify(planData, null, 2);
+    fs.writeFileSync(result.filePath, json, 'utf-8');
+    return { ok: true, filePath: result.filePath };
   } catch (err) {
-    console.error("Erreur d'écriture du fichier:", err);
-    return false;
+    console.error("Erreur d'écriture du fichier .navxpv:", err);
+    return { ok: false, error: err.message };
+  }
+});
+
+// 3b. Ouvrir un plan de vol natif .navxpv
+ipcMain.handle('ouvrir-navxpv', async () => {
+  ensureNavXpressDirs();
+  const { fpDir } = getNavXpressDirs();
+  const result = await dialog.showOpenDialog({
+    title: "Charger un plan de vol (.navxpv)",
+    defaultPath: fpDir,
+    properties: ['openFile'],
+    filters: [{ name: 'Plan de vol NavXpressVFR', extensions: ['navxpv'] }]
+  });
+
+  if (result.canceled || result.filePaths.length === 0) return null;
+
+  try {
+    const raw = fs.readFileSync(result.filePaths[0], 'utf-8');
+    const data = JSON.parse(raw);
+    return { ok: true, data, filePath: result.filePaths[0] };
+  } catch (err) {
+    console.error("Erreur de lecture du fichier .navxpv:", err);
+    return { ok: false, error: err.message };
   }
 });
 
@@ -268,6 +302,198 @@ function loadOurAirportsIndex() {
 
 function invalidateOurAirportsIndex() {
   _oaAirportsIndex = null;
+  _oaRunwaysByAirport = null;
+  _oaAirportsList = null;
+  _oaFrequenciesByAirport = null;
+  _oaCommentsByAirport = null;
+}
+
+// --- INDEX FRÉQUENCES : airport_ident → tableau de fréquences ---
+let _oaFrequenciesByAirport = null;
+
+function loadOurAirportsFrequenciesIndex() {
+  const { ourAirportsDir } = getNavXpressDirs();
+  const jsonlPath = path.join(ourAirportsDir, 'airport-frequencies.jsonl');
+  if (!fs.existsSync(jsonlPath)) {
+    _oaFrequenciesByAirport = null;
+    return false;
+  }
+  const text = fs.readFileSync(jsonlPath, 'utf-8');
+  const lines = text.split('\n');
+  const idx = new Map();
+  for (const line of lines) {
+    if (!line) continue;
+    let obj;
+    try { obj = JSON.parse(line); } catch (_) { continue; }
+    const ident = (obj.airport_ident || '').toUpperCase();
+    if (!ident) continue;
+    if (!idx.has(ident)) idx.set(ident, []);
+    idx.get(ident).push({
+      type: obj.type || '',
+      description: obj.description || '',
+      frequency_mhz: obj.frequency_mhz || '',
+    });
+  }
+  _oaFrequenciesByAirport = idx;
+  return true;
+}
+
+// --- INDEX COMMENTAIRES : airport_ident → tableau de commentaires ---
+//   NOTE : le CSV source a des clés avec espaces parasites (" airportIdent" etc.)
+//   → on trim les clés au chargement
+let _oaCommentsByAirport = null;
+
+function loadOurAirportsCommentsIndex() {
+  const { ourAirportsDir } = getNavXpressDirs();
+  const jsonlPath = path.join(ourAirportsDir, 'airport-comments.jsonl');
+  if (!fs.existsSync(jsonlPath)) {
+    _oaCommentsByAirport = null;
+    return false;
+  }
+  const text = fs.readFileSync(jsonlPath, 'utf-8');
+  const lines = text.split('\n');
+  const idx = new Map();
+  for (const line of lines) {
+    if (!line) continue;
+    let raw;
+    try { raw = JSON.parse(line); } catch (_) { continue; }
+    // Nettoyer les clés (espaces parasites du CSV source)
+    const obj = {};
+    for (const k of Object.keys(raw)) obj[k.trim()] = raw[k];
+    const ident = (obj.airportIdent || '').toUpperCase();
+    if (!ident) continue;
+    if (!idx.has(ident)) idx.set(ident, []);
+    idx.get(ident).push({
+      date: obj.date || '',
+      author: obj.memberNickname || '',
+      subject: obj.subject || '',
+      body: obj.body || '',
+    });
+  }
+  _oaCommentsByAirport = idx;
+  return true;
+}
+
+// --- INDEX RUNWAYS : airport_ident → tableau de toutes les pistes ---
+let _oaRunwaysByAirport = null; // Map<UPPER_IDENT, Array<runway>>
+
+function loadOurAirportsRunwaysIndex() {
+  const { ourAirportsDir } = getNavXpressDirs();
+  const jsonlPath = path.join(ourAirportsDir, 'runways.jsonl');
+  if (!fs.existsSync(jsonlPath)) {
+    _oaRunwaysByAirport = null;
+    return false;
+  }
+  const text = fs.readFileSync(jsonlPath, 'utf-8');
+  const lines = text.split('\n');
+  const idx = new Map();
+  for (const line of lines) {
+    if (!line) continue;
+    let rw;
+    try { rw = JSON.parse(line); } catch (_) { continue; }
+    const ident = (rw.airport_ident || '').toUpperCase();
+    if (!ident) continue;
+
+    const closed = rw.closed === '1' || rw.closed === 1;
+    const length = parseFloat(rw.length_ft) || 0;
+    const width = parseFloat(rw.width_ft) || 0;
+    const heading = parseFloat(rw.le_heading_degT);
+
+    const r = {
+      le_ident: rw.le_ident || '',
+      he_ident: rw.he_ident || '',
+      headingDegT: Number.isFinite(heading) ? heading : null,
+      length_ft: length,
+      width_ft: width,
+      surface: rw.surface || '',
+      lighted: rw.lighted === '1' || rw.lighted === 1,
+      closed,
+    };
+
+    if (!idx.has(ident)) idx.set(ident, []);
+    idx.get(ident).push(r);
+  }
+  _oaRunwaysByAirport = idx;
+  return true;
+}
+
+// Retourne la piste principale (la plus longue, non fermée, avec heading valide)
+function _oaMainRunway(runways) {
+  if (!runways || runways.length === 0) return null;
+  let best = null;
+  for (const r of runways) {
+    if (r.closed) continue;
+    if (r.headingDegT === null) continue;
+    if (!best || r.length_ft > best.length_ft) best = r;
+  }
+  return best;
+}
+
+// --- LISTE PLATE des airports utilisables (en mémoire) pour filtrage bbox rapide ---
+let _oaAirportsList = null;       // [{ident, name, lat, lon, type, runway?}]
+let _oaAirportsRawByIdent = null; // Map<UPPER_IDENT, full airport object>
+
+function loadOurAirportsListForMap() {
+  if (_oaAirportsList) return true;
+  const { ourAirportsDir } = getNavXpressDirs();
+  const jsonlPath = path.join(ourAirportsDir, 'airports.jsonl');
+  if (!fs.existsSync(jsonlPath)) {
+    _oaAirportsList = null;
+    return false;
+  }
+  if (!_oaRunwaysByAirport) loadOurAirportsRunwaysIndex();
+
+  const TYPES_OK = new Set(['large_airport', 'medium_airport', 'small_airport']);
+  const text = fs.readFileSync(jsonlPath, 'utf-8');
+  const lines = text.split('\n');
+  const list = [];
+  const rawIdx = new Map();
+  for (const line of lines) {
+    if (!line) continue;
+    let a;
+    try { a = JSON.parse(line); } catch (_) { continue; }
+    // On indexe TOUS les types par ident pour la modale (heliports / seaplane / closed inclus)
+    if (a.ident) rawIdx.set(String(a.ident).toUpperCase(), a);
+    if (!TYPES_OK.has(a.type)) continue;
+    const lat = parseFloat(a.latitude_deg);
+    const lon = parseFloat(a.longitude_deg);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+    const identUp = (a.ident || '').toUpperCase();
+    const runways = _oaRunwaysByAirport ? _oaRunwaysByAirport.get(identUp) : null;
+    const runway = _oaMainRunway(runways);
+
+    // Code affichable, par ordre de priorité :
+    //   icao_code (LFPG, KJFK…)
+    //   gps_code  (codes GPS, parfois utilisés)
+    //   local_code (codes FAA US, codes ULM FR type LFXXXX)
+    //   ident     (dernier recours : FR-XXXX, US-XXXX…)
+    const displayCode =
+      (a.icao_code  && a.icao_code.trim())  ||
+      (a.gps_code   && a.gps_code.trim())   ||
+      (a.local_code && a.local_code.trim()) ||
+      a.ident || '';
+
+    list.push({
+      ident: a.ident,
+      icao: a.icao_code || '',
+      gps: a.gps_code || '',
+      local: a.local_code || '',
+      code: displayCode,
+      name: a.name || a.ident,
+      lat, lon,
+      type: a.type,
+      runway: runway ? {
+        name: runway.le_ident + (runway.he_ident ? '/' + runway.he_ident : ''),
+        headingDegT: runway.headingDegT,
+        length_ft: runway.length_ft,
+      } : null,
+    });
+  }
+  _oaAirportsList = list;
+  _oaAirportsRawByIdent = rawIdx;
+  console.log('[OurAirports] Liste chargée pour la carte :', list.length, 'aéroports');
+  return true;
 }
 
 // 6. Vérifier si des fichiers OurAirports sont déjà présents (.jsonl ou .json)
@@ -383,8 +609,197 @@ ipcMain.handle('rechercher-aeroport-oa', async (event, code) => {
   };
 });
 
+// 9bis. Retourne les détails complets d'un aéroport : airport + runways + frequencies + comments
+ipcMain.handle('details-aeroport', async (event, ident) => {
+  if (!ident) return { ok: false, reason: 'no-ident' };
+  const up = String(ident).toUpperCase();
+
+  // Assurer le chargement des index
+  if (!_oaAirportsRawByIdent) loadOurAirportsListForMap();
+  if (!_oaRunwaysByAirport) loadOurAirportsRunwaysIndex();
+  if (!_oaFrequenciesByAirport) loadOurAirportsFrequenciesIndex();
+  if (!_oaCommentsByAirport) loadOurAirportsCommentsIndex();
+
+  const airport = _oaAirportsRawByIdent ? _oaAirportsRawByIdent.get(up) : null;
+  if (!airport) return { ok: false, reason: 'not-found' };
+
+  const runways = (_oaRunwaysByAirport && _oaRunwaysByAirport.get(up)) || [];
+  const frequencies = (_oaFrequenciesByAirport && _oaFrequenciesByAirport.get(up)) || [];
+  const comments = (_oaCommentsByAirport && _oaCommentsByAirport.get(up)) || [];
+
+  // Trier les commentaires du plus récent au plus ancien
+  comments.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+  return { ok: true, airport, runways, frequencies, comments };
+});
+
+// 9. Renvoie tous les aéroports (large/medium/small) dans une bounding box.
+//    bbox = { south, west, north, east } en degrés décimaux.
+ipcMain.handle('aeroports-bbox', async (event, bbox) => {
+  if (!bbox) return { ok: false, reason: 'no-bbox' };
+  if (!_oaAirportsList) {
+    const ok = loadOurAirportsListForMap();
+    if (!ok) return { ok: false, reason: 'no-data' };
+  }
+  const { south, west, north, east } = bbox;
+  const crossDateline = west > east; // bbox traverse l'antiméridien
+  const out = [];
+  for (const a of _oaAirportsList) {
+    if (a.lat < south || a.lat > north) continue;
+    if (crossDateline) {
+      if (a.lon < west && a.lon > east) continue;
+    } else {
+      if (a.lon < west || a.lon > east) continue;
+    }
+    out.push(a);
+  }
+  return { ok: true, airports: out };
+});
+
+// ============================================================
+// SIMCONNECT (MSFS) — connexion + lecture du vent
+// ============================================================
+let _scHandle = null;        // handle SimConnect courant
+let _scConnecting = false;   // évite les connexions concurrentes
+
+const SC_WIND_DEF_ID = 1;
+const SC_WIND_REQ_ID = 1;
+
+function broadcastSimStatus(payload) {
+  // Émet un statut sur toutes les fenêtres ouvertes
+  BrowserWindow.getAllWindows().forEach(w => {
+    try { w.webContents.send('simconnect-status', payload); } catch (_) {}
+  });
+}
+
+function broadcastDonneesVol(payload) {
+  BrowserWindow.getAllWindows().forEach(w => {
+    try { w.webContents.send('donnees-vol', payload); } catch (_) {}
+  });
+}
+
+async function simConnectFermer() {
+  if (_scHandle) {
+    try { _scHandle.close(); } catch (_) {}
+    _scHandle = null;
+  }
+}
+
+ipcMain.handle('simconnect-connecter', async () => {
+  if (_scHandle) return { ok: true, alreadyConnected: true };
+  if (_scConnecting) return { ok: false, error: 'connect-in-progress' };
+
+  _scConnecting = true;
+  broadcastSimStatus({ state: 'connecting' });
+
+  try {
+    const { recvOpen, handle } = await scOpen('NavXpressVFR', SCProtocol.FSX_SP2);
+    _scHandle = handle;
+    _scConnecting = false;
+
+    console.log('[SimConnect] Connecté à', recvOpen.applicationName);
+    broadcastSimStatus({
+      state: 'connected',
+      app: recvOpen.applicationName,
+    });
+
+    // --- Définition des variables vent ---
+    handle.addToDataDefinition(
+      SC_WIND_DEF_ID,
+      'AMBIENT WIND DIRECTION',
+      'degrees',
+      SCDataType.FLOAT64
+    );
+    handle.addToDataDefinition(
+      SC_WIND_DEF_ID,
+      'AMBIENT WIND VELOCITY',
+      'knots',
+      SCDataType.FLOAT64
+    );
+
+    // Souscription : 1 update toutes les 30 secondes (le vent évolue lentement)
+    handle.requestDataOnSimObject(
+      SC_WIND_REQ_ID,
+      SC_WIND_DEF_ID,
+      SCConst.OBJECT_ID_USER,
+      SCPeriod.SECOND,
+      0,   // flags
+      0,   // origin (commence immédiatement)
+      29   // interval : 29 secondes sautées → 1 update toutes les 30 s
+    );
+
+    handle.on('simObjectData', (data) => {
+      if (data.requestID !== SC_WIND_REQ_ID) return;
+      try {
+        const dir = data.data.readFloat64();
+        const vit = data.data.readFloat64();
+        broadcastDonneesVol({
+          windDir: dir,
+          windSpeed: vit,
+        });
+      } catch (err) {
+        console.warn('[SimConnect] Lecture vent KO:', err);
+      }
+    });
+
+    handle.on('exception', (ex) => {
+      console.warn('[SimConnect] Exception simulator:', ex);
+    });
+
+    handle.on('quit', () => {
+      console.log('[SimConnect] Le simulateur a quitté.');
+      _scHandle = null;
+      broadcastSimStatus({ state: 'disconnected', reason: 'sim-quit' });
+    });
+
+    handle.on('close', () => {
+      console.log('[SimConnect] Connexion fermée.');
+      _scHandle = null;
+      broadcastSimStatus({ state: 'disconnected', reason: 'closed' });
+    });
+
+    handle.on('error', (err) => {
+      console.error('[SimConnect] Erreur :', err);
+      _scHandle = null;
+      broadcastSimStatus({ state: 'disconnected', reason: 'error', error: err && err.message });
+    });
+
+    return { ok: true, app: recvOpen.applicationName };
+  } catch (err) {
+    _scConnecting = false;
+    _scHandle = null;
+    console.error('[SimConnect] Échec connexion:', err);
+    broadcastSimStatus({
+      state: 'disconnected',
+      reason: 'connect-failed',
+      error: err && err.message,
+    });
+    return { ok: false, error: err && err.message };
+  }
+});
+
+ipcMain.handle('simconnect-deconnecter', async () => {
+  await simConnectFermer();
+  broadcastSimStatus({ state: 'disconnected', reason: 'user' });
+  return { ok: true };
+});
+
+ipcMain.handle('simconnect-etat', async () => {
+  if (_scHandle) return { state: 'connected' };
+  if (_scConnecting) return { state: 'connecting' };
+  return { state: 'disconnected' };
+});
+
 // --- ENREGISTREMENT DE L'APP ---
 app.whenReady().then(() => {
+  // Création des dossiers de travail au 1er lancement (Documents/NavXpressVFR + sous-dossiers)
+  try {
+    ensureNavXpressDirs();
+    console.log('[NavXpress] Dossiers vérifiés/créés :', getNavXpressDirs().root);
+  } catch (err) {
+    console.error('[NavXpress] Impossible de créer les dossiers :', err);
+  }
+
   // Intercepte les requêtes vers les tuiles OpenAIP pour injecter la clé API
   session.defaultSession.webRequest.onBeforeSendHeaders(
     { urls: ['https://*.api.tiles.openaip.net/*'] },
@@ -409,5 +824,10 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  simConnectFermer();
   if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('before-quit', () => {
+  simConnectFermer();
 });

@@ -7,6 +7,12 @@ const TRANSLATIONS = {
     // Header
     simDisconnected: "MSFS Déconnecté",
     simDisconnectedEngine: "MSFS Déconnecté (Moteur Prêt)",
+    simDisconnectedClick: "🔌 MSFS Déconnecté",
+    simConnecting: "⏳ Connexion à MSFS…",
+    simConnected: "🟢 MSFS Connecté",
+    simConnectFailed: "❌ Échec — MSFS introuvable",
+    simClickToConnect: "Cliquer pour se connecter à MSFS",
+    simClickToDisconnect: "Cliquer pour se déconnecter",
 
     // Config section
     flightConfig: "Configuration du Vol",
@@ -36,8 +42,11 @@ const TRANSLATIONS = {
 
     // Action bar
     btnNew: "✨ Nouveau",
+    btnLoadFlight: "📥 Charger plan de vol",
     btnImport: "📂 Importer LNMPLN",
     btnSave: "💾 Sauvegarder",
+    navxpvParseError: "Erreur lors de la lecture du fichier .navxpv : ",
+    navxpvBadFormat: "Format de fichier invalide : ce n'est pas un fichier NavXpressVFR.",
 
     // Nav log table
     navLog: "Log de Navigation (Legs)",
@@ -126,12 +135,38 @@ const TRANSLATIONS = {
     oaProgressDone: (ok, total) => `Terminé : ${ok}/${total} fichiers importés.`,
     oaProgressDoneDir: (dir) => `Fichiers JSON enregistrés dans :\n${dir}`,
     oaDataMissing: "⚠️ Cliquez d'abord sur 'Importer données OurAirports'",
+
+    // Rose des vents
+    windPanelTitle: "Vent",
+    windPanelDir: "Direction",
+    windPanelSpeed: "Vitesse",
+    windPanelSourceManual: "Saisie manuelle",
+    windPanelSourceMSFS: "Depuis MSFS",
+
+    // Modale détails aéroport
+    apInfoGeneral: "Informations générales",
+    apInfoRunways: "Pistes",
+    apInfoFrequencies: "Fréquences",
+    apInfoComments: "Commentaires",
+
+    // Chronomètre / Timer
+    chronoLabel: "Chronomètre",
+    timerLabel: "Timer",
+    chronoStart: "Démarrer",
+    chronoStop: "Arrêter",
+    chronoReset: "Remise à zéro",
   },
 
   en: {
     // Header
     simDisconnected: "MSFS Disconnected",
     simDisconnectedEngine: "MSFS Disconnected (Engine Ready)",
+    simDisconnectedClick: "🔌 MSFS Disconnected",
+    simConnecting: "⏳ Connecting to MSFS…",
+    simConnected: "🟢 MSFS Connected",
+    simConnectFailed: "❌ Failed — MSFS not found",
+    simClickToConnect: "Click to connect to MSFS",
+    simClickToDisconnect: "Click to disconnect",
 
     // Config section
     flightConfig: "Flight Configuration",
@@ -161,8 +196,11 @@ const TRANSLATIONS = {
 
     // Action bar
     btnNew: "✨ New",
+    btnLoadFlight: "📥 Load flight plan",
     btnImport: "📂 Import LNMPLN",
     btnSave: "💾 Save",
+    navxpvParseError: "Error reading .navxpv file: ",
+    navxpvBadFormat: "Invalid file format: not a NavXpressVFR file.",
 
     // Nav log table
     navLog: "Navigation Log (Legs)",
@@ -251,6 +289,26 @@ const TRANSLATIONS = {
     oaProgressDone: (ok, total) => `Done: ${ok}/${total} files imported.`,
     oaProgressDoneDir: (dir) => `JSON files saved in:\n${dir}`,
     oaDataMissing: "⚠️ Click 'Import OurAirports data' first",
+
+    // Wind rose
+    windPanelTitle: "Wind",
+    windPanelDir: "Direction",
+    windPanelSpeed: "Speed",
+    windPanelSourceManual: "Manual input",
+    windPanelSourceMSFS: "From MSFS",
+
+    // Airport info modal
+    apInfoGeneral: "General information",
+    apInfoRunways: "Runways",
+    apInfoFrequencies: "Frequencies",
+    apInfoComments: "Comments",
+
+    // Stopwatch / Timer
+    chronoLabel: "Stopwatch",
+    timerLabel: "Timer",
+    chronoStart: "Start",
+    chronoStop: "Stop",
+    chronoReset: "Reset",
   }
 };
 

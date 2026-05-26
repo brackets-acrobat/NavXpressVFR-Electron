@@ -21,6 +21,44 @@ body {
     padding: 20px;
     box-sizing: border-box;
     border-right: 1px solid #2d2d2d;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+#left-panel > header {
+    flex-shrink: 0;
+}
+
+#flight-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#flight-info > #top-row {
+    flex-shrink: 0;
+}
+
+/* Section "Log de Navigation" : prend toute la hauteur restante,
+   seul le tableau scrolle à l'intérieur                            */
+#flight-info > .config-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-bottom: 0;
+}
+
+#flight-info > .config-section > h3 {
+    flex-shrink: 0;
+}
+
+#flight-info > .config-section > .table-container {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
 }
 
@@ -39,8 +77,67 @@ body {
 }
 
 #wind-rose-container {
+    position: relative;
     height: 200px;
     background-color: #151515;
+    border-top: 1px solid #2d2d2d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    box-sizing: border-box;
+}
+
+#wind-rose-svg {
+    height: 180px;
+    width: 180px;
+    flex-shrink: 0;
+    overflow: visible;
+}
+
+#wind-arrow {
+    transform-origin: 0 0;
+    transition: transform 0.5s ease-out;
+}
+
+#wind-data-panel {
+    position: absolute;
+    /* Bord gauche du panneau = milieu du container + demi-rose (90px) + petit espace */
+    left: calc(50% + 105px);
+    top: 50%;
+    transform: translateY(-50%);
+    color: #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.wind-data-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.wind-data-label {
+    color: #888;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.wind-data-value {
+    color: #00bcd4;
+    font-size: 24px;
+    font-weight: bold;
+    font-family: 'Consolas', 'Monaco', monospace;
+    line-height: 1;
+}
+
+#wind-rose-source {
+    color: #666;
+    font-size: 10px;
+    font-style: italic;
+    margin-top: 2px;
 }
 
 /* -------------------------------------------------- */
@@ -75,6 +172,19 @@ h1 {
     font-size: 13px;
     font-weight: bold;
     white-space: nowrap;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    transition: filter 0.15s ease;
+}
+
+.status-badge:hover {
+    filter: brightness(1.15);
+}
+
+.status-badge:disabled {
+    cursor: wait;
+    opacity: 0.8;
 }
 
 /* -------------------------------------------------- */
@@ -138,8 +248,11 @@ h1 {
 
 #top-buttons .btn-secondary {
     flex: 1;
+    min-width: 0;
     text-align: center;
-    white-space: nowrap;
+    /* Le texte peut passer à la ligne quand la fenêtre est étroite */
+    white-space: normal;
+    line-height: 1.2;
 }
 
 #top-buttons-row2 {
@@ -150,8 +263,10 @@ h1 {
 
 #top-buttons-row2 .btn-api {
     flex: 1;
+    min-width: 0;
     text-align: center;
-    white-space: nowrap;
+    white-space: normal;
+    line-height: 1.2;
     border-color: #00bcd4;
     color: #00bcd4;
 }
@@ -164,8 +279,10 @@ h1 {
 
 #top-buttons-row2 .btn-ourairports {
     flex: 1;
+    min-width: 0;
     text-align: center;
-    white-space: nowrap;
+    white-space: normal;
+    line-height: 1.2;
     border-color: #00bcd4;
     color: #00bcd4;
 }
@@ -174,6 +291,122 @@ h1 {
     background-color: #00bcd4;
     color: #121212;
     border-color: #00bcd4;
+}
+
+/* -------------------------------------------------- */
+/* Boîte Chronomètre + Timer                          */
+/* -------------------------------------------------- */
+#chrono-timer-box {
+    background-color: #1a1a1a;
+    border: 1px solid #2d2d2d;
+    border-radius: 6px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-sizing: border-box;
+    /* Alignée à gauche du parent, largeur fixe suffisante pour contenir
+       label (100px) + display (130px) + 3 boutons (98px) + gaps + padding */
+    align-self: flex-start;
+    width: 400px;
+}
+
+.chrono-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+}
+
+.chrono-item + .chrono-item {
+    border-top: 1px dashed #2a2a2a;
+    padding-top: 8px;
+}
+
+.chrono-label {
+    /* Largeur fixe = largeur du plus long label (CHRONOMÈTRE)
+       pour que les champs d'affichage à droite soient alignés
+       verticalement sur la même colonne                          */
+    flex: 0 0 100px;
+    color: #888;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.chrono-display {
+    /* Largeur fixe identique pour les deux compteurs :
+       accommode aussi bien "00:00" que "00:00:00"          */
+    flex: 0 0 130px;
+    box-sizing: border-box;
+    color: #00bcd4;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-align: center;
+    background-color: #0e0e0e;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+
+.chrono-buttons {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 4px;
+}
+
+.chrono-btn {
+    background-color: #262626;
+    color: #e0e0e0;
+    border: 1px solid #3d3d3d;
+    border-radius: 4px;
+    box-sizing: border-box;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.chrono-btn:hover {
+    background-color: #303030;
+    border-color: #4a4a4a;
+}
+
+.chrono-btn-start:hover {
+    color: #00e676;
+    border-color: #00e676;
+}
+
+.chrono-btn-stop:hover {
+    color: #ffb300;
+    border-color: #ffb300;
+}
+
+.chrono-btn-reset:hover {
+    color: #ff5252;
+    border-color: #ff5252;
+}
+
+.chrono-btn:active {
+    transform: scale(0.95);
+}
+
+.chrono-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.chrono-display.running {
+    color: #00e676;
 }
 
 
@@ -418,6 +651,9 @@ th {
     padding: 8px;
     font-weight: 600;
     border-bottom: 2px solid #3d3d3d;
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
 td {
@@ -1085,6 +1321,233 @@ tr:hover {
 .btn-airspaces:disabled {
     opacity: 0.6;
     cursor: wait;
+}
+
+/* -------------------------------------------------- */
+/* Modale détails d'un aéroport                       */
+/* -------------------------------------------------- */
+#airport-info-popup {
+    width: 640px;
+    max-width: 92vw;
+    max-height: 85vh;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+.airport-info-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 4px;
+    transition: color 0.15s, background-color 0.15s;
+}
+
+.airport-info-close:hover {
+    color: #fff;
+    background-color: #2a2a2a;
+}
+
+.airport-info-header {
+    padding: 16px 24px 14px 24px;
+    border-bottom: 1px solid #2a2a2a;
+    background-color: #141414;
+    flex-shrink: 0;
+}
+
+#airport-info-code {
+    color: #00bcd4;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+#airport-info-name {
+    color: #e0e0e0;
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+#airport-info-type {
+    color: #888;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+.airport-info-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 24px 20px 24px;
+}
+
+.airport-info-section {
+    margin-bottom: 18px;
+}
+
+.airport-info-section:last-child {
+    margin-bottom: 0;
+}
+
+.airport-info-section h4 {
+    margin: 0 0 8px 0;
+    color: #00bcd4;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    border-bottom: 1px solid #2a2a2a;
+    padding-bottom: 6px;
+}
+
+.ap-info-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.ap-info-table th,
+.ap-info-table td {
+    text-align: left;
+    padding: 4px 8px;
+    border-bottom: 1px solid #1f1f1f;
+}
+
+.ap-info-table th {
+    color: #888;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.4px;
+    background-color: #161616;
+    border-bottom: 1px solid #2a2a2a;
+    position: static;
+    z-index: auto;
+}
+
+.ap-info-table td {
+    color: #e0e0e0;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.ap-info-table tr:hover td {
+    background-color: #1f1f1f;
+}
+
+.ap-info-empty {
+    color: #666;
+    font-size: 12px;
+    font-style: italic;
+    padding: 6px 0;
+}
+
+.ap-info-link {
+    color: #00bcd4;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.ap-info-link:hover {
+    text-decoration: underline;
+}
+
+.ap-info-comment {
+    background-color: #161616;
+    border: 1px solid #232323;
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.ap-info-comment-head {
+    color: #888;
+    font-size: 10px;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ap-info-comment-author {
+    color: #00bcd4;
+    font-weight: 600;
+}
+
+.ap-info-comment-subject {
+    color: #e0e0e0;
+    font-weight: 600;
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+
+.ap-info-comment-body {
+    color: #d0d0d0;
+    white-space: pre-wrap;
+    line-height: 1.5;
+    font-size: 12px;
+}
+
+/* -------------------------------------------------- */
+/* Symboles d'aéroport sur la carte (chart-style)     */
+/* -------------------------------------------------- */
+.airport-marker {
+    background: transparent !important;
+    border: none !important;
+    /* Petit halo blanc pour rester lisible sur fond foncé (satellite) */
+    filter: drop-shadow(0 0 1px rgba(255,255,255,0.8))
+            drop-shadow(0 0 0.5px rgba(255,255,255,0.8));
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+/* Tooltip d'aéroport */
+.airport-tooltip {
+    background-color: #1a1a1a !important;
+    border: 1px solid #00bcd4 !important;
+    color: #e0e0e0 !important;
+    font-size: 12px !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.7) !important;
+    padding: 6px 10px !important;
+    line-height: 1.4 !important;
+    white-space: nowrap;
+}
+
+.airport-tooltip::before {
+    display: none !important;
+}
+
+.airport-tooltip .ap-tt-icao {
+    color: #00bcd4;
+    font-weight: bold;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+}
+
+.airport-tooltip .ap-tt-name {
+    color: #e0e0e0;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.airport-tooltip .ap-tt-rwy {
+    color: #aaa;
+    font-size: 11px;
+    margin-top: 2px;
+    font-family: 'Consolas', 'Monaco', monospace;
 }
 
 /* Tooltip espaces aériens */

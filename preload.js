@@ -5,9 +5,17 @@ contextBridge.exposeInMainWorld('api', {
     onStatusSimConnect: (callback) => ipcRenderer.on('simconnect-status', (event, status) => callback(status)),
     onDonneesVol: (callback) => ipcRenderer.on('donnees-vol', (event, data) => callback(data)),
 
-    // NOUVELLES FONCTIONS DE FICHIERS
+    // CONNEXION SIMCONNECT (MSFS)
+    simConnectConnecter: () => ipcRenderer.invoke('simconnect-connecter'),
+    simConnectDeconnecter: () => ipcRenderer.invoke('simconnect-deconnecter'),
+    simConnectEtat: () => ipcRenderer.invoke('simconnect-etat'),
+
+    // FICHIERS — Plan de vol Little Navmap (import uniquement)
     ouvrirLNM: () => ipcRenderer.invoke('ouvrir-dialogue-lnm'),
-    sauvegarderPlan: (data) => ipcRenderer.invoke('sauvegarder-dialogue', data),
+
+    // FICHIERS — Plan de vol natif NavXpressVFR (.navxpv)
+    sauvegarderNavXpv: (planData) => ipcRenderer.invoke('sauvegarder-navxpv', planData),
+    ouvrirNavXpv: () => ipcRenderer.invoke('ouvrir-navxpv'),
 
     // GESTION CLÉ OpenAIP
     lireCleOpenAIP: () => ipcRenderer.invoke('lire-cle-openaip'),
@@ -23,5 +31,11 @@ contextBridge.exposeInMainWorld('api', {
     },
 
     // RECHERCHE AÉROPORT (base OurAirports locale)
-    rechercherAeroportOA: (code) => ipcRenderer.invoke('rechercher-aeroport-oa', code)
+    rechercherAeroportOA: (code) => ipcRenderer.invoke('rechercher-aeroport-oa', code),
+
+    // AÉROPORTS DANS UNE BOUNDING BOX (pour affichage sur la carte)
+    aeroportsDansBbox: (bbox) => ipcRenderer.invoke('aeroports-bbox', bbox),
+
+    // DÉTAILS COMPLETS d'un aéroport (airport + runways + frequencies + comments)
+    detailsAeroport: (ident) => ipcRenderer.invoke('details-aeroport', ident)
 });

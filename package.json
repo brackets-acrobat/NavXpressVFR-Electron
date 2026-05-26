@@ -20,7 +20,7 @@
     "extract-zip": "^2.0.1",
     "fs-extra": "^11.3.5",
     "geomagnetism": "^0.2.0",
-    "node-simconnect": "^1.1.2",
+    "node-simconnect": "^4.2.0",
     "wmm": "*"
   },
   "devDependencies": {

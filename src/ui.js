@@ -20,6 +20,291 @@ const ALT_MAX = 15000;
 const ALT_DEFAULT = 3000;
 const ALT_STEP = 500;
 
+// -------------------------------------------------------
+// Modale Détails d'un aéroport (clic sur un marqueur de la carte)
+// -------------------------------------------------------
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function buildKVTable(rows) {
+  const ths = rows.map(r => `<tr><th>${escapeHtml(r[0])}</th><td>${r[1] ?? ''}</td></tr>`).join('');
+  return `<table class="ap-info-table"><tbody>${ths}</tbody></table>`;
+}
+
+async function ouvrirInfoAeroport(ident) {
+  if (!ident) return;
+  const overlay = document.getElementById('airport-info-overlay');
+  const codeEl  = document.getElementById('airport-info-code');
+  const nameEl  = document.getElementById('airport-info-name');
+  const typeEl  = document.getElementById('airport-info-type');
+  const genEl   = document.getElementById('airport-info-general');
+  const rwyEl   = document.getElementById('airport-info-runways');
+  const freqEl  = document.getElementById('airport-info-frequencies');
+  const cmtEl   = document.getElementById('airport-info-comments');
+  if (!overlay) return;
+
+  // Loading state
+  codeEl.textContent = '…';
+  nameEl.textContent = currentLang === 'fr' ? 'Chargement…' : 'Loading…';
+  typeEl.textContent = '';
+  genEl.innerHTML = '<div class="ap-info-empty">…</div>';
+  rwyEl.innerHTML = '';
+  freqEl.innerHTML = '';
+  cmtEl.innerHTML = '';
+  overlay.classList.add('visible');
+
+  let res;
+  try {
+    res = await window.api.detailsAeroport(ident);
+  } catch (err) {
+    nameEl.textContent = 'Error: ' + err.message;
+    return;
+  }
+  if (!res || !res.ok) {
+    nameEl.textContent = currentLang === 'fr'
+      ? `Aéroport introuvable (${ident})`
+      : `Airport not found (${ident})`;
+    return;
+  }
+
+  const a = res.airport;
+  // Code à afficher (mêmes règles que côté carte)
+  const code = (a.icao_code && a.icao_code.trim())
+    || (a.gps_code && a.gps_code.trim())
+    || (a.local_code && a.local_code.trim())
+    || a.ident || '';
+  codeEl.textContent = code;
+  nameEl.textContent = a.name || a.ident;
+  typeEl.textContent = (a.type || '').replace(/_/g, ' ');
+
+  // --- Général ---
+  const lat = parseFloat(a.latitude_deg);
+  const lon = parseFloat(a.longitude_deg);
+  const elev = a.elevation_ft;
+  const rowsGen = [
+    [currentLang === 'fr' ? 'ICAO' : 'ICAO', escapeHtml(a.icao_code || '—')],
+    [currentLang === 'fr' ? 'IATA' : 'IATA', escapeHtml(a.iata_code || '—')],
+    ['GPS code', escapeHtml(a.gps_code || '—')],
+    [currentLang === 'fr' ? 'Code local' : 'Local code', escapeHtml(a.local_code || '—')],
+    ['Ident', escapeHtml(a.ident || '—')],
+    [currentLang === 'fr' ? 'Pays' : 'Country', escapeHtml(a.iso_country || '—')],
+    [currentLang === 'fr' ? 'Région' : 'Region', escapeHtml(a.iso_region || '—')],
+    [currentLang === 'fr' ? 'Ville' : 'City', escapeHtml(a.municipality || '—')],
+    ['Lat', Number.isFinite(lat) ? lat.toFixed(6) + '°' : '—'],
+    ['Lon', Number.isFinite(lon) ? lon.toFixed(6) + '°' : '—'],
+    [currentLang === 'fr' ? 'Élévation' : 'Elevation', elev ? `${elev} ft` : '—'],
+    [currentLang === 'fr' ? 'Vol commercial' : 'Scheduled service',
+      a.scheduled_service === 'yes' ? (currentLang === 'fr' ? 'Oui' : 'Yes') : (currentLang === 'fr' ? 'Non' : 'No')],
+  ];
+  if (a.home_link) rowsGen.push(['Web', `<a class="ap-info-link" href="${escapeHtml(a.home_link)}" target="_blank" rel="noopener">${escapeHtml(a.home_link)}</a>`]);
+  if (a.wikipedia_link) rowsGen.push(['Wikipedia', `<a class="ap-info-link" href="${escapeHtml(a.wikipedia_link)}" target="_blank" rel="noopener">${escapeHtml(a.wikipedia_link)}</a>`]);
+  if (a.keywords) rowsGen.push([currentLang === 'fr' ? 'Mots-clés' : 'Keywords', escapeHtml(a.keywords)]);
+  genEl.innerHTML = buildKVTable(rowsGen);
+
+  // --- Pistes ---
+  if (!res.runways || res.runways.length === 0) {
+    rwyEl.innerHTML = `<div class="ap-info-empty">${currentLang === 'fr' ? 'Aucune piste référencée' : 'No runway data'}</div>`;
+  } else {
+    const head = currentLang === 'fr'
+      ? '<tr><th>Désignation</th><th>Long.</th><th>Larg.</th><th>Surface</th><th>Cap (°vrai)</th><th>Bal.</th><th>État</th></tr>'
+      : '<tr><th>Designation</th><th>Length</th><th>Width</th><th>Surface</th><th>Hdg (°true)</th><th>Lit</th><th>Status</th></tr>';
+    const rows = res.runways.map(r => {
+      const name = r.le_ident + (r.he_ident ? '/' + r.he_ident : '');
+      const heading = r.headingDegT !== null
+        ? String(Math.round(r.headingDegT) % 360).padStart(3, '0') + '°'
+        : '—';
+      const len = r.length_ft ? `${r.length_ft} ft` : '—';
+      const wid = r.width_ft ? `${r.width_ft} ft` : '—';
+      const status = r.closed
+        ? `<span style="color:#ff5252;">${currentLang === 'fr' ? 'Fermée' : 'Closed'}</span>`
+        : `<span style="color:#00e676;">${currentLang === 'fr' ? 'Active' : 'Active'}</span>`;
+      const lit = r.lighted ? (currentLang === 'fr' ? 'Oui' : 'Yes') : (currentLang === 'fr' ? 'Non' : 'No');
+      return `<tr><td>${escapeHtml(name)}</td><td>${len}</td><td>${wid}</td><td>${escapeHtml(r.surface || '—')}</td><td>${heading}</td><td>${lit}</td><td>${status}</td></tr>`;
+    }).join('');
+    rwyEl.innerHTML = `<table class="ap-info-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+  }
+
+  // --- Fréquences ---
+  if (!res.frequencies || res.frequencies.length === 0) {
+    freqEl.innerHTML = `<div class="ap-info-empty">${currentLang === 'fr' ? 'Aucune fréquence référencée' : 'No frequency data'}</div>`;
+  } else {
+    const head = currentLang === 'fr'
+      ? '<tr><th>Type</th><th>Description</th><th>MHz</th></tr>'
+      : '<tr><th>Type</th><th>Description</th><th>MHz</th></tr>';
+    const rows = res.frequencies.map(f =>
+      `<tr><td>${escapeHtml(f.type)}</td><td>${escapeHtml(f.description)}</td><td>${escapeHtml(f.frequency_mhz)}</td></tr>`
+    ).join('');
+    freqEl.innerHTML = `<table class="ap-info-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+  }
+
+  // --- Commentaires ---
+  if (!res.comments || res.comments.length === 0) {
+    cmtEl.innerHTML = `<div class="ap-info-empty">${currentLang === 'fr' ? 'Aucun commentaire' : 'No comments'}</div>`;
+  } else {
+    cmtEl.innerHTML = res.comments.map(c => `
+      <div class="ap-info-comment">
+        <div class="ap-info-comment-head">
+          <span class="ap-info-comment-author">${escapeHtml(c.author || '?')}</span>
+          <span>${escapeHtml(c.date || '')}</span>
+        </div>
+        ${c.subject ? `<div class="ap-info-comment-subject">${escapeHtml(c.subject)}</div>` : ''}
+        <div class="ap-info-comment-body">${escapeHtml(c.body || '')}</div>
+      </div>
+    `).join('');
+  }
+}
+
+function fermerInfoAeroport() {
+  const overlay = document.getElementById('airport-info-overlay');
+  if (overlay) overlay.classList.remove('visible');
+}
+
+// Câblages globaux (boutons fermeture / overlay)
+document.addEventListener('DOMContentLoaded', () => {
+  const overlay = document.getElementById('airport-info-overlay');
+  const btnClose = document.getElementById('btn-airport-info-close');
+  if (btnClose) btnClose.addEventListener('click', fermerInfoAeroport);
+  if (overlay) {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) fermerInfoAeroport();
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay && overlay.classList.contains('visible')) {
+      fermerInfoAeroport();
+    }
+  });
+});
+
+// -------------------------------------------------------
+// Chronomètre / Timer générique (compte le temps écoulé)
+//   format = 'mmss'   → 00:00
+//   format = 'hhmmss' → 00:00:00
+// -------------------------------------------------------
+class StopWatch {
+  constructor(displayEl, format, buttons) {
+    this.displayEl = displayEl;
+    this.format = format;
+    this.btnStart = buttons.start;
+    this.btnStop = buttons.stop;
+    this.btnReset = buttons.reset;
+    this.elapsed = 0;       // ms cumulés
+    this.startTime = null;  // timestamp Date.now() du dernier démarrage
+    this.intervalId = null;
+    this.render();
+    this._updateButtons();
+  }
+
+  start() {
+    if (this.intervalId !== null) return; // déjà en marche
+    this.startTime = Date.now() - this.elapsed;
+    this.intervalId = setInterval(() => this._tick(), 250);
+    if (this.displayEl) this.displayEl.classList.add('running');
+    this._updateButtons();
+  }
+
+  stop() {
+    if (this.intervalId === null) return;
+    this.elapsed = Date.now() - this.startTime;
+    clearInterval(this.intervalId);
+    this.intervalId = null;
+    if (this.displayEl) this.displayEl.classList.remove('running');
+    this.render();
+    this._updateButtons();
+  }
+
+  reset() {
+    if (this.intervalId !== null) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+    this.elapsed = 0;
+    this.startTime = null;
+    if (this.displayEl) this.displayEl.classList.remove('running');
+    this.render();
+    this._updateButtons();
+  }
+
+  _tick() {
+    this.elapsed = Date.now() - this.startTime;
+    this.render();
+  }
+
+  render() {
+    if (!this.displayEl) return;
+    const totalSec = Math.floor(this.elapsed / 1000);
+    if (this.format === 'mmss') {
+      const m = Math.floor(totalSec / 60);
+      const s = totalSec % 60;
+      // Cap visuel à 99:59 (le format MM:SS n'a pas d'heures)
+      const mm = Math.min(m, 99);
+      this.displayEl.textContent =
+        String(mm).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    } else {
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      this.displayEl.textContent =
+        String(h).padStart(2, '0') + ':' +
+        String(m).padStart(2, '0') + ':' +
+        String(s).padStart(2, '0');
+    }
+  }
+
+  _updateButtons() {
+    const running = this.intervalId !== null;
+    if (this.btnStart) this.btnStart.disabled = running;
+    if (this.btnStop) this.btnStop.disabled = !running;
+    if (this.btnReset) this.btnReset.disabled = (this.elapsed === 0 && !running);
+  }
+}
+
+// -------------------------------------------------------
+// Rose des vents : met à jour la flèche + le panneau données.
+// Convention aviation : windDir = direction d'où vient le vent.
+// La flèche pointe vers où VA le vent (= windDir + 180°).
+// -------------------------------------------------------
+function updateWindRose(dir, speed, source) {
+  const arrow = document.getElementById('wind-arrow');
+  const dirEl = document.getElementById('wind-rose-dir');
+  const spdEl = document.getElementById('wind-rose-speed');
+  const srcEl = document.getElementById('wind-rose-source');
+
+  // Normaliser direction sur 0..360
+  let d = Number.isFinite(dir) ? dir : 0;
+  d = ((d % 360) + 360) % 360;
+
+  // Vitesse
+  let v = Number.isFinite(speed) ? speed : 0;
+  if (v < 0) v = 0;
+
+  // Mise à jour de la flèche : pointe vers où VA le vent → rotation = d + 180
+  if (arrow) {
+    arrow.setAttribute('transform', `rotate(${d + 180})`);
+    // Si vent calme, masquer la flèche
+    arrow.style.opacity = v < 0.5 ? '0.2' : '1';
+  }
+
+  if (dirEl) dirEl.textContent = Math.round(d).toString().padStart(3, '0');
+  if (spdEl) spdEl.textContent = Math.round(v).toString();
+
+  if (srcEl) {
+    if (source === 'msfs') {
+      srcEl.textContent = (typeof t === 'function') ? t('windPanelSourceMSFS') : 'Depuis MSFS';
+      srcEl.style.color = '#00e676';
+    } else {
+      srcEl.textContent = (typeof t === 'function') ? t('windPanelSourceManual') : 'Saisie manuelle';
+      srcEl.style.color = '#666';
+    }
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   console.log("UI NavXpressVFR chargée et prête.");
 
@@ -360,6 +645,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // ----------------------------------------------------------
+  // Chronomètre (MM:SS) + Timer (HH:MM:SS)
+  // ----------------------------------------------------------
+  const chronoDisplay = document.getElementById('chrono-display');
+  if (chronoDisplay) {
+    const chrono = new StopWatch(chronoDisplay, 'mmss', {
+      start: document.getElementById('chrono-start'),
+      stop:  document.getElementById('chrono-stop'),
+      reset: document.getElementById('chrono-reset'),
+    });
+    document.getElementById('chrono-start')?.addEventListener('click', () => chrono.start());
+    document.getElementById('chrono-stop')?.addEventListener('click', () => chrono.stop());
+    document.getElementById('chrono-reset')?.addEventListener('click', () => chrono.reset());
+  }
+
+  const timerDisplay = document.getElementById('timer-display');
+  if (timerDisplay) {
+    const timer = new StopWatch(timerDisplay, 'hhmmss', {
+      start: document.getElementById('timer-start'),
+      stop:  document.getElementById('timer-stop'),
+      reset: document.getElementById('timer-reset'),
+    });
+    document.getElementById('timer-start')?.addEventListener('click', () => timer.start());
+    document.getElementById('timer-stop')?.addEventListener('click', () => timer.stop());
+    document.getElementById('timer-reset')?.addEventListener('click', () => timer.reset());
+  }
+
   // --- Initialisation du système i18n ---
   initI18n();
 
@@ -372,15 +684,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Redessiner le tableau (les en-têtes sont gérés par applyTranslations,
       // mais les lignes dynamiques doivent être regénérées)
       mettreAJourLogDeNav();
-      // Mettre à jour le badge de statut simulateur
-      const statusBadge = document.getElementById('sim-status');
-      if (statusBadge) statusBadge.textContent = t('simDisconnectedEngine');
+      // Mettre à jour le badge de statut simulateur (réapplique le texte dans la nouvelle langue)
+      appliquerEtatSim(_simState);
       // Mettre à jour la déclinaison dans le titre
       actualiserAffichageDeclinaison();
       // Màj label bouton espaces aériens
       if (window._btnAirspacesLeaflet && !window._btnAirspacesLeaflet.disabled) {
         window._btnAirspacesLeaflet.innerHTML = newLang === 'fr' ? '🛡️ Espaces aériens' : '🛡️ Airspaces';
       }
+      // Régénérer les tooltips aéroports (langue dans "Piste / Runway")
+      if (typeof window._refreshAirports === 'function') window._refreshAirports();
     });
   }
 
@@ -520,6 +833,132 @@ document.addEventListener('DOMContentLoaded', async () => {
       return btn;
     };
     btnAirspaces.addTo(map);
+
+    // -------------------------------------------------------
+    // Affichage des aéroports OurAirports (zoom >= 8)
+    // -------------------------------------------------------
+    const ZOOM_MIN_AEROPORTS = 8;
+    const airportsLayer = L.layerGroup().addTo(map);
+    let _aeroportsMoveTimer = null;
+    let _aeroportsLastRequestId = 0;
+
+    // Tailles selon le type d'aéroport (rayon du cercle)
+    const TAILLES_AEROPORT = {
+      large_airport: 9,
+      medium_airport: 7,
+      small_airport: 5,
+    };
+
+    // Construit l'icône SVG d'un aéroport (cercle + trait piste orienté)
+    function makeAirportIcon(airport) {
+      const r = TAILLES_AEROPORT[airport.type] || 5;
+      const size = r * 2 + 12; // marge pour la piste qui dépasse + tooltip
+      const heading = airport.runway ? airport.runway.headingDegT : 0;
+      const hasRunway = !!airport.runway;
+
+      // Le trait de piste dépasse de chaque côté du cercle ; sa rotation est
+      // appliquée sur le <line> (centre = 0,0). L'icône globale n'est pas tournée.
+      // Le trait est horizontal par défaut (E-W) ; un cap 0° = Nord (donc N-S
+      // sur l'écran) → on soustrait 90° à la rotation.
+      const lineExtent = r + 4;
+      const rotation = heading - 90;
+      const svg = `
+        <svg viewBox="-${size/2} -${size/2} ${size} ${size}" width="${size}" height="${size}" style="overflow:visible;">
+          ${hasRunway ? `<line x1="-${lineExtent}" y1="0" x2="${lineExtent}" y2="0"
+                stroke="#000" stroke-width="2.2" stroke-linecap="round"
+                transform="rotate(${rotation})"/>` : ''}
+          <circle cx="0" cy="0" r="${r}" fill="#fff" stroke="#000" stroke-width="1.6"/>
+        </svg>
+      `;
+      return L.divIcon({
+        className: 'airport-marker',
+        html: svg,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
+      });
+    }
+
+    // Tooltip HTML
+    function makeAirportTooltipHtml(airport) {
+      // Priorité : code calculé côté main (icao → gps → local → ident)
+      const code = airport.code || airport.icao || airport.ident;
+      const name = airport.name;
+      let pisteLigne = '';
+      if (airport.runway) {
+        const heading = Math.round(airport.runway.headingDegT) % 360;
+        pisteLigne = `<div class="ap-tt-rwy">${currentLang === 'fr' ? 'Piste' : 'Runway'} ${airport.runway.name} (${String(heading).padStart(3, '0')}°)</div>`;
+      }
+      return `
+        <div class="ap-tt-icao">${code}</div>
+        <div class="ap-tt-name">${name}</div>
+        ${pisteLigne}
+      `;
+    }
+
+    async function refreshAirportsOnMap() {
+      if (!map) return;
+      const zoom = map.getZoom();
+      if (zoom < ZOOM_MIN_AEROPORTS) {
+        airportsLayer.clearLayers();
+        return;
+      }
+      const b = map.getBounds();
+      const bbox = {
+        south: b.getSouth(),
+        west: b.getWest(),
+        north: b.getNorth(),
+        east: b.getEast(),
+      };
+
+      // Annule la dernière requête si une nouvelle arrive
+      const reqId = ++_aeroportsLastRequestId;
+      let res;
+      try {
+        res = await window.api.aeroportsDansBbox(bbox);
+      } catch (err) {
+        console.warn('Erreur lecture aéroports bbox:', err);
+        return;
+      }
+      // Si une requête plus récente a déjà été envoyée, on ignore le résultat
+      if (reqId !== _aeroportsLastRequestId) return;
+      if (!res || !res.ok) {
+        // Pas de données = silencieux (l'utilisateur n'a peut-être pas encore importé)
+        airportsLayer.clearLayers();
+        return;
+      }
+
+      airportsLayer.clearLayers();
+      for (const a of res.airports) {
+        const marker = L.marker([a.lat, a.lon], {
+          icon: makeAirportIcon(a),
+          interactive: true,
+          keyboard: false,
+        });
+        marker.bindTooltip(makeAirportTooltipHtml(a), {
+          direction: 'top',
+          offset: [0, -8],
+          className: 'airport-tooltip',
+          opacity: 1,
+          sticky: false,
+        });
+        // Click → ouvrir la modale d'informations détaillées
+        marker.on('click', () => ouvrirInfoAeroport(a.ident));
+        marker.addTo(airportsLayer);
+      }
+    }
+
+    function scheduleAirportRefresh() {
+      if (_aeroportsMoveTimer) clearTimeout(_aeroportsMoveTimer);
+      _aeroportsMoveTimer = setTimeout(refreshAirportsOnMap, 200);
+    }
+
+    map.on('moveend', scheduleAirportRefresh);
+    map.on('zoomend', scheduleAirportRefresh);
+    // Premier render
+    scheduleAirportRefresh();
+
+    // Exposer pour debug / langue (le texte "Piste" / "Runway" doit changer)
+    window._refreshAirports = refreshAirportsOnMap;
 
     console.log("Carte Leaflet initialisée avec succès.");
   } catch (mapError) {
@@ -880,7 +1319,97 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // --- 4. BOUTON : SAUVEGARDER ---
+  // --- 4. BOUTON : CHARGER PLAN DE VOL (.navxpv natif) ---
+  const btnLoad = document.getElementById('btn-load-flight');
+  if (btnLoad) {
+    btnLoad.addEventListener('click', async () => {
+      const res = await window.api.ouvrirNavXpv();
+      if (!res) return; // annulation
+      if (!res.ok || !res.data) {
+        alert(t('navxpvParseError') + (res && res.error ? res.error : ''));
+        return;
+      }
+      const data = res.data;
+
+      // Validation minimale
+      if (data.format !== 'navxpv' || !Array.isArray(data.waypoints)) {
+        alert(t('navxpvBadFormat'));
+        return;
+      }
+
+      try {
+        // Réinitialiser l'état actuel
+        flightPlan = [];
+        legAltitudes = [];
+        activeLegIndex = 1;
+        marqueursCarte.forEach(m => map.removeLayer(m));
+        marqueursCarte = [];
+        supprimerSegmentsCarte();
+
+        // Re-peupler les waypoints
+        for (const wp of data.waypoints) {
+          if (typeof wp.lat === 'number' && typeof wp.lon === 'number') {
+            flightPlan.push({
+              name: wp.name || wp.ident || '',
+              ident: wp.ident || wp.name || '',
+              lat: wp.lat,
+              lon: wp.lon,
+            });
+          }
+        }
+
+        // Altitudes (null → undefined pour respecter la convention interne)
+        if (Array.isArray(data.legAltitudes) && data.legAltitudes.length === flightPlan.length) {
+          legAltitudes = data.legAltitudes.map(a => (a === null ? undefined : a));
+        } else {
+          legAltitudes = [undefined];
+          for (let i = 1; i < flightPlan.length; i++) legAltitudes.push(ALT_DEFAULT);
+        }
+
+        // Config (Vp + vent)
+        if (data.config) {
+          const inputVp        = document.getElementById('input-vp');
+          const inputWindDir   = document.getElementById('input-wind-dir');
+          const inputWindSpeed = document.getElementById('input-wind-speed');
+          if (inputVp && typeof data.config.trueAirspeed === 'number')   inputVp.value        = data.config.trueAirspeed;
+          if (inputWindDir && typeof data.config.windDirection === 'number') inputWindDir.value   = data.config.windDirection;
+          if (inputWindSpeed && typeof data.config.windSpeed === 'number')   inputWindSpeed.value = data.config.windSpeed;
+          // Rafraîchir la rose des vents
+          if (typeof updateWindRose === 'function') {
+            updateWindRose(
+              data.config.windDirection ?? 0,
+              data.config.windSpeed ?? 0,
+              'manual'
+            );
+          }
+        }
+
+        // ICAO départ / arrivée (champs en lecture seule, peuplés depuis le plan)
+        if (flightPlan.length >= 1) {
+          const inputDep = document.getElementById('input-icao-dep');
+          const inputArr = document.getElementById('input-icao-arr');
+          if (inputDep) inputDep.value = flightPlan[0].ident;
+          if (inputArr) inputArr.value = flightPlan[flightPlan.length - 1].ident;
+        }
+
+        await calculerDeclinaisonCentroide();
+        flightPlan.forEach((p, idx) => tracerPointVisuel(p, idx));
+        redessinerSegments();
+
+        if (flightPlan.length > 0) {
+          const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
+          map.fitBounds(bounds, { padding: [50, 50] });
+        }
+
+        mettreAJourLogDeNav();
+      } catch (err) {
+        console.error('Erreur chargement .navxpv:', err);
+        alert(t('navxpvParseError') + err.message);
+      }
+    });
+  }
+
+  // --- 4. BOUTON : SAUVEGARDER (.navxpv natif uniquement) ---
   const btnSave = document.getElementById('btn-save-flight');
   if (btnSave) {
     btnSave.addEventListener('click', async () => {
@@ -889,14 +1418,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      let xmlString = `<?xml version="1.0" encoding="UTF-8"?>\n<LittleNavmap>\n  <Flightplan>\n    <Waypoints>\n`;
-      flightPlan.forEach(wp => {
-        xmlString += `      <Waypoint>\n        <Name>${wp.name}</Name>\n        <Ident>${wp.name}</Ident>\n        <Pos Lon="${wp.lon.toFixed(6)}" Lat="${wp.lat.toFixed(6)}"/>\n      </Waypoint>\n`;
-      });
-      xmlString += `    </Waypoints>\n  </Flightplan>\n</LittleNavmap>`;
+      const planData = {
+        format: 'navxpv',
+        version: 1,
+        savedAt: new Date().toISOString(),
+        config: {
+          trueAirspeed: parseFloat(document.getElementById('input-vp').value) || 90,
+          windDirection: parseFloat(document.getElementById('input-wind-dir').value) || 0,
+          windSpeed: parseFloat(document.getElementById('input-wind-speed').value) || 0,
+        },
+        // Snapshot des waypoints (on ne sérialise pas d'éventuels objets Leaflet)
+        waypoints: flightPlan.map(wp => ({
+          name: wp.name,
+          ident: wp.ident || wp.name,
+          lat: wp.lat,
+          lon: wp.lon,
+        })),
+        // legAltitudes : index 0 inutilisé → null en JSON (undefined non sérialisable)
+        legAltitudes: legAltitudes.map(a => (a === undefined ? null : a)),
+      };
 
-      const reussite = await window.api.sauvegarderPlan(xmlString);
-      if (reussite) alert(t('saveSuccess'));
+      const result = await window.api.sauvegarderNavXpv(planData);
+      if (result && result.ok) {
+        alert(t('saveSuccess'));
+      } else if (result && !result.canceled) {
+        alert('❌ ' + (result.error || 'Erreur sauvegarde'));
+      }
     });
   }
 
@@ -966,11 +1513,125 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (e.key === 'Enter') el.blur();
     });
   });
+
+  // Mise à jour live de la rose des vents pendant la saisie utilisateur
+  const updateRoseFromInputs = () => {
+    const d = parseFloat(inputWindDir?.value) || 0;
+    const v = parseFloat(inputWindSpeed?.value) || 0;
+    updateWindRose(d, v, 'manual');
+  };
+  if (inputWindDir) inputWindDir.addEventListener('input', updateRoseFromInputs);
+  if (inputWindSpeed) inputWindSpeed.addEventListener('input', updateRoseFromInputs);
+
+  // État initial de la rose
+  updateRoseFromInputs();
+  // ----------------------------------------------------------
+  // SimConnect : connexion MSFS + injection vent
+  // ----------------------------------------------------------
   const statusBadge = document.getElementById('sim-status');
-  if (statusBadge) {
-    statusBadge.textContent = t('simDisconnectedEngine');
-    statusBadge.style.backgroundColor = "#e65100";
+  let _simState = 'disconnected'; // disconnected | connecting | connected
+
+  function appliquerEtatSim(state, info) {
+    _simState = state;
+    if (!statusBadge) return;
+    statusBadge.disabled = (state === 'connecting');
+    statusBadge.removeAttribute('data-i18n'); // on gère le texte manuellement
+    switch (state) {
+      case 'connected':
+        statusBadge.textContent = t('simConnected');
+        statusBadge.style.backgroundColor = '#2e7d32'; // vert
+        statusBadge.title = t('simClickToDisconnect');
+        break;
+      case 'connecting':
+        statusBadge.textContent = t('simConnecting');
+        statusBadge.style.backgroundColor = '#ef6c00'; // orange foncé
+        statusBadge.title = '';
+        break;
+      case 'disconnected':
+      default:
+        statusBadge.textContent = t('simDisconnectedClick');
+        statusBadge.style.backgroundColor = '#d32f2f'; // rouge
+        statusBadge.title = t('simClickToConnect');
+        break;
+    }
   }
+
+  // État initial
+  appliquerEtatSim('disconnected');
+
+  if (statusBadge) {
+    statusBadge.addEventListener('click', async () => {
+      if (_simState === 'connecting') return;
+      if (_simState === 'connected') {
+        await window.api.simConnectDeconnecter();
+      } else {
+        appliquerEtatSim('connecting');
+        const res = await window.api.simConnectConnecter();
+        if (!res || !res.ok) {
+          appliquerEtatSim('disconnected');
+          // Petite info dans la console — pas d'alerte intrusive
+          console.warn('Connexion MSFS échouée:', res && res.error);
+          // Flash visuel rapide pour signaler l'erreur
+          if (statusBadge) {
+            const prev = statusBadge.textContent;
+            statusBadge.textContent = t('simConnectFailed');
+            setTimeout(() => {
+              if (_simState === 'disconnected') statusBadge.textContent = t('simDisconnectedClick');
+            }, 2500);
+          }
+        }
+      }
+    });
+  }
+
+  // Écouter les changements de statut côté main process
+  window.api.onStatusSimConnect((status) => {
+    if (!status || !status.state) return;
+    appliquerEtatSim(status.state, status);
+  });
+
+  // Recevoir les données de vol (vent) et injecter dans les inputs
+  window.api.onDonneesVol((data) => {
+    if (!data) return;
+    let modifie = false;
+    if (typeof data.windDir === 'number' && Number.isFinite(data.windDir)) {
+      // Normaliser 0..360
+      let d = data.windDir % 360;
+      if (d < 0) d += 360;
+      const val = Math.round(d).toString();
+      if (inputWindDir && inputWindDir.value !== val) {
+        inputWindDir.value = val;
+        modifie = true;
+      }
+    }
+    if (typeof data.windSpeed === 'number' && Number.isFinite(data.windSpeed)) {
+      // Plafonner à 0..40 pour respecter la validation existante
+      let v = data.windSpeed;
+      if (v < 0) v = 0;
+      if (v > 40) v = 40;
+      const val = Math.round(v).toString();
+      if (inputWindSpeed && inputWindSpeed.value !== val) {
+        inputWindSpeed.value = val;
+        modifie = true;
+      }
+    }
+    if (modifie && typeof mettreAJourLogDeNav === 'function') {
+      mettreAJourLogDeNav();
+    }
+    // Mettre à jour la rose avec les valeurs brutes reçues de MSFS
+    if (typeof data.windDir === 'number' && typeof data.windSpeed === 'number') {
+      updateWindRose(data.windDir, data.windSpeed, 'msfs');
+    }
+  });
+
+  // Quand l'utilisateur se déconnecte de MSFS, revenir à 'manuel'
+  window.api.onStatusSimConnect((status) => {
+    if (status && status.state === 'disconnected') {
+      const d = parseFloat(inputWindDir?.value) || 0;
+      const v = parseFloat(inputWindSpeed?.value) || 0;
+      updateWindRose(d, v, 'manual');
+    }
+  });
 
   // --- 8. MODALE : INSÉRER UN POINT TOURNANT ---
   const insertOverlay = document.getElementById('insert-wp-overlay');
