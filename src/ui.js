@@ -15,10 +15,37 @@ let declinaisonMoyenneGlobale = 0.0;
 let activeLegIndex = 1; // Le leg actif (1-based, correspond au numéro affiché)
 let insertLegIndex = 0; // Index d'insertion du point tournant (position dans flightPlan)
 
+// --- État Direct To ---
+let _directToActive = false;
+let _directToOrigin = null;       // {lat, lon} = position avion au moment de l'activation
+let _directToTargetIndex = null;  // index dans flightPlan du waypoint cible
+let _directToLayer = null;        // L.polyline magenta dashed sur la carte
+let _lastAircraftPos = null;      // {lat, lon} : dernière position avion reçue de MSFS
+
 const ALT_MIN = 500;
 const ALT_MAX = 15000;
 const ALT_DEFAULT = 3000;
 const ALT_STEP = 500;
+
+// -------------------------------------------------------
+// Toast non-bloquant (remplace alert() — pas de gel de focus dans Electron)
+// -------------------------------------------------------
+function showToast(message, type = 'info', duration = 2500) {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-' + type;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('toast-fade-out');
+    setTimeout(() => { try { toast.remove(); } catch (_) {} }, 320);
+  }, duration);
+}
 
 // -------------------------------------------------------
 // Modale Détails d'un aéroport (clic sur un marqueur de la carte)
@@ -87,8 +114,18 @@ async function ouvrirInfoAeroport(ident) {
   const lat = parseFloat(a.latitude_deg);
   const lon = parseFloat(a.longitude_deg);
   const elev = a.elevation_ft;
+
+  // ICAO affiché : si le champ icao_code est vide MAIS que le code résolu
+  // est composé de 4 lettres uniquement (ex: LFNN dans gps_code, Narbonne),
+  // on l'utilise comme ICAO. Les codes du type 2 lettres + 4 chiffres
+  // (ex: LF1923 ULM) ne matchent pas ce filtre — comportement inchangé.
+  let icaoAffiche = (a.icao_code && a.icao_code.trim()) || '';
+  if (!icaoAffiche && /^[A-Za-z]{4}$/.test(code)) {
+    icaoAffiche = code;
+  }
+
   const rowsGen = [
-    [currentLang === 'fr' ? 'ICAO' : 'ICAO', escapeHtml(a.icao_code || '—')],
+    [currentLang === 'fr' ? 'ICAO' : 'ICAO', escapeHtml(icaoAffiche || '—')],
     [currentLang === 'fr' ? 'IATA' : 'IATA', escapeHtml(a.iata_code || '—')],
     ['GPS code', escapeHtml(a.gps_code || '—')],
     [currentLang === 'fr' ? 'Code local' : 'Local code', escapeHtml(a.local_code || '—')],
@@ -761,10 +798,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       appliquerEtatSim(_simState);
       // Mettre à jour la déclinaison dans le titre
       actualiserAffichageDeclinaison();
-      // Màj label bouton espaces aériens
-      if (window._btnAirspacesLeaflet && !window._btnAirspacesLeaflet.disabled) {
-        window._btnAirspacesLeaflet.innerHTML = newLang === 'fr' ? '🛡️ Espaces aériens' : '🛡️ Airspaces';
-      }
+      // Régénérer le dropdown des calques (libellés des toggles)
+      if (typeof window._refreshLayersDropdown === 'function') window._refreshLayersDropdown();
       // Régénérer les tooltips aéroports (langue dans "Piste / Runway")
       if (typeof window._refreshAirports === 'function') window._refreshAirports();
     });
@@ -825,6 +860,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           map.removeLayer(layers[currentLayerIdx].layer);
           currentLayerIdx = layers.findIndex(l => l.key === opt.key);
           layers[currentLayerIdx].layer.addTo(map);
+          // Si les espaces aériens sont activés, les remettre au premier plan
+          // (sinon la nouvelle couche de tuiles les masque)
+          if (airspacesVisible && airspaceTileLayer && airspaceTileLayer.bringToFront) {
+            airspaceTileLayer.bringToFront();
+          }
           btn.innerHTML = opt.label + ' ▾';
           dropdown.querySelectorAll('.layer-dropdown-item').forEach(el => el.classList.remove('active'));
           item.classList.add('active');
@@ -834,7 +874,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        const wasOpen = dropdown.style.display !== 'none';
+        // Fermer tous les dropdowns Leaflet ouverts (les nôtres uniquement)
+        document.querySelectorAll('.layer-dropdown').forEach(d => { d.style.display = 'none'; });
+        dropdown.style.display = wasOpen ? 'none' : 'block';
       });
 
       // Fermer si clic ailleurs
@@ -846,18 +889,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     btnLayerToggle.addTo(map);
 
-    // --- BOUTON ESPACES AÉRIENS (topleft) — couche TileLayer OpenAIP ---
-    // On utilise l'API Tiles d'OpenAIP : couche PNG transparente, complète,
-    // aucune limite de pagination. URL recommandée par OpenAIP officiel.
+    // --- ÉTAT DES COUCHES (espaces aériens, aéroports, navaids) ---
     let airspacesVisible = false;
     let airspaceTileLayer = null;
+    let airportsEnabled = true;
+    let navaidsEnabled  = true;
 
     function creerCoucheEspacesAeriens() {
       // La clé API est injectée automatiquement par le main process via
       // session.defaultSession.webRequest.onBeforeSendHeaders — pas besoin
       // de l'exposer dans l'URL côté renderer.
-      // Subdomains a/b/c confirmés par le forum officiel OpenAIP.
-      // Pas de tms:true (tuiles XYZ standard, pas TMS).
       return L.tileLayer(
         'https://{s}.api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png',
         {
@@ -871,41 +912,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       );
     }
 
-    // Contrôle Leaflet — bouton espaces aériens (topleft)
-    const btnAirspaces = L.control({ position: 'topleft' });
-    btnAirspaces.onAdd = function () {
-      const btn = L.DomUtil.create('button', 'btn-airspaces');
-      btn.innerHTML = currentLang === 'fr' ? '🛡️ Espaces aériens' : '🛡️ Airspaces';
-      btn.title = currentLang === 'fr'
-        ? 'Afficher / masquer les espaces aériens'
-        : 'Show / hide airspaces';
-
-      L.DomEvent.disableClickPropagation(btn);
-      L.DomEvent.on(btn, 'click', () => {
-        if (!OPENAIP_API_KEY) {
-          alert(t('apiKeyMissing'));
-          return;
+    function setAirspacesVisible(on) {
+      if (on && !OPENAIP_API_KEY) {
+        alert(t('apiKeyMissing'));
+        return false; // toggle refusé
+      }
+      if (on && !airspacesVisible) {
+        airspaceTileLayer = creerCoucheEspacesAeriens();
+        airspaceTileLayer.addTo(map);
+        airspacesVisible = true;
+      } else if (!on && airspacesVisible) {
+        if (airspaceTileLayer) {
+          map.removeLayer(airspaceTileLayer);
+          airspaceTileLayer = null;
         }
-        if (!airspacesVisible) {
-          airspaceTileLayer = creerCoucheEspacesAeriens();
-          airspaceTileLayer.addTo(map);
-          airspacesVisible = true;
-          btn.classList.add('active');
-        } else {
-          if (airspaceTileLayer) {
-            map.removeLayer(airspaceTileLayer);
-            airspaceTileLayer = null;
-          }
-          airspacesVisible = false;
-          btn.classList.remove('active');
-        }
-      });
-
-      // Stocker une référence pour màj de la langue
-      window._btnAirspacesLeaflet = btn;
-      return btn;
-    };
-    btnAirspaces.addTo(map);
+        airspacesVisible = false;
+      }
+      return true;
+    }
 
     // -------------------------------------------------------
     // Affichage des aéroports OurAirports (zoom >= 8)
@@ -970,6 +994,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function refreshAirportsOnMap() {
       if (!map) return;
+      if (!airportsEnabled) {
+        airportsLayer.clearLayers();
+        return;
+      }
       const zoom = map.getZoom();
       if (zoom < ZOOM_MIN_AEROPORTS) {
         airportsLayer.clearLayers();
@@ -1144,6 +1172,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function refreshNavaidsOnMap() {
       if (!map) return;
+      if (!navaidsEnabled) {
+        navaidsLayer.clearLayers();
+        return;
+      }
       const zoom = map.getZoom();
       if (zoom < ZOOM_MIN_NAVAIDS) {
         navaidsLayer.clearLayers();
@@ -1190,6 +1222,70 @@ document.addEventListener('DOMContentLoaded', async () => {
     map.on('zoomend', scheduleNavaidRefresh);
     scheduleNavaidRefresh();
     window._refreshNavaids = refreshNavaidsOnMap;
+
+    // Bascule labels permanents / hover des waypoints à chaque changement de zoom
+    map.on('zoomend', updateAllWaypointLabels);
+
+    // --- Bouton déroulant des CALQUES (Espaces aériens / Aéroports / Navaids) ---
+    // Placé à gauche du dropdown des fonds de carte (grâce au row-reverse CSS sur topright)
+    const btnLayersFilter = L.control({ position: 'topright' });
+    btnLayersFilter.onAdd = function() {
+      const wrapper = L.DomUtil.create('div', 'layer-toggle-wrapper layers-filter-wrapper');
+      L.DomEvent.disableClickPropagation(wrapper);
+      L.DomEvent.disableScrollPropagation(wrapper);
+
+      const btn = L.DomUtil.create('button', 'btn-layer-toggle', wrapper);
+      const dropdown = L.DomUtil.create('div', 'layer-dropdown layers-filter-dropdown', wrapper);
+      dropdown.style.display = 'none';
+
+      // Construit (ou reconstruit, après changement de langue) le contenu
+      function rebuild() {
+        btn.innerHTML = (currentLang === 'fr' ? '🗂️ Calques' : '🗂️ Layers') + ' ▾';
+        dropdown.innerHTML = '';
+        const items = [
+          { id: 'airspaces', labelFr: 'Espaces aériens', labelEn: 'Airspaces', checked: airspacesVisible },
+          { id: 'airports',  labelFr: 'Aéroports',       labelEn: 'Airports',  checked: airportsEnabled },
+          { id: 'navaids',   labelFr: 'Navaids',          labelEn: 'Navaids',   checked: navaidsEnabled },
+        ];
+        items.forEach(it => {
+          const row = L.DomUtil.create('label', 'layer-toggle-row', dropdown);
+          row.innerHTML = `
+            <span>${currentLang === 'fr' ? it.labelFr : it.labelEn}</span>
+            <input type="checkbox" class="toggle-switch" data-layer="${it.id}" ${it.checked ? 'checked' : ''}>
+          `;
+          const input = row.querySelector('input');
+          L.DomEvent.on(input, 'click', e => e.stopPropagation());
+          L.DomEvent.on(input, 'change', () => {
+            const on = input.checked;
+            if (it.id === 'airspaces') {
+              const ok = setAirspacesVisible(on);
+              if (!ok) input.checked = false; // ex: pas de clé API → toggle refusé
+            } else if (it.id === 'airports') {
+              airportsEnabled = on;
+              if (on) refreshAirportsOnMap(); else airportsLayer.clearLayers();
+            } else if (it.id === 'navaids') {
+              navaidsEnabled = on;
+              if (on) refreshNavaidsOnMap(); else navaidsLayer.clearLayers();
+            }
+          });
+        });
+      }
+      rebuild();
+      window._refreshLayersDropdown = rebuild;
+
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const wasOpen = dropdown.style.display !== 'none';
+        document.querySelectorAll('.layer-dropdown').forEach(d => { d.style.display = 'none'; });
+        dropdown.style.display = wasOpen ? 'none' : 'block';
+      });
+      document.addEventListener('click', e => {
+        if (!wrapper.contains(e.target)) dropdown.style.display = 'none';
+      });
+
+      return wrapper;
+    };
+    btnLayersFilter.addTo(map);
 
     console.log("Carte Leaflet initialisée avec succès.");
   } catch (mapError) {
@@ -1256,13 +1352,57 @@ document.addEventListener('DOMContentLoaded', async () => {
   // --- Modale : édition leg — listeners ---
   window._editLegIndex = null;
 
-  document.getElementById('btn-edit-leg-cancel').addEventListener('click', () => {
+  // Helper : ferme la modale Édit leg + nettoie les états de recherche
+  function fermerModaleEditLeg() {
     document.getElementById('edit-leg-overlay').style.display = 'none';
-  });
+    // Invalider toute recherche en cours et vider les résultats
+    ['search-results-edit-dep', 'search-results-edit-arr'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el._searchReqId = (el._searchReqId || 0) + 1; // invalide les réponses pendantes
+        el.innerHTML = '';
+        el.classList.remove('visible');
+      }
+    });
+    ['search-status-edit-dep', 'search-status-edit-arr'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = ''; el.className = 'search-status'; }
+    });
+  }
+
+  document.getElementById('btn-edit-leg-cancel').addEventListener('click', fermerModaleEditLeg);
 
   document.getElementById('edit-leg-overlay').addEventListener('click', (e) => {
     if (e.target === document.getElementById('edit-leg-overlay'))
-      document.getElementById('edit-leg-overlay').style.display = 'none';
+      fermerModaleEditLeg();
+  });
+
+  // Recherche multi pour Édit leg — Départ
+  document.getElementById('btn-search-edit-dep').addEventListener('click', () => {
+    rechercherMulti({
+      code: document.getElementById('edit-leg-dep-name').value,
+      statusEl: document.getElementById('search-status-edit-dep'),
+      resultsEl: document.getElementById('search-results-edit-dep'),
+      latEl: document.getElementById('edit-leg-dep-lat'),
+      lonEl: document.getElementById('edit-leg-dep-lon'),
+      latRadioName: 'edit-dep-lat-dir',
+      lonRadioName: 'edit-dep-lon-dir',
+      nameEl: document.getElementById('edit-leg-dep-name'),
+    });
+  });
+
+  // Recherche multi pour Édit leg — Arrivée
+  document.getElementById('btn-search-edit-arr').addEventListener('click', () => {
+    rechercherMulti({
+      code: document.getElementById('edit-leg-arr-name').value,
+      statusEl: document.getElementById('search-status-edit-arr'),
+      resultsEl: document.getElementById('search-results-edit-arr'),
+      latEl: document.getElementById('edit-leg-arr-lat'),
+      lonEl: document.getElementById('edit-leg-arr-lon'),
+      latRadioName: 'edit-arr-lat-dir',
+      lonRadioName: 'edit-arr-lon-dir',
+      nameEl: document.getElementById('edit-leg-arr-name'),
+    });
   });
 
   document.getElementById('btn-edit-leg-validate').addEventListener('click', () => {
@@ -1299,7 +1439,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     flightPlan[legIndex - 1] = { ...flightPlan[legIndex - 1], ...newDep };
     flightPlan[legIndex]     = { ...flightPlan[legIndex],     ...newArr };
 
-    document.getElementById('edit-leg-overlay').style.display = 'none';
+    fermerModaleEditLeg();
 
     // Recalculer et redessiner toute la carte
     marqueursCarte.forEach(m => map.removeLayer(m));
@@ -1671,9 +1811,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const result = await window.api.sauvegarderNavXpv(planData);
       if (result && result.ok) {
-        alert(t('saveSuccess'));
+        showToast(t('saveSuccess'), 'success');
       } else if (result && !result.canceled) {
-        alert('❌ ' + (result.error || 'Erreur sauvegarde'));
+        showToast('❌ ' + (result.error || 'Erreur sauvegarde'), 'error');
       }
     });
   }
@@ -1864,6 +2004,644 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // ----------------------------------------------------------
+  // Alerte sonore de proximité waypoint
+  //   Reçoit la position de l'avion toutes les 5 s depuis MSFS,
+  //   calcule la distance au point d'arrivée du leg actif et
+  //   joue waypoint_fr.wav / waypoint_en.wav quand < 1.5 NM.
+  // ----------------------------------------------------------
+  const WAYPOINT_RADIUS_NM = 1.5;
+  const DEVIATION_MAX_NM  = 1.2;
+  // Précharge des fichiers audio (situés dans src/sounds/)
+  const _wpSounds = {
+    fr: new Audio('sounds/waypoint_fr.wav'),
+    en: new Audio('sounds/waypoint_en.wav'),
+  };
+  const _arrivalSound = new Audio('sounds/cuckoo.wav'); // joué à l'arrivée finale (langue-agnostique)
+  const _devSounds = {
+    fr: new Audio('sounds/deviation_fr.wav'),
+    en: new Audio('sounds/deviation_en.wav'),
+  };
+  // Pré-chargement (au cas où le 1er play soit en différé)
+  _wpSounds.fr.preload = 'auto';
+  _wpSounds.en.preload = 'auto';
+  _arrivalSound.preload = 'auto';
+  _devSounds.fr.preload = 'auto';
+  _devSounds.en.preload = 'auto';
+
+  let _lastSoundLegIndex = null;     // index du leg pour lequel le son d'arrivée a déjà été joué
+  let _lastSoundSession = false;     // mémoire qu'on était DANS le rayon au précédent tick
+
+  // État de l'alerte d'écart latéral
+  let _deviationLegIndex = null;     // index du leg pour lequel on a alerté la dernière fois
+  let _deviationOutside = false;     // currently hors du couloir 1.2 NM
+  let _deviationLastAlertTime = 0;   // timestamp ms de la dernière alerte (pour rappel toutes les 2 min)
+  const DEVIATION_REMIND_MS = 2 * 60 * 1000; // 2 minutes
+
+  function _distanceNM(lat1, lon1, lat2, lon2) {
+    const R_NM = 3440.065;
+    const toRad = d => d * Math.PI / 180;
+    const φ1 = toRad(lat1);
+    const φ2 = toRad(lat2);
+    const Δφ = toRad(lat2 - lat1);
+    const Δλ = toRad(lon2 - lon1);
+    const a = Math.sin(Δφ / 2) ** 2
+            + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R_NM * c;
+  }
+
+  // Cross-track distance (XTD) : distance perpendiculaire signée d'un point P
+  // à la route grand-cercle A→B. Positif = à droite de la route, négatif = à gauche.
+  // Résultat en nautical miles. Pour le test de seuil on utilisera Math.abs().
+  function _crossTrackNM(latP, lonP, latA, lonA, latB, lonB) {
+    const R_NM = 3440.065;
+    const toRad = d => d * Math.PI / 180;
+    const φA = toRad(latA), λA = toRad(lonA);
+    const φP = toRad(latP), λP = toRad(lonP);
+    const φB = toRad(latB), λB = toRad(lonB);
+
+    // Distance angulaire A→P (en radians)
+    const Δφap = φP - φA;
+    const Δλap = λP - λA;
+    const aap = Math.sin(Δφap / 2) ** 2
+              + Math.cos(φA) * Math.cos(φP) * Math.sin(Δλap / 2) ** 2;
+    const d_AP = 2 * Math.atan2(Math.sqrt(aap), Math.sqrt(1 - aap));
+
+    // Relevement A→B et A→P
+    function bearing(φ1, λ1, φ2, λ2) {
+      const y = Math.sin(λ2 - λ1) * Math.cos(φ2);
+      const x = Math.cos(φ1) * Math.sin(φ2)
+              - Math.sin(φ1) * Math.cos(φ2) * Math.cos(λ2 - λ1);
+      return Math.atan2(y, x);
+    }
+    const θ_AB = bearing(φA, λA, φB, λB);
+    const θ_AP = bearing(φA, λA, φP, λP);
+
+    return Math.asin(Math.sin(d_AP) * Math.sin(θ_AP - θ_AB)) * R_NM;
+  }
+
+  function _jouerSon(audioEl) {
+    try {
+      audioEl.currentTime = 0;
+      audioEl.play().catch(err => console.warn('Lecture son refusée :', err));
+    } catch (err) {
+      console.warn('Erreur son :', err);
+    }
+  }
+  function _jouerSonWaypoint() {
+    _jouerSon(_wpSounds[currentLang] || _wpSounds.fr);
+  }
+  function _jouerSonArrivee() {
+    _jouerSon(_arrivalSound);
+  }
+  function _jouerSonDeviation() {
+    _jouerSon(_devSounds[currentLang] || _devSounds.fr);
+  }
+
+  // Calcul cap magnétique + temps + distance pour une trajectoire (A → B).
+  // Utilise la déclinaison magnétique globale et les valeurs courantes Vp/vent
+  // (lues depuis les inputs). Retourne null si Vp invalide.
+  function calcLegInfo(latA, lonA, latB, lonB) {
+    const vp = parseFloat(document.getElementById('input-vp').value) || 90;
+    const dirVent = parseFloat(document.getElementById('input-wind-dir').value) || 0;
+    const vitVent = parseFloat(document.getElementById('input-wind-speed').value) || 0;
+
+    const R = 3440.065;
+    const toRad = d => d * Math.PI / 180;
+    const dLat = toRad(latB - latA);
+    const dLon = toRad(lonB - lonA);
+    const lat1Rad = toRad(latA);
+    const lat2Rad = toRad(latB);
+    const a = Math.sin(dLat / 2) ** 2
+            + Math.sin(dLon / 2) ** 2 * Math.cos(lat1Rad) * Math.cos(lat2Rad);
+    const distanceNM = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    // Route vraie (bearing initial du grand-cercle)
+    const y = Math.sin(dLon) * Math.cos(lat2Rad);
+    const x = Math.cos(lat1Rad) * Math.sin(lat2Rad)
+            - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+    const rvDeg = ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+
+    // Triangle des vitesses (dérive + GS)
+    const alphaRad = ((dirVent - rvDeg) * Math.PI) / 180;
+    let deriveDeg = 0;
+    if (vp > 0) {
+      const sinX = (vitVent * Math.sin(alphaRad)) / vp;
+      if (Math.abs(sinX) <= 1) deriveDeg = (Math.asin(sinX) * 180) / Math.PI;
+    }
+    const deriveRad = (deriveDeg * Math.PI) / 180;
+    let gs = vp * Math.cos(deriveRad) - vitVent * Math.cos(alphaRad);
+    if (gs < 0) gs = 0;
+
+    let tempsSec = null;
+    let tempsFormate = '--:--';
+    if (gs > 0) {
+      tempsSec = Math.round((distanceNM / gs) * 3600);
+      const mm = Math.floor(tempsSec / 60).toString().padStart(2, '0');
+      const ss = (tempsSec % 60).toString().padStart(2, '0');
+      tempsFormate = `${mm}:${ss}`;
+    }
+
+    const capMagDeg = (rvDeg + deriveDeg - declinaisonMoyenneGlobale + 360) % 360;
+    return { distanceNM, rvDeg, capMagDeg, gs, tempsSec, tempsFormate };
+  }
+
+  window.api.onDonneesPosition((pos) => {
+    if (!pos || typeof pos.lat !== 'number' || typeof pos.lon !== 'number') return;
+    // Cache la dernière position avion (utilisée par Direct To)
+    _lastAircraftPos = { lat: pos.lat, lon: pos.lon };
+    if (!flightPlan || flightPlan.length < 2) return;
+    // Le leg actif doit avoir un point d'arrivée valide
+    if (activeLegIndex < 1 || activeLegIndex >= flightPlan.length) return;
+
+    // Si l'utilisateur a changé de leg actif depuis la dernière fois,
+    // on reset le tracking (le son pourra être rejoué pour le nouveau leg)
+    if (_lastSoundLegIndex !== null && _lastSoundLegIndex !== activeLegIndex) {
+      _lastSoundLegIndex = null;
+      _lastSoundSession = false;
+    }
+    // Idem pour le tracking d'écart latéral
+    if (_deviationLegIndex !== null && _deviationLegIndex !== activeLegIndex) {
+      _deviationLegIndex = null;
+      _deviationOutside = false;
+      _deviationLastAlertTime = 0;
+    }
+
+    // En mode Direct To, le DÉPART de la trajectoire est figé à la position
+    // de l'avion au moment de l'activation, pas le précédent waypoint.
+    // L'ARRIVÉE reste flightPlan[activeLegIndex].
+    const dep = _directToActive ? _directToOrigin : flightPlan[activeLegIndex - 1];
+    const arr = flightPlan[activeLegIndex];
+    const distance = _distanceNM(pos.lat, pos.lon, arr.lat, arr.lon);
+    const insideRadius = distance < WAYPOINT_RADIUS_NM;
+
+    // --- Vérification de l'écart latéral à la trajectoire du leg actif ---
+    if (dep) {
+      const xtd = _crossTrackNM(pos.lat, pos.lon, dep.lat, dep.lon, arr.lat, arr.lon);
+      const horsCouloir = Math.abs(xtd) > DEVIATION_MAX_NM;
+      if (horsCouloir) {
+        const now = Date.now();
+        if (!_deviationOutside) {
+          // 1ère alerte (transition dans → hors couloir)
+          _jouerSonDeviation();
+          _deviationOutside = true;
+          _deviationLegIndex = activeLegIndex;
+          _deviationLastAlertTime = now;
+        } else if (now - _deviationLastAlertTime >= DEVIATION_REMIND_MS) {
+          // Rappel : toujours hors couloir et 2 minutes se sont écoulées
+          _jouerSonDeviation();
+          _deviationLastAlertTime = now;
+        }
+      } else if (_deviationOutside) {
+        // Retour dans le couloir → reset complet, la prochaine déviation rejouera
+        _deviationOutside = false;
+        _deviationLastAlertTime = 0;
+      }
+    }
+
+    // Détection de FRANCHISSEMENT du seuil (transition extérieur → intérieur)
+    // pour ne jouer le son qu'une fois par entrée dans le rayon.
+    if (insideRadius && _lastSoundLegIndex !== activeLegIndex) {
+      // Dernier leg → son d'arrivée finale (cuckoo), sinon son de waypoint
+      const estDernierLeg = (activeLegIndex === flightPlan.length - 1);
+      if (estDernierLeg) {
+        _jouerSonArrivee();
+      } else {
+        _jouerSonWaypoint();
+      }
+      _lastSoundLegIndex = activeLegIndex;
+      _lastSoundSession = true;
+      // Auto-validation : on marque le leg comme fait → activeLegIndex++
+      // (identique au comportement de la checkbox "Fait" cochée manuellement)
+      activeLegIndex = activeLegIndex + 1;
+      // Si on était en mode Direct To, on le quitte → le plan reprend son
+      // cours normal à partir du leg suivant
+      if (_directToActive) {
+        _directToActive = false;
+        _directToOrigin = null;
+        _directToTargetIndex = null;
+        _supprimerLigneDirectTo();
+      }
+      if (typeof mettreAJourLogDeNav === 'function') mettreAJourLogDeNav();
+    } else if (!insideRadius && _lastSoundSession) {
+      // L'avion sort du rayon. On garde _lastSoundLegIndex mémorisé pour ne pas
+      // rejouer s'il revient dans le rayon sur le MÊME leg (pas d'oscillation).
+      _lastSoundSession = false;
+    }
+  });
+
+  // ============================================================
+  // EMPORT CARBURANT — calcul et affichage du total
+  // ============================================================
+  const fuelConsoEl  = document.getElementById('fuel-conso');
+  const fuelNightEl  = document.getElementById('fuel-night');
+  const fuelDistAltEl = document.getElementById('fuel-dist-alt');
+  const fuelReserveEl = document.getElementById('fuel-reserve');
+  const fuelTotalEl   = document.getElementById('fuel-total');
+
+  // Filtre décimal (réutilise la même logique que les conversions, déclarée
+  // dans le bloc CONVERSIONS plus bas — on en redéfinit une locale ici par
+  // sécurité, indépendante de l'ordre des blocs)
+  function _fuelCleanInput(el) {
+    const before = el.value;
+    let v = before.replace(/,/g, '.').replace(/[^0-9.\-]/g, '');
+    const firstDot = v.indexOf('.');
+    if (firstDot !== -1) {
+      v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, '');
+    }
+    if (v.lastIndexOf('-') > 0) v = v.replace(/-/g, '');
+    if (v !== before) el.value = v;
+  }
+
+  // Calcule le temps total du plan de vol (somme des durées des legs) en secondes.
+  // Renvoie 0 si aucun plan ou si le calcul n'est pas possible.
+  function _calcTempsTripSec() {
+    if (!flightPlan || flightPlan.length < 2) return 0;
+    let total = 0;
+    for (let i = 1; i < flightPlan.length; i++) {
+      const a = flightPlan[i - 1];
+      const b = flightPlan[i];
+      const info = calcLegInfo(a.lat, a.lon, b.lat, b.lon);
+      if (info && Number.isFinite(info.tempsSec)) total += info.tempsSec;
+    }
+    return total;
+  }
+
+  function updateFuelTotal() {
+    if (!fuelTotalEl) return;
+    const conso = parseFloat(fuelConsoEl?.value) || 0;
+    const distAlt = parseFloat(fuelDistAltEl?.value) || 0;
+    const reserveDisc = parseFloat(fuelReserveEl?.value) || 0;
+    const vfrNuit = !!fuelNightEl?.checked;
+    const vp = parseFloat(document.getElementById('input-vp')?.value) || 0;
+
+    // Durées (en heures)
+    const taxiH = 10 / 60;
+    const tripH = _calcTempsTripSec() / 3600;
+    const reserveRegMin = vfrNuit ? 45 : 30;
+    const reserveRegH = reserveRegMin / 60;
+    const altH = (vp > 0 && distAlt > 0) ? (distAlt / vp) : 0;
+
+    // Carburant (USG) = consommation (USG/h) × temps (h)
+    const fTaxi = conso * taxiH;
+    const fTrip = conso * tripH;
+    const fReserve = conso * reserveRegH;
+    const fAlt = conso * altH;
+    // Réserve de route : 10% de la consommation horaire (aléas météo, etc.)
+    const fRouteReserve = conso * 0.10;
+    const total = fTaxi + fTrip + fReserve + fAlt + fRouteReserve + reserveDisc;
+
+    fuelTotalEl.textContent = total.toFixed(1);
+  }
+
+  // Listeners sur les champs carburant
+  [fuelConsoEl, fuelDistAltEl, fuelReserveEl].forEach(el => {
+    if (!el) return;
+    el.addEventListener('input', () => {
+      _fuelCleanInput(el);
+      updateFuelTotal();
+    });
+  });
+  if (fuelNightEl) fuelNightEl.addEventListener('change', updateFuelTotal);
+
+  // Quand le plan de vol / Vp / vent changent, le trip time change → recalcul.
+  // mettreAJourLogDeNav est déjà wrappé plus bas par le bloc Direct To, donc
+  // pour ne pas perdre les autres effets on hook ici aussi.
+  const _origMajLogForFuel = mettreAJourLogDeNav;
+  mettreAJourLogDeNav = function() {
+    const r = _origMajLogForFuel.apply(this, arguments);
+    try { updateFuelTotal(); } catch (_) {}
+    return r;
+  };
+
+  // Calcul initial
+  updateFuelTotal();
+
+  // --- Bouton + Modale Emport Carburant ---
+  const btnFuel = document.getElementById('btn-fuel');
+  const fuelOverlay = document.getElementById('fuel-overlay');
+  const btnFuelClose = document.getElementById('btn-fuel-close');
+
+  function _ouvrirFuel() {
+    if (!fuelOverlay) return;
+    updateFuelTotal(); // s'assure que le total est à jour à l'ouverture
+    fuelOverlay.classList.add('visible');
+    setTimeout(() => {
+      if (fuelConsoEl) { fuelConsoEl.focus(); fuelConsoEl.select(); }
+    }, 50);
+  }
+  function _fermerFuel() {
+    if (fuelOverlay) fuelOverlay.classList.remove('visible');
+    // Les valeurs des champs sont conservées (pas de reset) → persistance entre ouvertures
+  }
+  if (btnFuel) btnFuel.addEventListener('click', _ouvrirFuel);
+  if (btnFuelClose) btnFuelClose.addEventListener('click', _fermerFuel);
+  if (fuelOverlay) {
+    fuelOverlay.addEventListener('click', e => {
+      if (e.target === fuelOverlay) _fermerFuel();
+    });
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && fuelOverlay && fuelOverlay.classList.contains('visible')) {
+      _fermerFuel();
+    }
+  });
+
+  // ============================================================
+  // CONVERSIONS D'UNITÉS — bouton + modale
+  // ============================================================
+  const btnConversions = document.getElementById('btn-conversions');
+  const convOverlay = document.getElementById('conversions-overlay');
+
+  // Helpers : filtre le texte saisi pour n'autoriser que les chiffres,
+  // un point décimal et un signe moins. Accepte aussi la virgule (convertie).
+  function _convCleanInput(el) {
+    const before = el.value;
+    let v = before.replace(/,/g, '.').replace(/[^0-9.\-]/g, '');
+    // Au plus un point et un signe moins en début
+    const firstDot = v.indexOf('.');
+    if (firstDot !== -1) {
+      v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, '');
+    }
+    if (v.lastIndexOf('-') > 0) v = v.replace(/-/g, '');
+    if (v !== before) el.value = v;
+  }
+  // Formate un nombre en supprimant les zéros de fin inutiles (max N décimales)
+  function _convFmt(num, decimals = 3) {
+    if (!isFinite(num)) return '';
+    return parseFloat(num.toFixed(decimals)).toString();
+  }
+
+  // Lien bidirectionnel entre deux inputs (paire simple)
+  function linkPair(idA, idB, aToB, bToA, decimals = 2) {
+    const a = document.getElementById(idA);
+    const b = document.getElementById(idB);
+    if (!a || !b) return;
+    a.addEventListener('input', () => {
+      _convCleanInput(a);
+      const v = parseFloat(a.value);
+      b.value = isFinite(v) ? _convFmt(aToB(v), decimals) : '';
+    });
+    b.addEventListener('input', () => {
+      _convCleanInput(b);
+      const v = parseFloat(b.value);
+      a.value = isFinite(v) ? _convFmt(bToA(v), decimals) : '';
+    });
+  }
+
+  // Lien à 3 unités (vitesse : kt, km/h, mph) via une base commune (kt)
+  function linkTripletSpeed() {
+    const items = [
+      { id: 'conv-kt',  toKt: v => v,           fromKt: v => v },
+      { id: 'conv-kmh', toKt: v => v / 1.852,   fromKt: v => v * 1.852 },
+      { id: 'conv-mph', toKt: v => v / 1.150779, fromKt: v => v * 1.150779 },
+    ];
+    items.forEach(src => {
+      const el = document.getElementById(src.id);
+      if (!el) return;
+      el.addEventListener('input', () => {
+        _convCleanInput(el);
+        const v = parseFloat(el.value);
+        if (!isFinite(v)) {
+          items.forEach(o => {
+            if (o.id !== src.id) document.getElementById(o.id).value = '';
+          });
+          return;
+        }
+        const ktVal = src.toKt(v);
+        items.forEach(o => {
+          if (o.id === src.id) return;
+          document.getElementById(o.id).value = _convFmt(o.fromKt(ktVal), 2);
+        });
+      });
+    });
+  }
+
+  // Câblages des paires
+  // Distance NM ↔ km : 1 NM = 1.852 km
+  linkPair('conv-nm', 'conv-km', v => v * 1.852, v => v / 1.852, 3);
+  // Distance ft ↔ m : 1 ft = 0.3048 m
+  linkPair('conv-ft', 'conv-m', v => v * 0.3048, v => v / 0.3048, 2);
+  // Vitesse triplet
+  linkTripletSpeed();
+  // Température °C ↔ °F
+  linkPair('conv-c', 'conv-f', v => v * 9 / 5 + 32, v => (v - 32) * 5 / 9, 1);
+  // Pression hPa ↔ inHg : 1 inHg = 33.8639 hPa
+  linkPair('conv-hpa', 'conv-inhg', v => v / 33.8639, v => v * 33.8639, 3);
+  // Poids kg ↔ lb : 1 kg = 2.20462 lb
+  linkPair('conv-kg', 'conv-lb', v => v * 2.20462, v => v / 2.20462, 3);
+  // Volume US gal ↔ L : 1 US gal = 3.785411784 L
+  linkPair('conv-usgal', 'conv-l', v => v * 3.785411784, v => v / 3.785411784, 3);
+
+  // Ouverture / fermeture de la modale
+  function _ouvrirConversions() {
+    if (!convOverlay) return;
+    convOverlay.classList.add('visible');
+    setTimeout(() => {
+      const first = document.getElementById('conv-nm');
+      if (first) { first.focus(); first.select(); }
+    }, 50);
+  }
+  function _fermerConversions() {
+    if (convOverlay) convOverlay.classList.remove('visible');
+    // Vider tous les champs de conversion
+    convOverlay?.querySelectorAll('.conv-input').forEach(el => { el.value = ''; });
+  }
+  if (btnConversions) btnConversions.addEventListener('click', _ouvrirConversions);
+  if (convOverlay) {
+    convOverlay.addEventListener('click', e => {
+      if (e.target === convOverlay) _fermerConversions();
+    });
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && convOverlay && convOverlay.classList.contains('visible')) {
+      _fermerConversions();
+    }
+  });
+
+  // ============================================================
+  // DIRECT TO — bouton + 2 modales + logique
+  // ============================================================
+  const btnDirectTo = document.getElementById('btn-direct-to');
+  const dtOverlay = document.getElementById('direct-to-overlay');
+  const dtList = document.getElementById('dt-wp-list');
+  const dtError = document.getElementById('dt-error');
+  const btnDtCancel = document.getElementById('btn-dt-cancel');
+  const btnDtValidate = document.getElementById('btn-dt-validate');
+  const dtInfoOverlay = document.getElementById('direct-to-info-overlay');
+  const dtInfoTarget = document.getElementById('dt-info-target');
+  const dtInfoCap = document.getElementById('dt-info-cap');
+  const dtInfoDist = document.getElementById('dt-info-dist');
+  const dtInfoTime = document.getElementById('dt-info-time');
+  const dtProgressFill = document.getElementById('dt-progress-fill');
+  const btnDtInfoClose = document.getElementById('btn-dt-info-close');
+
+  // Etat d'activation du bouton (MSFS connecté + plan présent)
+  function _majBoutonDirectTo() {
+    if (!btnDirectTo) return;
+    const peut = (_simState === 'connected') && Array.isArray(flightPlan) && flightPlan.length >= 1;
+    btnDirectTo.disabled = !peut;
+    btnDirectTo.title = peut
+      ? (currentLang === 'fr' ? "Direct To — Aller directement vers un waypoint"
+                              : "Direct To — Fly directly to a waypoint")
+      : (currentLang === 'fr' ? "Direct To — MSFS doit être connecté et un plan chargé"
+                              : "Direct To — MSFS must be connected and a flight plan loaded");
+  }
+  // Mise à jour à la connexion / déconnexion + après chaque rafraîchissement du nav log
+  window.api.onStatusSimConnect(() => _majBoutonDirectTo());
+  // Hook dans mettreAJourLogDeNav (ré-évalué à chaque redraw)
+  const _origMajLog = mettreAJourLogDeNav;
+  mettreAJourLogDeNav = function() {
+    const r = _origMajLog.apply(this, arguments);
+    _majBoutonDirectTo();
+    return r;
+  };
+  _majBoutonDirectTo();
+
+  // --- Ouverture modale 1 : sélection waypoint ---
+  if (btnDirectTo) {
+    btnDirectTo.addEventListener('click', () => {
+      if (btnDirectTo.disabled) return;
+      if (!flightPlan || flightPlan.length === 0) return;
+      // Remplit la liste (TOUS les waypoints, départ inclus)
+      dtList.innerHTML = '';
+      dtError.textContent = '';
+      btnDtValidate.disabled = true;
+      flightPlan.forEach((wp, idx) => {
+        const item = document.createElement('label');
+        item.className = 'dt-wp-item';
+        item.innerHTML = `
+          <input type="radio" name="dt-target" value="${idx}">
+          <span class="dt-wp-index">#${idx}</span>
+          <span class="dt-wp-name">${escapeHtml(wp.name || wp.ident || '?')}</span>
+        `;
+        dtList.appendChild(item);
+      });
+      dtList.querySelectorAll('input[type="radio"]').forEach(r => {
+        r.addEventListener('change', () => { btnDtValidate.disabled = false; });
+      });
+      dtOverlay.classList.add('visible');
+    });
+  }
+
+  function _fermerDtSelect() { dtOverlay.classList.remove('visible'); }
+  if (btnDtCancel) btnDtCancel.addEventListener('click', _fermerDtSelect);
+  if (dtOverlay) {
+    dtOverlay.addEventListener('click', e => { if (e.target === dtOverlay) _fermerDtSelect(); });
+  }
+
+  // --- Validation modale 1 → activation Direct To + modale 2 ---
+  if (btnDtValidate) {
+    btnDtValidate.addEventListener('click', () => {
+      const checked = dtList.querySelector('input[type="radio"]:checked');
+      if (!checked) {
+        dtError.textContent = t('dtNoWaypoint');
+        return;
+      }
+      const targetIdx = parseInt(checked.value, 10);
+      if (!_lastAircraftPos) {
+        dtError.textContent = currentLang === 'fr'
+          ? 'Position avion inconnue — MSFS non connecté ?'
+          : 'Aircraft position unknown — MSFS not connected?';
+        return;
+      }
+      _activerDirectTo(targetIdx);
+      _fermerDtSelect();
+    });
+  }
+
+  // --- Ligne magenta dashed sur la carte ---
+  function _supprimerLigneDirectTo() {
+    if (_directToLayer) {
+      try { map.removeLayer(_directToLayer); } catch (_) {}
+      _directToLayer = null;
+    }
+  }
+  // Exposer pour le bloc auto-validation arrivée (qui appelle aussi cette fonction)
+  window._supprimerLigneDirectTo = _supprimerLigneDirectTo;
+
+  function _tracerLigneDirectTo(origin, target) {
+    _supprimerLigneDirectTo();
+    if (!map || !origin || !target) return;
+    _directToLayer = L.polyline(
+      [[origin.lat, origin.lon], [target.lat, target.lon]],
+      { color: '#e91e63', weight: 3, opacity: 0.9, dashArray: '10 6' }
+    ).addTo(map);
+  }
+
+  // --- Activation : passage en mode Direct To ---
+  function _activerDirectTo(targetIdx) {
+    const target = flightPlan[targetIdx];
+    if (!target || !_lastAircraftPos) return;
+
+    // Etat
+    _directToActive = true;
+    _directToOrigin = { lat: _lastAircraftPos.lat, lon: _lastAircraftPos.lon };
+    _directToTargetIndex = targetIdx;
+
+    // Reset tracking déviation et waypoint pour ce nouveau "leg"
+    _lastSoundLegIndex = null;
+    _lastSoundSession = false;
+    _deviationLegIndex = null;
+    _deviationOutside = false;
+    _deviationLastAlertTime = 0;
+
+    // Le leg dont l'arrivée est ce waypoint devient actif.
+    // Si l'utilisateur cible le waypoint #0 (départ), activeLegIndex = 0
+    // (= "rien encore fait"). Sinon, activeLegIndex = targetIdx.
+    activeLegIndex = targetIdx;
+
+    // Trace la ligne magenta sur la carte
+    _tracerLigneDirectTo(_directToOrigin, target);
+
+    // Redessine table + segments (couleurs mises à jour selon activeLegIndex)
+    mettreAJourLogDeNav();
+
+    // Calcul cap / temps / distance et ouvre la modale info
+    const info = calcLegInfo(_directToOrigin.lat, _directToOrigin.lon, target.lat, target.lon);
+    _afficherInfoDirectTo(target, info);
+  }
+
+  // --- Modale 2 : info cap + temps + auto-close 10 s ---
+  let _dtInfoTimer = null;
+  let _dtInfoStart = 0;
+  const DT_INFO_DURATION_MS = 10000;
+
+  function _afficherInfoDirectTo(target, info) {
+    if (!dtInfoOverlay) return;
+    dtInfoTarget.textContent = (currentLang === 'fr' ? 'Vers ' : 'To ')
+      + (target.name || target.ident || '?');
+    dtInfoCap.textContent = info.gs > 0
+      ? String(Math.round(info.capMagDeg)).padStart(3, '0')
+      : '---';
+    dtInfoDist.textContent = info.distanceNM.toFixed(1);
+    dtInfoTime.textContent = info.tempsFormate;
+    dtProgressFill.style.width = '100%';
+    dtInfoOverlay.classList.add('visible');
+
+    if (_dtInfoTimer) clearInterval(_dtInfoTimer);
+    _dtInfoStart = Date.now();
+    _dtInfoTimer = setInterval(() => {
+      const elapsed = Date.now() - _dtInfoStart;
+      const remaining = Math.max(0, DT_INFO_DURATION_MS - elapsed);
+      const pct = (remaining / DT_INFO_DURATION_MS) * 100;
+      dtProgressFill.style.width = pct + '%';
+      if (remaining <= 0) _fermerDtInfo();
+    }, 100);
+  }
+
+  function _fermerDtInfo() {
+    if (_dtInfoTimer) { clearInterval(_dtInfoTimer); _dtInfoTimer = null; }
+    if (dtInfoOverlay) dtInfoOverlay.classList.remove('visible');
+  }
+  if (btnDtInfoClose) btnDtInfoClose.addEventListener('click', _fermerDtInfo);
+  if (dtInfoOverlay) {
+    dtInfoOverlay.addEventListener('click', e => {
+      if (e.target === dtInfoOverlay) _fermerDtInfo();
+    });
+  }
+
   // --- 8. MODALE : INSÉRER UN POINT TOURNANT ---
   const insertOverlay = document.getElementById('insert-wp-overlay');
   const btnInsertCancel = document.getElementById('btn-insert-wp-cancel');
@@ -1896,14 +2674,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
 
-    // Recherche OpenAIP pour le point tournant (bouton)
+    // Recherche multi (airports + navaids) pour le point tournant
     document.getElementById('btn-search-wp').addEventListener('click', () => {
-      rechercherAeroport(
-        document.getElementById('insert-wp-icao').value,
-        document.getElementById('search-status-wp'),
-        document.getElementById('insert-wp-lat'),
-        document.getElementById('insert-wp-lon')
-      );
+      rechercherMulti({
+        code: document.getElementById('insert-wp-icao').value,
+        statusEl: document.getElementById('search-status-wp'),
+        resultsEl: document.getElementById('search-results-wp'),
+        latEl: document.getElementById('insert-wp-lat'),
+        lonEl: document.getElementById('insert-wp-lon'),
+        latRadioName: 'lat-dir',
+        lonRadioName: 'lon-dir',
+      });
     });
 
     // Valider l'insertion
@@ -2102,6 +2883,127 @@ async function rechercherAeroport(icao, statusEl, latEl, lonEl) {
 }
 
 // -------------------------------------------------------
+// Recherche MULTI (airports + navaids) avec liste de résultats à radios
+// + bouton "Sélectionner". Utilisée par "Insérer point tournant" et
+// "Éditer leg" (Départ / Arrivée).
+// -------------------------------------------------------
+async function rechercherMulti(opts) {
+  const {
+    code,            // string saisi par l'utilisateur
+    statusEl,        // élément où afficher le statut de recherche
+    resultsEl,       // container <div> où injecter la liste de radios
+    latEl, lonEl,    // inputs cible (où injecter les coordonnées sélectionnées)
+    latRadioName,    // name des radios N/S
+    lonRadioName,    // name des radios E/W
+    nameEl,          // (optionnel) input "Nom/Ident" à mettre à jour à la sélection
+  } = opts;
+
+  const up = (code || '').trim().toUpperCase();
+  if (!up) return;
+
+  statusEl.className = 'search-status';
+  statusEl.textContent = t('searchSearching');
+  // Cacher la liste précédente
+  resultsEl.innerHTML = '';
+  resultsEl.classList.remove('visible');
+
+  // Anti-race : on attache un identifiant unique sur le container ; quand le
+  // résultat IPC revient, si l'identifiant a changé (= nouvelle recherche ou
+  // réouverture de modale entre-temps), on abandonne ce résultat.
+  const reqId = (resultsEl._searchReqId || 0) + 1;
+  resultsEl._searchReqId = reqId;
+
+  let res;
+  try {
+    res = await window.api.chercherCorrespondances(up);
+  } catch (err) {
+    if (resultsEl._searchReqId !== reqId) return;
+    statusEl.className = 'search-status error';
+    statusEl.textContent = t('searchNetworkError');
+    return;
+  }
+  // Réponse tardive (modale fermée ou rouverte entre-temps) → ignorer
+  if (resultsEl._searchReqId !== reqId) return;
+  if (!res || !res.ok) {
+    statusEl.className = 'search-status error';
+    statusEl.textContent = (res && res.reason === 'no-data') ? t('oaDataMissing') : t('searchNotFound');
+    return;
+  }
+  if (!res.matches || res.matches.length === 0) {
+    statusEl.className = 'search-status error';
+    statusEl.textContent = t('searchNotFound');
+    return;
+  }
+
+  // Statut OK
+  statusEl.className = 'search-status ok';
+  statusEl.textContent = currentLang === 'fr'
+    ? `${res.matches.length} résultat${res.matches.length > 1 ? 's' : ''}`
+    : `${res.matches.length} result${res.matches.length > 1 ? 's' : ''}`;
+
+  // Construire la liste avec radios
+  const groupName = 'wp-search-' + Math.random().toString(36).slice(2, 9);
+  resultsEl.innerHTML = '';
+  res.matches.forEach((m, idx) => {
+    const item = document.createElement('label');
+    item.className = 'wp-result-item';
+    const typeLabel = m.kind === 'airport' ? m.type.replace(/_/g, ' ') : m.type;
+    item.innerHTML = `
+      <input type="radio" name="${groupName}" value="${idx}">
+      <span class="wp-result-code">${escapeHtml(m.code)}</span>
+      <span class="wp-result-type">${escapeHtml(typeLabel)}</span>
+      <span class="wp-result-country">${escapeHtml(m.country || '—')}</span>
+      <span class="wp-result-name">${escapeHtml(m.name || '')}</span>
+    `;
+    resultsEl.appendChild(item);
+  });
+
+  // Zone d'action avec bouton Sélectionner
+  const actions = document.createElement('div');
+  actions.className = 'wp-results-action';
+  const btnSelect = document.createElement('button');
+  btnSelect.className = 'btn-wp-select';
+  btnSelect.textContent = t('btnSelectChoice');
+  btnSelect.disabled = true;
+  actions.appendChild(btnSelect);
+  resultsEl.appendChild(actions);
+
+  resultsEl.classList.add('visible');
+
+  // Activer le bouton dès qu'un radio est coché
+  resultsEl.querySelectorAll('input[type="radio"]').forEach(r => {
+    r.addEventListener('change', () => { btnSelect.disabled = false; });
+  });
+
+  btnSelect.addEventListener('click', () => {
+    const checked = resultsEl.querySelector('input[type="radio"]:checked');
+    if (!checked) return;
+    const match = res.matches[parseInt(checked.value, 10)];
+    if (!match) return;
+    // Injection coordonnées
+    latEl.value = Math.abs(match.lat).toFixed(6);
+    lonEl.value = Math.abs(match.lon).toFixed(6);
+    if (latRadioName) {
+      const dir = match.lat >= 0 ? 'N' : 'S';
+      const el = document.querySelector(`input[name="${latRadioName}"][value="${dir}"]`);
+      if (el) el.checked = true;
+    }
+    if (lonRadioName) {
+      const dir = match.lon >= 0 ? 'E' : 'W';
+      const el = document.querySelector(`input[name="${lonRadioName}"][value="${dir}"]`);
+      if (el) el.checked = true;
+    }
+    if (nameEl) {
+      nameEl.value = match.code;
+    }
+    statusEl.className = 'search-status ok';
+    statusEl.textContent = match.name || match.code;
+    resultsEl.innerHTML = '';
+    resultsEl.classList.remove('visible');
+  });
+}
+
+// -------------------------------------------------------
 // Calcule le prochain nom WP disponible (WP1, WP2, ...)
 // -------------------------------------------------------
 function prochainNomWP() {
@@ -2121,9 +3023,19 @@ function supprimerSegmentsCarte() {
   segmentsCarte = [];
 }
 
+// Couleur d'un segment selon l'état du leg :
+//   leg fait    (i < active) → gris moyen
+//   leg actif   (i === active) → magenta
+//   leg à faire (i > active)   → bleu
+function _legColor(legIndex, active) {
+  if (legIndex < active)  return '#888888';
+  if (legIndex === active) return '#e91e63';
+  return '#4088DC';
+}
+
 // -------------------------------------------------------
 // Redessine tous les segments de route (un polyline par leg)
-// avec interactivité clic → scission
+// avec interactivité clic → scission. Couleur selon état (fait/actif/à faire).
 // -------------------------------------------------------
 function redessinerSegments() {
   supprimerSegmentsCarte();
@@ -2133,19 +3045,21 @@ function redessinerSegments() {
     const ptA = flightPlan[i - 1];
     const ptB = flightPlan[i];
     const legIndex = i;
+    const baseColor = _legColor(legIndex, activeLegIndex);
 
     const seg = L.polyline(
       [[ptA.lat, ptA.lon], [ptB.lat, ptB.lon]],
-      { color: '#ff1744', weight: 3, opacity: 0.6 }
+      { color: baseColor, weight: 3, opacity: 0.85 }
     ).addTo(map);
+    seg._baseColor = baseColor;
 
-    // Curseur main + survol
+    // Curseur main + survol (on garde la couleur d'état, on augmente juste l'épaisseur)
     seg.on('mouseover', () => {
-      seg.setStyle({ weight: 3, color: '#ff6d00' });
+      seg.setStyle({ weight: 5 });
       map.getContainer().style.cursor = 'crosshair';
     });
     seg.on('mouseout', () => {
-      seg.setStyle({ weight: 3, color: '#ff1744' });
+      seg.setStyle({ weight: 3 });
       map.getContainer().style.cursor = '';
     });
 
@@ -2212,6 +3126,160 @@ function initierDragScission(latlng, legIndex, originalMouseEvent) {
 }
 
 // -------------------------------------------------------
+// Affichage du NOM des waypoints :
+//   - zoom >= 8  → tooltip permanent (toujours visible à côté du point)
+//   - zoom <  8  → tooltip non-permanent (apparaît au survol)
+// Placement perpendiculaire à la direction de vol (côté starboard) afin
+// que les labels de waypoints voisins n'aient pas tendance à se chevaucher.
+// -------------------------------------------------------
+const WP_LABEL_ZOOM_MIN = 9;
+const WP_LABEL_OFFSET = 10;
+
+// Choisit la direction (right/left/top/bottom) la plus proche de la
+// perpendiculaire à la direction de vol au niveau du waypoint d'index donné.
+function _wpDirectionAndOffset(index) {
+  const off = WP_LABEL_OFFSET;
+  const pt = flightPlan[index];
+  if (!pt) return { direction: 'right', offset: [off, 0] };
+
+  const prev = index > 0 ? flightPlan[index - 1] : null;
+  const next = index < flightPlan.length - 1 ? flightPlan[index + 1] : null;
+
+  // Direction de vol moyenne (somme des deltas incoming + outgoing)
+  let dx = 0, dy = 0;
+  if (prev) { dx += pt.lon - prev.lon; dy += pt.lat - prev.lat; }
+  if (next) { dx += next.lon - pt.lon; dy += next.lat - pt.lat; }
+  if (dx === 0 && dy === 0) return { direction: 'right', offset: [off, 0] };
+
+  // Perpendiculaire "à droite" en repère écran (l'axe y de l'écran pointe
+  // vers le bas, opposé à la latitude). Rotation -90° sur écran de la
+  // direction de vol projetée donne : perpScreen = (dy_geo, dx_geo).
+  const perpX = dy;
+  const perpY = dx;
+
+  if (Math.abs(perpX) > Math.abs(perpY)) {
+    return perpX > 0
+      ? { direction: 'right', offset: [off, 0] }
+      : { direction: 'left',  offset: [-off, 0] };
+  }
+  return perpY > 0
+    ? { direction: 'bottom', offset: [0, off] }
+    : { direction: 'top',    offset: [0, -off] };
+}
+
+function _wpTooltipOptions(permanent, dirOpts) {
+  return {
+    permanent,
+    direction: dirOpts.direction,
+    offset: dirOpts.offset,
+    className: 'waypoint-label',
+    opacity: 1,
+    sticky: false,
+  };
+}
+
+function _bindWaypointTooltip(marqueur, index) {
+  if (!map || !marqueur._wpName) return;
+  const permanent = map.getZoom() >= WP_LABEL_ZOOM_MIN;
+  const idx = (typeof index === 'number') ? index : marqueursCarte.indexOf(marqueur);
+  const dirOpts = _wpDirectionAndOffset(idx);
+  marqueur.bindTooltip(marqueur._wpName, _wpTooltipOptions(permanent, dirOpts));
+}
+
+function _rectsOverlap(a, b) {
+  if (!a || !b) return false;
+  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+}
+
+function _tooltipRect(marker) {
+  const ttip = marker.getTooltip();
+  if (!ttip) return null;
+  const el = ttip.getElement();
+  if (!el) return null;
+  return el.getBoundingClientRect();
+}
+
+async function updateAllWaypointLabels() {
+  if (!map) return;
+  const permanent = map.getZoom() >= WP_LABEL_ZOOM_MIN;
+
+  // États mutables par marqueur (direction + offset)
+  const states = [];
+  marqueursCarte.forEach((m, i) => {
+    if (!m._wpName) return;
+    const d = _wpDirectionAndOffset(i);
+    states.push({ marker: m, index: i, direction: d.direction, offset: d.offset });
+  });
+
+  // Bind initial (positionnement perpendiculaire à la route)
+  states.forEach(s => {
+    s.marker.unbindTooltip();
+    s.marker.bindTooltip(s.marker._wpName, _wpTooltipOptions(permanent, s));
+  });
+
+  // En mode "hover" (zoom < 9) on ne fait pas de gestion de collision
+  if (!permanent || states.length < 2) return;
+
+  // Attendre le rendu DOM pour mesurer les bounding boxes
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  // ---------- Phase 1 : collisions résolues par left/right (lon) ----------
+  let touched = false;
+  for (let i = 0; i < states.length; i++) {
+    for (let j = i + 1; j < states.length; j++) {
+      const ri = _tooltipRect(states[i].marker);
+      const rj = _tooltipRect(states[j].marker);
+      if (!_rectsOverlap(ri, rj)) continue;
+
+      const pi = flightPlan[states[i].index];
+      const pj = flightPlan[states[j].index];
+      if (!pi || !pj) continue;
+
+      // Le plus à droite (lon plus élevée) → label à droite, l'autre à gauche
+      const [right, left] = pi.lon >= pj.lon ? [states[i], states[j]] : [states[j], states[i]];
+      if (right.direction !== 'right') {
+        right.direction = 'right';
+        right.offset = [WP_LABEL_OFFSET, 0];
+        right.marker.unbindTooltip();
+        right.marker.bindTooltip(right.marker._wpName, _wpTooltipOptions(permanent, right));
+        touched = true;
+      }
+      if (left.direction !== 'left') {
+        left.direction = 'left';
+        left.offset = [-WP_LABEL_OFFSET, 0];
+        left.marker.unbindTooltip();
+        left.marker.bindTooltip(left.marker._wpName, _wpTooltipOptions(permanent, left));
+        touched = true;
+      }
+    }
+  }
+
+  if (touched) await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  // ---------- Phase 2 : collisions résiduelles → décalage vertical ----------
+  // On parcourt à nouveau et on décale verticalement les labels encore en collision.
+  // On alterne haut / bas pour minimiser l'impact.
+  const LABEL_H = 18;
+  const verticalAdjustedIndexes = new Set();
+  for (let i = 0; i < states.length; i++) {
+    for (let j = i + 1; j < states.length; j++) {
+      const ri = _tooltipRect(states[i].marker);
+      const rj = _tooltipRect(states[j].marker);
+      if (!_rectsOverlap(ri, rj)) continue;
+
+      // On décale celui qui n'a pas encore été décalé verticalement
+      const target = verticalAdjustedIndexes.has(states[i].index) ? states[j] : states[i];
+      // Direction du décalage (alternance pour répartir)
+      const dy = (verticalAdjustedIndexes.size % 2 === 0) ? -LABEL_H : LABEL_H;
+      target.offset = [target.offset[0], target.offset[1] + dy];
+      target.marker.unbindTooltip();
+      target.marker.bindTooltip(target.marker._wpName, _wpTooltipOptions(permanent, target));
+      verticalAdjustedIndexes.add(target.index);
+    }
+  }
+}
+
+// -------------------------------------------------------
 // Rendu visuel d'un point sur la carte (avec drag si ni départ ni arrivée)
 // -------------------------------------------------------
 function tracerPointVisuel(point, indexDansFlightPlan) {
@@ -2231,8 +3299,9 @@ function tracerPointVisuel(point, indexDansFlightPlan) {
   };
 
   const marqueur = L.circleMarker([point.lat, point.lon], stylePointVFR)
-    .addTo(map)
-    .bindPopup(`<b>${point.name}</b>`);
+    .addTo(map);
+  marqueur._wpName = point.name;
+  _bindWaypointTooltip(marqueur, indexDansFlightPlan);
 
   if (isDraggable) {
     marqueur.on('mouseover', () => {
@@ -2402,6 +3471,28 @@ function ouvrirModaleEditLeg(legIndex) {
   const ptA = flightPlan[legIndex - 1];
   const ptB = flightPlan[legIndex];
 
+  // Nettoyer les listes de résultats de recherche + invalider toute
+  // requête IPC encore en cours (anti-race condition)
+  ['search-results-edit-dep', 'search-results-edit-arr'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el._searchReqId = (el._searchReqId || 0) + 1;
+      el.innerHTML = '';
+      el.classList.remove('visible');
+    }
+  });
+  ['search-status-edit-dep', 'search-status-edit-arr'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = ''; el.className = 'search-status'; }
+  });
+  // Défensif : s'assurer que les inputs ne portent pas readonly/disabled
+  ['edit-leg-dep-name', 'edit-leg-arr-name'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.removeAttribute('readonly');
+    el.removeAttribute('disabled');
+  });
+
   // Remplir le sous-titre
   document.getElementById('edit-leg-subtitle').textContent =
     TRANSLATIONS[currentLang].editLegSubtitle(legIndex);
@@ -2429,6 +3520,11 @@ function ouvrirModaleEditLeg(legIndex) {
   // Stocker l'index courant pour la validation
   window._editLegIndex = legIndex;
   document.getElementById('edit-leg-overlay').style.display = 'flex';
+  // Focus l'input Départ (sélectionne le contenu pour faciliter le remplacement)
+  setTimeout(() => {
+    const el = document.getElementById('edit-leg-dep-name');
+    if (el) { el.focus(); el.select(); }
+  }, 50);
 }
 
 // -------------------------------------------------------
@@ -2603,6 +3699,8 @@ function mettreAJourLogDeNav() {
       document.getElementById('insert-wp-error').textContent = '';
       document.getElementById('search-status-wp').textContent = '';
       document.getElementById('search-status-wp').className = 'search-status';
+      const resWp = document.getElementById('search-results-wp');
+      if (resWp) { resWp.innerHTML = ''; resWp.classList.remove('visible'); }
       const subtitle = document.getElementById('insert-wp-subtitle');
       subtitle.textContent = currentLang === 'fr'
         ? `Insertion entre ${ptA.name} et ${ptB.name}`
@@ -2647,4 +3745,7 @@ function mettreAJourLogDeNav() {
 
     tbody.appendChild(row);
   }
+
+  // Refléter l'état des legs (fait/actif/à faire) sur les segments de la carte
+  if (typeof redessinerSegments === 'function') redessinerSegments();
 }

@@ -173,8 +173,9 @@ ipcMain.handle('calculer-declinaison', async (event, { lat, lon, alt }) => {
 });
 
 // 2. Écouteur pour Ouvrir un fichier .lnmpln
-ipcMain.handle('ouvrir-dialogue-lnm', async () => {
-  const result = await dialog.showOpenDialog({
+ipcMain.handle('ouvrir-dialogue-lnm', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const result = await dialog.showOpenDialog(win, {
     title: "Importer un plan de vol Little Navmap",
     properties: ['openFile'],
     filters: [{ name: 'Fichiers Little Navmap', extensions: ['lnmpln'] }]
@@ -194,7 +195,8 @@ ipcMain.handle('ouvrir-dialogue-lnm', async () => {
 ipcMain.handle('sauvegarder-navxpv', async (event, planData) => {
   ensureNavXpressDirs();
   const { fpDir } = getNavXpressDirs();
-  const result = await dialog.showSaveDialog({
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const result = await dialog.showSaveDialog(win, {
     title: "Sauvegarder le plan de vol (.navxpv)",
     defaultPath: path.join(fpDir, 'flightplan.navxpv'),
     filters: [{ name: 'Plan de vol NavXpressVFR', extensions: ['navxpv'] }]
@@ -214,10 +216,11 @@ ipcMain.handle('sauvegarder-navxpv', async (event, planData) => {
 });
 
 // 3b. Ouvrir un plan de vol natif .navxpv
-ipcMain.handle('ouvrir-navxpv', async () => {
+ipcMain.handle('ouvrir-navxpv', async (event) => {
   ensureNavXpressDirs();
   const { fpDir } = getNavXpressDirs();
-  const result = await dialog.showOpenDialog({
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const result = await dialog.showOpenDialog(win, {
     title: "Charger un plan de vol (.navxpv)",
     defaultPath: fpDir,
     properties: ['openFile'],
@@ -526,10 +529,12 @@ function loadOurAirportsListForMap() {
     list.push({
       ident: a.ident,
       icao: a.icao_code || '',
+      iata: a.iata_code || '',
       gps: a.gps_code || '',
       local: a.local_code || '',
       code: displayCode,
       name: a.name || a.ident,
+      country: a.iso_country || '',
       lat, lon,
       type: a.type,
       runway: runway ? {
@@ -658,6 +663,67 @@ ipcMain.handle('rechercher-aeroport-oa', async (event, code) => {
   };
 });
 
+// 8bis. Recherche multi-sources (airports + navaids) par code exact (case-insensitive).
+//    Retourne TOUTES les correspondances avec : kind, code, type, country, lat, lon, name, id.
+ipcMain.handle('chercher-correspondances', async (event, code) => {
+  if (!code) return { ok: false, reason: 'empty' };
+  const up = String(code).trim().toUpperCase();
+  if (!up) return { ok: false, reason: 'empty' };
+
+  // S'assurer que les indexes sont chargés
+  if (!_oaAirportsList) loadOurAirportsListForMap();
+  if (!_oaNavaidsList) loadOurAirportsNavaidsList();
+
+  if (!_oaAirportsList && !_oaNavaidsList) return { ok: false, reason: 'no-data' };
+
+  const matches = [];
+
+  // --- Recherche dans les aéroports ---
+  //   Champs cherchés : ident, icao, gps, local (PAS iata — trop de collisions
+  //   avec des codes locaux nationaux à 3 lettres)
+  if (_oaAirportsList) {
+    for (const a of _oaAirportsList) {
+      const codes = [a.ident, a.icao, a.gps, a.local];
+      let matched = false;
+      for (const c of codes) {
+        if (c && String(c).toUpperCase() === up) { matched = true; break; }
+      }
+      if (!matched) continue;
+      matches.push({
+        kind: 'airport',
+        // Code "représentatif" à afficher dans la liste
+        code: a.code || a.ident,
+        type: a.type,
+        country: a.country,
+        name: a.name,
+        lat: a.lat,
+        lon: a.lon,
+        ident: a.ident,
+      });
+    }
+  }
+
+  // --- Recherche dans les navaids ---
+  if (_oaNavaidsList) {
+    for (const n of _oaNavaidsList) {
+      if (!n.ident) continue;
+      if (String(n.ident).toUpperCase() !== up) continue;
+      matches.push({
+        kind: 'navaid',
+        code: n.ident,
+        type: n.type,
+        country: n.country,
+        name: n.name,
+        lat: n.lat,
+        lon: n.lon,
+        id: n.id,
+      });
+    }
+  }
+
+  return { ok: true, matches };
+});
+
 // 9bis. Retourne les détails complets d'un aéroport : airport + runways + frequencies + comments
 ipcMain.handle('details-aeroport', async (event, ident) => {
   if (!ident) return { ok: false, reason: 'no-ident' };
@@ -744,6 +810,8 @@ let _scConnecting = false;   // évite les connexions concurrentes
 
 const SC_WIND_DEF_ID = 1;
 const SC_WIND_REQ_ID = 1;
+const SC_POS_DEF_ID  = 2;
+const SC_POS_REQ_ID  = 2;
 
 function broadcastSimStatus(payload) {
   // Émet un statut sur toutes les fenêtres ouvertes
@@ -755,6 +823,12 @@ function broadcastSimStatus(payload) {
 function broadcastDonneesVol(payload) {
   BrowserWindow.getAllWindows().forEach(w => {
     try { w.webContents.send('donnees-vol', payload); } catch (_) {}
+  });
+}
+
+function broadcastPosition(payload) {
+  BrowserWindow.getAllWindows().forEach(w => {
+    try { w.webContents.send('donnees-position', payload); } catch (_) {}
   });
 }
 
@@ -808,17 +882,44 @@ ipcMain.handle('simconnect-connecter', async () => {
       29   // interval : 29 secondes sautées → 1 update toutes les 30 s
     );
 
+    // --- Définition des variables position ---
+    handle.addToDataDefinition(
+      SC_POS_DEF_ID,
+      'PLANE LATITUDE',
+      'degrees',
+      SCDataType.FLOAT64
+    );
+    handle.addToDataDefinition(
+      SC_POS_DEF_ID,
+      'PLANE LONGITUDE',
+      'degrees',
+      SCDataType.FLOAT64
+    );
+
+    // Souscription : 1 update toutes les 5 secondes pour la position
+    handle.requestDataOnSimObject(
+      SC_POS_REQ_ID,
+      SC_POS_DEF_ID,
+      SCConst.OBJECT_ID_USER,
+      SCPeriod.SECOND,
+      0,   // flags
+      0,   // origin
+      4    // interval : 4 secondes sautées → 1 update toutes les 5 s
+    );
+
     handle.on('simObjectData', (data) => {
-      if (data.requestID !== SC_WIND_REQ_ID) return;
       try {
-        const dir = data.data.readFloat64();
-        const vit = data.data.readFloat64();
-        broadcastDonneesVol({
-          windDir: dir,
-          windSpeed: vit,
-        });
+        if (data.requestID === SC_WIND_REQ_ID) {
+          const dir = data.data.readFloat64();
+          const vit = data.data.readFloat64();
+          broadcastDonneesVol({ windDir: dir, windSpeed: vit });
+        } else if (data.requestID === SC_POS_REQ_ID) {
+          const lat = data.data.readFloat64();
+          const lon = data.data.readFloat64();
+          broadcastPosition({ lat, lon });
+        }
       } catch (err) {
-        console.warn('[SimConnect] Lecture vent KO:', err);
+        console.warn('[SimConnect] Lecture données KO:', err);
       }
     });
 

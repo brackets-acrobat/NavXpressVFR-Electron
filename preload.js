@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('api', {
     calculerDeclinaison: (lat, lon, alt) => ipcRenderer.invoke('calculer-declinaison', { lat, lon, alt }),
     onStatusSimConnect: (callback) => ipcRenderer.on('simconnect-status', (event, status) => callback(status)),
     onDonneesVol: (callback) => ipcRenderer.on('donnees-vol', (event, data) => callback(data)),
+    onDonneesPosition: (callback) => ipcRenderer.on('donnees-position', (event, data) => callback(data)),
 
     // CONNEXION SIMCONNECT (MSFS)
     simConnectConnecter: () => ipcRenderer.invoke('simconnect-connecter'),
@@ -32,6 +33,9 @@ contextBridge.exposeInMainWorld('api', {
 
     // RECHERCHE AÉROPORT (base OurAirports locale)
     rechercherAeroportOA: (code) => ipcRenderer.invoke('rechercher-aeroport-oa', code),
+
+    // RECHERCHE MULTI (airports + navaids), retourne toutes les correspondances
+    chercherCorrespondances: (code) => ipcRenderer.invoke('chercher-correspondances', code),
 
     // AÉROPORTS DANS UNE BOUNDING BOX (pour affichage sur la carte)
     aeroportsDansBbox: (bbox) => ipcRenderer.invoke('aeroports-bbox', bbox),

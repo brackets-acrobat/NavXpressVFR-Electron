@@ -96,6 +96,7 @@ const TRANSLATIONS = {
     createFlightDep: "🛫 Départ",
     createFlightArr: "🛬 Arrivée",
     btnSearch: "Rechercher",
+    btnSelectChoice: "Sélectionner",
     btnCancel: "Annuler",
     btnValidate: "Valider",
 
@@ -151,6 +152,37 @@ const TRANSLATIONS = {
 
     // Modale détails navaid
     navaidInfoTitle: "Informations Navaid",
+
+    // Emport carburant
+    fuelBtnTooltip: "Emport carburant",
+    fuelBoxTitle: "Emport Carburant",
+    fuelConso: "Consommation croisière (USG/h)",
+    fuelNight: "VFR de nuit",
+    fuelDistAlt: "Dist. aéroport dég. (NM)",
+    fuelReserve: "Réserve discrétionnaire (USG)",
+    fuelTotal: "Emport total",
+
+    // Conversions
+    convBtnTooltip: "Conversions d'unités",
+    convTitle: "Conversions d'unités",
+    convDistance: "Distance",
+    convSpeed: "Vitesse",
+    convTemperature: "Température",
+    convPressure: "Pression",
+    convWeight: "Poids",
+    convVolume: "Volume",
+
+    // Direct To
+    dtBtnLabel: "Direct to",
+    dtBtnTooltipDisabled: "Direct To — MSFS doit être connecté et un plan chargé",
+    dtBtnTooltip: "Direct To — Aller directement vers un waypoint",
+    dtModalTitle: "Direct To",
+    dtModalHint: "Sélectionnez un waypoint cible :",
+    dtNoWaypoint: "Aucun waypoint sélectionné",
+    dtInfoHeading: "Cap magnétique",
+    dtInfoDistance: "Distance",
+    dtInfoTime: "Temps estimé",
+    dtInfoTitleFmt: (name) => `Vers ${name}`,
 
     // Chronomètre / Timer
     chronoLabel: "Chronomètre",
@@ -253,6 +285,7 @@ const TRANSLATIONS = {
     createFlightDep: "🛫 Departure",
     createFlightArr: "🛬 Arrival",
     btnSearch: "Search",
+    btnSelectChoice: "Select",
     btnCancel: "Cancel",
     btnValidate: "Validate",
 
@@ -308,6 +341,37 @@ const TRANSLATIONS = {
 
     // Navaid info modal
     navaidInfoTitle: "Navaid information",
+
+    // Fuel quantity
+    fuelBtnTooltip: "Fuel Planner",
+    fuelBoxTitle: "Fuel Planner",
+    fuelConso: "Cruise fuel flow (USG/h)",
+    fuelNight: "Night VFR",
+    fuelDistAlt: "Alternate airport dist. (NM)",
+    fuelReserve: "Discretionary reserve (USG)",
+    fuelTotal: "Total fuel",
+
+    // Conversions
+    convBtnTooltip: "Unit conversions",
+    convTitle: "Unit conversions",
+    convDistance: "Distance",
+    convSpeed: "Speed",
+    convTemperature: "Temperature",
+    convPressure: "Pressure",
+    convWeight: "Weight",
+    convVolume: "Volume",
+
+    // Direct To
+    dtBtnLabel: "Direct to",
+    dtBtnTooltipDisabled: "Direct To — MSFS must be connected and a flight plan loaded",
+    dtBtnTooltip: "Direct To — Fly directly to a waypoint",
+    dtModalTitle: "Direct To",
+    dtModalHint: "Select a target waypoint:",
+    dtNoWaypoint: "No waypoint selected",
+    dtInfoHeading: "Magnetic heading",
+    dtInfoDistance: "Distance",
+    dtInfoTime: "Estimated time",
+    dtInfoTitleFmt: (name) => `To ${name}`,
 
     // Stopwatch / Timer
     chronoLabel: "Stopwatch",

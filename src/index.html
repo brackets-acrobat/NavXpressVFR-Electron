@@ -120,6 +120,22 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Boutons Carburant + Conversions + Direct To sur la même ligne -->
+                        <div class="dt-conv-row">
+                            <button id="btn-fuel" class="btn-fuel"
+                                    data-i18n-title="fuelBtnTooltip" title="Emport carburant">
+                                <span class="fuel-btn-icon" aria-hidden="true">⛽</span>
+                            </button>
+                            <button id="btn-conversions" class="btn-conversions"
+                                    data-i18n-title="convBtnTooltip" title="Conversions d'unités">
+                                <span class="conv-icon" aria-hidden="true">⇄</span>
+                            </button>
+                            <button id="btn-direct-to" class="btn-direct-to" disabled
+                                    data-i18n-title="dtBtnTooltipDisabled" title="Direct To — MSFS doit être connecté">
+                                <span class="dt-icon" aria-hidden="true">D&nbsp;➤</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -225,7 +241,10 @@
                 <h4 style="color:#00bcd4; font-size:12px; text-transform:uppercase; margin:0 0 10px 0;" data-i18n="editLegDep">🛫 Point de départ</h4>
                 <div class="insert-wp-name-row" style="margin-bottom:8px;">
                     <input type="text" id="edit-leg-dep-name" class="insert-wp-name-input" autocomplete="off" spellcheck="false" placeholder="Nom / Ident">
+                    <button id="btn-search-edit-dep" class="btn-search" data-i18n="btnSearch">Rechercher</button>
                 </div>
+                <span id="search-status-edit-dep" class="search-status" style="display:block; margin-bottom:6px;"></span>
+                <div id="search-results-edit-dep" class="wp-search-results"></div>
                 <div class="insert-wp-coord-row">
                     <div class="input-group" style="flex:1;">
                         <label data-i18n="latitude">Latitude</label>
@@ -253,7 +272,10 @@
                 <h4 style="color:#00bcd4; font-size:12px; text-transform:uppercase; margin:0 0 10px 0;" data-i18n="editLegArr">🛬 Point d'arrivée</h4>
                 <div class="insert-wp-name-row" style="margin-bottom:8px;">
                     <input type="text" id="edit-leg-arr-name" class="insert-wp-name-input" autocomplete="off" spellcheck="false" placeholder="Nom / Ident">
+                    <button id="btn-search-edit-arr" class="btn-search" data-i18n="btnSearch">Rechercher</button>
                 </div>
+                <span id="search-status-edit-arr" class="search-status" style="display:block; margin-bottom:6px;"></span>
+                <div id="search-results-edit-arr" class="wp-search-results"></div>
                 <div class="insert-wp-coord-row">
                     <div class="input-group" style="flex:1;">
                         <label data-i18n="latitude">Latitude</label>
@@ -298,6 +320,7 @@
                     <button id="btn-search-wp" class="btn-search" data-i18n="btnSearch">Rechercher</button>
                 </div>
                 <span id="search-status-wp" class="search-status" style="display:block; margin-bottom:10px;"></span>
+                <div id="search-results-wp" class="wp-search-results"></div>
 
                 <!-- Latitude -->
                 <div class="insert-wp-coord-row">
@@ -636,6 +659,167 @@
                     <h4 data-i18n="navaidInfoTitle">Informations Navaid</h4>
                     <div id="navaid-info-table"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Emport Carburant -->
+    <div id="fuel-overlay" class="modal-overlay">
+        <div id="fuel-popup" class="modal-popup">
+            <h3 data-i18n="fuelBoxTitle" style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Emport Carburant</h3>
+
+            <div class="fuel-field-modal">
+                <label for="fuel-conso" data-i18n="fuelConso">Consommation croisière (USG/h)</label>
+                <input type="text" id="fuel-conso" class="fuel-input" inputmode="decimal" autocomplete="off" placeholder="0">
+            </div>
+
+            <label class="fuel-check-row" style="margin: 10px 0;">
+                <input type="checkbox" id="fuel-night" class="fuel-check">
+                <span data-i18n="fuelNight">VFR de nuit</span>
+            </label>
+
+            <div class="fuel-field-modal">
+                <label for="fuel-dist-alt" data-i18n="fuelDistAlt">Dist. aéroport dég. (NM)</label>
+                <input type="text" id="fuel-dist-alt" class="fuel-input" inputmode="decimal" autocomplete="off" placeholder="0">
+            </div>
+
+            <div class="fuel-field-modal">
+                <label for="fuel-reserve" data-i18n="fuelReserve">Réserve discrétionnaire (USG)</label>
+                <input type="text" id="fuel-reserve" class="fuel-input" inputmode="decimal" autocomplete="off" placeholder="0">
+            </div>
+
+            <div class="fuel-total-row-modal">
+                <div class="fuel-total-label" data-i18n="fuelTotal">Emport total</div>
+                <div class="fuel-total-value"><span id="fuel-total">0.0</span> USG</div>
+            </div>
+
+            <div class="create-flight-actions" style="margin-top:16px;">
+                <button id="btn-fuel-close" class="btn-primary" data-i18n="btnClose">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Conversions d'unités -->
+    <div id="conversions-overlay" class="modal-overlay">
+        <div id="conversions-popup" class="modal-popup">
+            <h3 data-i18n="convTitle" style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Conversions d'unités</h3>
+
+            <div class="conv-section">
+                <h4 data-i18n="convDistance">Distance</h4>
+                <div class="conv-row">
+                    <input type="text" id="conv-nm" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <span class="conv-unit">NM</span>
+                    <span class="conv-arrow">⇄</span>
+                    <input type="text" id="conv-km" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <span class="conv-unit">km</span>
+                </div>
+                <div class="conv-row">
+                    <input type="text" id="conv-ft" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <span class="conv-unit">ft</span>
+                    <span class="conv-arrow">⇄</span>
+                    <input type="text" id="conv-m" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <span class="conv-unit">m</span>
+                </div>
+            </div>
+
+            <div class="conv-section">
+                <h4 data-i18n="convSpeed">Vitesse</h4>
+                <div class="conv-row">
+                    <input type="text" id="conv-kt" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <span class="conv-unit">kt</span>
+                    <span class="conv-arrow">⇄</span>
+                    <input type="text" id="conv-kmh" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <span class="conv-unit">km/h</span>
+                    <span class="conv-arrow">⇄</span>
+                    <input type="text" id="conv-mph" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <span class="conv-unit">mph</span>
+                </div>
+            </div>
+
+            <div class="conv-section">
+                <h4 data-i18n="convTemperature">Température</h4>
+                <div class="conv-row">
+                    <input type="text" id="conv-c" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <span class="conv-unit">°C</span>
+                    <span class="conv-arrow">⇄</span>
+                    <input type="text" id="conv-f" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <span class="conv-unit">°F</span>
+                </div>
+            </div>
+
+            <div class="conv-section">
+                <h4 data-i18n="convPressure">Pression</h4>
+                <div class="conv-row">
+                    <input type="text" id="conv-hpa" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <span class="conv-unit">hPa</span>
+                    <span class="conv-arrow">⇄</span>
+                    <input type="text" id="conv-inhg" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <span class="conv-unit">inHg</span>
+                </div>
+            </div>
+
+            <div class="conv-section">
+                <h4 data-i18n="convWeight">Poids</h4>
+                <div class="conv-row">
+                    <input type="text" id="conv-kg" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <span class="conv-unit">kg</span>
+                    <span class="conv-arrow">⇄</span>
+                    <input type="text" id="conv-lb" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <span class="conv-unit">lb</span>
+                </div>
+            </div>
+
+            <div class="conv-section">
+                <h4 data-i18n="convVolume">Volume</h4>
+                <div class="conv-row">
+                    <input type="text" id="conv-usgal" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <span class="conv-unit">USG</span>
+                    <span class="conv-arrow">⇄</span>
+                    <input type="text" id="conv-l" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <span class="conv-unit">L</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Direct To — Sélection du waypoint cible -->
+    <div id="direct-to-overlay" class="modal-overlay">
+        <div class="modal-popup" style="width:420px;">
+            <h3 data-i18n="dtModalTitle" style="margin:0 0 6px 0; color:#e91e63; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Direct To</h3>
+            <p data-i18n="dtModalHint" style="color:#888; font-size:12px; margin:0 0 14px 0;">Sélectionnez un waypoint cible :</p>
+            <div id="dt-wp-list" class="dt-wp-list"></div>
+            <div id="dt-error" class="field-error"></div>
+            <div class="create-flight-actions">
+                <button id="btn-dt-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
+                <button id="btn-dt-validate" class="btn-primary" data-i18n="btnValidate" disabled style="background:#e91e63; border-color:#e91e63;">Valider</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Direct To — Info cap + temps + auto-close 10s -->
+    <div id="direct-to-info-overlay" class="modal-overlay">
+        <div class="modal-popup" style="width:380px;">
+            <h3 id="dt-info-title" style="margin:0 0 6px 0; color:#e91e63; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Direct To</h3>
+            <p id="dt-info-target" style="color:#e0e0e0; font-size:13px; margin:0 0 14px 0;"></p>
+            <div class="dt-info-grid">
+                <div class="dt-info-row">
+                    <div class="dt-info-label" data-i18n="dtInfoHeading">Cap magnétique</div>
+                    <div class="dt-info-value"><span id="dt-info-cap">---</span>°</div>
+                </div>
+                <div class="dt-info-row">
+                    <div class="dt-info-label" data-i18n="dtInfoDistance">Distance</div>
+                    <div class="dt-info-value"><span id="dt-info-dist">--</span> NM</div>
+                </div>
+                <div class="dt-info-row">
+                    <div class="dt-info-label" data-i18n="dtInfoTime">Temps estimé</div>
+                    <div class="dt-info-value"><span id="dt-info-time">--:--</span></div>
+                </div>
+            </div>
+            <div class="dt-progress-bar" style="margin-top:18px;">
+                <div id="dt-progress-fill" class="dt-progress-fill"></div>
+            </div>
+            <div class="create-flight-actions" style="margin-top:14px;">
+                <button id="btn-dt-info-close" class="btn-primary" data-i18n="btnClose" style="background:#e91e63; border-color:#e91e63;">Fermer</button>
             </div>
         </div>
     </div>
