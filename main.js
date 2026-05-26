@@ -306,6 +306,55 @@ function invalidateOurAirportsIndex() {
   _oaAirportsList = null;
   _oaFrequenciesByAirport = null;
   _oaCommentsByAirport = null;
+  _oaNavaidsList = null;
+  _oaNavaidsByIdent = null;
+}
+
+// --- INDEX NAVAIDS : liste plate filtrée + map par (ident+id) pour détails ---
+const NAVAID_TYPES = new Set([
+  'VOR', 'VOR-DME', 'VORTAC', 'TACAN', 'NDB', 'NDB-DME', 'DME',
+]);
+let _oaNavaidsList = null;       // [{id, ident, name, type, freqKhz, lat, lon, elev, country}]
+let _oaNavaidsByIdent = null;    // Map<id, full navaid object>  (par id pour éviter ambiguïté ident)
+
+function loadOurAirportsNavaidsList() {
+  if (_oaNavaidsList) return true;
+  const { ourAirportsDir } = getNavXpressDirs();
+  const jsonlPath = path.join(ourAirportsDir, 'navaids.jsonl');
+  if (!fs.existsSync(jsonlPath)) {
+    _oaNavaidsList = null;
+    _oaNavaidsByIdent = null;
+    return false;
+  }
+  const text = fs.readFileSync(jsonlPath, 'utf-8');
+  const lines = text.split('\n');
+  const list = [];
+  const byId = new Map();
+  for (const line of lines) {
+    if (!line) continue;
+    let n;
+    try { n = JSON.parse(line); } catch (_) { continue; }
+    if (!NAVAID_TYPES.has(n.type)) continue;
+    const lat = parseFloat(n.latitude_deg);
+    const lon = parseFloat(n.longitude_deg);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+    list.push({
+      id: n.id,
+      ident: n.ident,
+      name: n.name,
+      type: n.type,
+      freqKhz: parseFloat(n.frequency_khz) || 0,
+      lat, lon,
+      elev: n.elevation_ft,
+      country: n.iso_country,
+    });
+    if (n.id) byId.set(String(n.id), n);
+  }
+  _oaNavaidsList = list;
+  _oaNavaidsByIdent = byId;
+  console.log('[OurAirports] Navaids chargés :', list.length);
+  return true;
 }
 
 // --- INDEX FRÉQUENCES : airport_ident → tableau de fréquences ---
@@ -654,6 +703,37 @@ ipcMain.handle('aeroports-bbox', async (event, bbox) => {
     out.push(a);
   }
   return { ok: true, airports: out };
+});
+
+// 10. Renvoie tous les navaids dans une bounding box.
+ipcMain.handle('navaids-bbox', async (event, bbox) => {
+  if (!bbox) return { ok: false, reason: 'no-bbox' };
+  if (!_oaNavaidsList) {
+    const ok = loadOurAirportsNavaidsList();
+    if (!ok) return { ok: false, reason: 'no-data' };
+  }
+  const { south, west, north, east } = bbox;
+  const crossDateline = west > east;
+  const out = [];
+  for (const n of _oaNavaidsList) {
+    if (n.lat < south || n.lat > north) continue;
+    if (crossDateline) {
+      if (n.lon < west && n.lon > east) continue;
+    } else {
+      if (n.lon < west || n.lon > east) continue;
+    }
+    out.push(n);
+  }
+  return { ok: true, navaids: out };
+});
+
+// 11. Retourne les détails complets d'un navaid (par son id)
+ipcMain.handle('details-navaid', async (event, id) => {
+  if (!id) return { ok: false, reason: 'no-id' };
+  if (!_oaNavaidsByIdent) loadOurAirportsNavaidsList();
+  const navaid = _oaNavaidsByIdent ? _oaNavaidsByIdent.get(String(id)) : null;
+  if (!navaid) return { ok: false, reason: 'not-found' };
+  return { ok: true, navaid };
 });
 
 // ============================================================

@@ -165,20 +165,93 @@ function fermerInfoAeroport() {
   if (overlay) overlay.classList.remove('visible');
 }
 
+// -------------------------------------------------------
+// Modale Détails d'un navaid (clic sur un marqueur)
+// -------------------------------------------------------
+function formatNavaidFreqGlobal(type, freqKhz) {
+  const v = parseFloat(freqKhz);
+  if (!v || !Number.isFinite(v) || v <= 0) return '—';
+  if (type === 'NDB' || type === 'NDB-DME') return Math.round(v) + ' kHz';
+  return (v / 1000).toFixed(2) + ' MHz';
+}
+
+async function ouvrirInfoNavaid(id) {
+  if (!id) return;
+  const overlay = document.getElementById('navaid-info-overlay');
+  const identEl = document.getElementById('navaid-info-ident');
+  const nameEl  = document.getElementById('navaid-info-name');
+  const typeEl  = document.getElementById('navaid-info-type');
+  const tableEl = document.getElementById('navaid-info-table');
+  if (!overlay) return;
+
+  identEl.textContent = '…';
+  nameEl.textContent = currentLang === 'fr' ? 'Chargement…' : 'Loading…';
+  typeEl.textContent = '';
+  tableEl.innerHTML = '';
+  overlay.classList.add('visible');
+
+  let res;
+  try { res = await window.api.detailsNavaid(id); }
+  catch (err) {
+    nameEl.textContent = 'Error: ' + err.message;
+    return;
+  }
+  if (!res || !res.ok) {
+    nameEl.textContent = currentLang === 'fr' ? 'Navaid introuvable' : 'Navaid not found';
+    return;
+  }
+
+  const n = res.navaid;
+  identEl.textContent = n.ident || '—';
+  nameEl.textContent = n.name || '—';
+  typeEl.textContent = n.type || '';
+
+  const lat = parseFloat(n.latitude_deg);
+  const lon = parseFloat(n.longitude_deg);
+
+  const rows = [
+    [currentLang === 'fr' ? 'Nom' : 'Name', escapeHtml(n.name || '—')],
+    ['Ident', escapeHtml(n.ident || '—')],
+    [currentLang === 'fr' ? 'Type' : 'Type', escapeHtml(n.type || '—')],
+    [currentLang === 'fr' ? 'Fréquence' : 'Frequency', escapeHtml(formatNavaidFreqGlobal(n.type, n.frequency_khz))],
+    [currentLang === 'fr' ? 'Pays' : 'Country', escapeHtml(n.iso_country || '—')],
+    ['Latitude', Number.isFinite(lat) ? lat.toFixed(6) + '°' : '—'],
+    ['Longitude', Number.isFinite(lon) ? lon.toFixed(6) + '°' : '—'],
+    [currentLang === 'fr' ? 'Élévation' : 'Elevation', n.elevation_ft ? `${n.elevation_ft} ft` : '—'],
+  ];
+  tableEl.innerHTML = buildKVTable(rows);
+}
+
+function fermerInfoNavaid() {
+  const overlay = document.getElementById('navaid-info-overlay');
+  if (overlay) overlay.classList.remove('visible');
+}
+
 // Câblages globaux (boutons fermeture / overlay)
 document.addEventListener('DOMContentLoaded', () => {
-  const overlay = document.getElementById('airport-info-overlay');
-  const btnClose = document.getElementById('btn-airport-info-close');
-  if (btnClose) btnClose.addEventListener('click', fermerInfoAeroport);
-  if (overlay) {
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) fermerInfoAeroport();
+  // Modale aéroport
+  const overlayAp = document.getElementById('airport-info-overlay');
+  const btnCloseAp = document.getElementById('btn-airport-info-close');
+  if (btnCloseAp) btnCloseAp.addEventListener('click', fermerInfoAeroport);
+  if (overlayAp) {
+    overlayAp.addEventListener('click', (e) => {
+      if (e.target === overlayAp) fermerInfoAeroport();
     });
   }
+  // Modale navaid
+  const overlayNv = document.getElementById('navaid-info-overlay');
+  const btnCloseNv = document.getElementById('btn-navaid-info-close');
+  if (btnCloseNv) btnCloseNv.addEventListener('click', fermerInfoNavaid);
+  if (overlayNv) {
+    overlayNv.addEventListener('click', (e) => {
+      if (e.target === overlayNv) fermerInfoNavaid();
+    });
+  }
+  // Escape ferme les deux
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && overlay && overlay.classList.contains('visible')) {
-      fermerInfoAeroport();
-    }
+    if (e.key !== 'Escape') return;
+    if (overlayAp && overlayAp.classList.contains('visible')) fermerInfoAeroport();
+    if (overlayNv && overlayNv.classList.contains('visible')) fermerInfoNavaid();
   });
 });
 
@@ -959,6 +1032,164 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Exposer pour debug / langue (le texte "Piste" / "Runway" doit changer)
     window._refreshAirports = refreshAirportsOnMap;
+
+    // -------------------------------------------------------
+    // Affichage des NAVAIDS OurAirports (zoom >= 8)
+    // -------------------------------------------------------
+    const ZOOM_MIN_NAVAIDS = 8;
+    const NAV_COLOR = '#1565c0';
+    const navaidsLayer = L.layerGroup().addTo(map);
+    let _navaidsMoveTimer = null;
+    let _navaidsLastRequestId = 0;
+
+    // Formate la fréquence selon le type
+    //   NDB / NDB-DME    → kHz
+    //   VOR / VOR-DME / VORTAC / TACAN / DME → MHz
+    function formatNavaidFreq(type, freqKhz) {
+      if (!freqKhz || !Number.isFinite(freqKhz) || freqKhz <= 0) return '—';
+      if (type === 'NDB' || type === 'NDB-DME') {
+        return Math.round(freqKhz) + ' kHz';
+      }
+      // MHz = kHz / 1000, 2 décimales
+      return (freqKhz / 1000).toFixed(2) + ' MHz';
+    }
+
+    // Génère l'icône SVG selon le type. Toutes les icônes sont en bleu sur fond blanc.
+    function makeNavaidIcon(navaid) {
+      const type = navaid.type;
+      const C = NAV_COLOR;
+      const size = 22;
+      const sw = 1.6;
+      let inner = '';
+
+      // Géométries de base
+      const hexPts = '-7,4 -7,-4 0,-8 7,-4 7,4 0,8';
+      const hexInsidePts = '-5,2.9 -5,-2.9 0,-5.8 5,-2.9 5,2.9 0,5.8';
+
+      switch (type) {
+        case 'VOR':
+          inner = `
+            <polygon points="${hexPts}" fill="#fff" stroke="${C}" stroke-width="${sw}"/>
+            <circle cx="0" cy="0" r="1.6" fill="${C}"/>
+          `;
+          break;
+        case 'VOR-DME':
+          inner = `
+            <rect x="-9" y="-9" width="18" height="18" fill="#fff" stroke="${C}" stroke-width="${sw}"/>
+            <polygon points="${hexInsidePts}" fill="#fff" stroke="${C}" stroke-width="1.3"/>
+            <circle cx="0" cy="0" r="1.4" fill="${C}"/>
+          `;
+          break;
+        case 'VORTAC':
+          // Hexagone + 3 petites barres aux sommets alternés (haut, bas-gauche, bas-droit)
+          inner = `
+            <rect x="-2.6" y="-11" width="5.2" height="3" fill="${C}"/>
+            <rect x="-2.6" y="-1.5" width="5.2" height="3" fill="${C}" transform="rotate(120 0 0) translate(0 9.5)"/>
+            <rect x="-2.6" y="-1.5" width="5.2" height="3" fill="${C}" transform="rotate(-120 0 0) translate(0 9.5)"/>
+            <polygon points="${hexPts}" fill="#fff" stroke="${C}" stroke-width="${sw}"/>
+            <circle cx="0" cy="0" r="1.6" fill="${C}"/>
+          `;
+          break;
+        case 'TACAN':
+          // Triangle équilatéral pointe en haut
+          inner = `
+            <polygon points="0,-8 7,5 -7,5" fill="#fff" stroke="${C}" stroke-width="${sw}"/>
+            <circle cx="0" cy="1" r="1.4" fill="${C}"/>
+          `;
+          break;
+        case 'NDB':
+          // Cercle pointillé + point central
+          inner = `
+            <circle cx="0" cy="0" r="7" fill="#fff" stroke="${C}" stroke-width="1.5" stroke-dasharray="1.8 1.8"/>
+            <circle cx="0" cy="0" r="1.8" fill="${C}"/>
+          `;
+          break;
+        case 'NDB-DME':
+          inner = `
+            <rect x="-9" y="-9" width="18" height="18" fill="#fff" stroke="${C}" stroke-width="${sw}"/>
+            <circle cx="0" cy="0" r="5.5" fill="#fff" stroke="${C}" stroke-width="1.4" stroke-dasharray="1.6 1.6"/>
+            <circle cx="0" cy="0" r="1.6" fill="${C}"/>
+          `;
+          break;
+        case 'DME':
+        default:
+          inner = `
+            <rect x="-7" y="-7" width="14" height="14" fill="#fff" stroke="${C}" stroke-width="${sw}"/>
+            <text x="0" y="3.5" text-anchor="middle" fill="${C}" font-size="8" font-weight="bold" font-family="Arial, sans-serif">D</text>
+          `;
+          break;
+      }
+
+      const svg = `
+        <svg viewBox="-12 -12 24 24" width="${size}" height="${size}" style="overflow:visible;">
+          ${inner}
+        </svg>
+      `;
+      return L.divIcon({
+        className: 'navaid-marker',
+        html: svg,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
+      });
+    }
+
+    function makeNavaidTooltipHtml(navaid) {
+      const freqLabel = formatNavaidFreq(navaid.type, navaid.freqKhz);
+      return `
+        <div class="nv-tt-ident">${escapeHtml(navaid.ident || '')}</div>
+        <div class="nv-tt-type">${escapeHtml(navaid.type)}</div>
+        <div class="nv-tt-freq">${freqLabel}</div>
+      `;
+    }
+
+    async function refreshNavaidsOnMap() {
+      if (!map) return;
+      const zoom = map.getZoom();
+      if (zoom < ZOOM_MIN_NAVAIDS) {
+        navaidsLayer.clearLayers();
+        return;
+      }
+      const b = map.getBounds();
+      const bbox = {
+        south: b.getSouth(),
+        west: b.getWest(),
+        north: b.getNorth(),
+        east: b.getEast(),
+      };
+      const reqId = ++_navaidsLastRequestId;
+      let res;
+      try { res = await window.api.navaidsDansBbox(bbox); }
+      catch (err) { console.warn('Erreur lecture navaids bbox:', err); return; }
+      if (reqId !== _navaidsLastRequestId) return;
+      if (!res || !res.ok) { navaidsLayer.clearLayers(); return; }
+
+      navaidsLayer.clearLayers();
+      for (const n of res.navaids) {
+        const marker = L.marker([n.lat, n.lon], {
+          icon: makeNavaidIcon(n),
+          interactive: true,
+          keyboard: false,
+        });
+        marker.bindTooltip(makeNavaidTooltipHtml(n), {
+          direction: 'top',
+          offset: [0, -8],
+          className: 'navaid-tooltip',
+          opacity: 1,
+          sticky: false,
+        });
+        marker.on('click', () => ouvrirInfoNavaid(n.id));
+        marker.addTo(navaidsLayer);
+      }
+    }
+
+    function scheduleNavaidRefresh() {
+      if (_navaidsMoveTimer) clearTimeout(_navaidsMoveTimer);
+      _navaidsMoveTimer = setTimeout(refreshNavaidsOnMap, 200);
+    }
+    map.on('moveend', scheduleNavaidRefresh);
+    map.on('zoomend', scheduleNavaidRefresh);
+    scheduleNavaidRefresh();
+    window._refreshNavaids = refreshNavaidsOnMap;
 
     console.log("Carte Leaflet initialisée avec succès.");
   } catch (mapError) {

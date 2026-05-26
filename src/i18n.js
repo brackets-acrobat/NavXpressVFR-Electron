@@ -149,6 +149,9 @@ const TRANSLATIONS = {
     apInfoFrequencies: "Fréquences",
     apInfoComments: "Commentaires",
 
+    // Modale détails navaid
+    navaidInfoTitle: "Informations Navaid",
+
     // Chronomètre / Timer
     chronoLabel: "Chronomètre",
     timerLabel: "Timer",
@@ -302,6 +305,9 @@ const TRANSLATIONS = {
     apInfoRunways: "Runways",
     apInfoFrequencies: "Frequencies",
     apInfoComments: "Comments",
+
+    // Navaid info modal
+    navaidInfoTitle: "Navaid information",
 
     // Stopwatch / Timer
     chronoLabel: "Stopwatch",

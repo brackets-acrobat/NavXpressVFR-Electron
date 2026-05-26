@@ -1550,6 +1550,91 @@ tr:hover {
     font-family: 'Consolas', 'Monaco', monospace;
 }
 
+/* -------------------------------------------------- */
+/* Symboles de NAVAIDs sur la carte                   */
+/* -------------------------------------------------- */
+.navaid-marker {
+    background: transparent !important;
+    border: none !important;
+    filter: drop-shadow(0 0 1px rgba(255,255,255,0.85))
+            drop-shadow(0 0 0.5px rgba(255,255,255,0.85));
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.navaid-tooltip {
+    background-color: #1a1a1a !important;
+    border: 1px solid #1565c0 !important;
+    color: #e0e0e0 !important;
+    font-size: 12px !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.7) !important;
+    padding: 6px 10px !important;
+    line-height: 1.4 !important;
+    white-space: nowrap;
+}
+
+.navaid-tooltip::before {
+    display: none !important;
+}
+
+.navaid-tooltip .nv-tt-ident {
+    color: #4fc3f7;
+    font-weight: bold;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+}
+
+.navaid-tooltip .nv-tt-type {
+    color: #aaa;
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 1px;
+}
+
+.navaid-tooltip .nv-tt-freq {
+    color: #e0e0e0;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+/* Bordure du header de la modale navaid : bleue */
+#navaid-info-popup {
+    width: 460px;
+    max-width: 92vw;
+    max-height: 85vh;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    border-color: #1565c0;
+}
+
+#navaid-info-ident {
+    color: #4fc3f7;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+#navaid-info-name {
+    color: #e0e0e0;
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+#navaid-info-type {
+    color: #888;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
 /* Tooltip espaces aériens */
 .airspace-tooltip {
     background-color: #1a1a1a !important;

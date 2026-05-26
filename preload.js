@@ -37,5 +37,9 @@ contextBridge.exposeInMainWorld('api', {
     aeroportsDansBbox: (bbox) => ipcRenderer.invoke('aeroports-bbox', bbox),
 
     // DÉTAILS COMPLETS d'un aéroport (airport + runways + frequencies + comments)
-    detailsAeroport: (ident) => ipcRenderer.invoke('details-aeroport', ident)
+    detailsAeroport: (ident) => ipcRenderer.invoke('details-aeroport', ident),
+
+    // NAVAIDS dans la bbox + détails par id
+    navaidsDansBbox: (bbox) => ipcRenderer.invoke('navaids-bbox', bbox),
+    detailsNavaid: (id) => ipcRenderer.invoke('details-navaid', id)
 });

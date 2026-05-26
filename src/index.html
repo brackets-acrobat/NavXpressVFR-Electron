@@ -622,6 +622,24 @@
         </div>
     </div>
 
+    <!-- Modale Détails d'un navaid -->
+    <div id="navaid-info-overlay" class="modal-overlay">
+        <div id="navaid-info-popup" class="modal-popup">
+            <button class="airport-info-close" id="btn-navaid-info-close" title="Fermer">×</button>
+            <div class="airport-info-header">
+                <div id="navaid-info-ident">----</div>
+                <div id="navaid-info-name">Loading…</div>
+                <div id="navaid-info-type"></div>
+            </div>
+            <div class="airport-info-body">
+                <div class="airport-info-section">
+                    <h4 data-i18n="navaidInfoTitle">Informations Navaid</h4>
+                    <div id="navaid-info-table"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- i18n chargé AVANT ui.js -->
     <script src="i18n.js"></script>
     <script src="ui.js"></script>
