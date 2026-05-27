@@ -2316,6 +2316,47 @@ tr:hover {
 }
 
 /* -------------------------------------------------- */
+/* Indicateur "Tour de piste prévu" dans le tableau   */
+/* -------------------------------------------------- */
+.pattern-indicator {
+    display: inline-block;
+    width: 14px;
+    height: 10px;
+    border: 1px solid #ff0000;
+    border-radius: 2px;
+    vertical-align: middle;
+    margin-left: 4px;
+    box-sizing: border-box;
+    cursor: help;
+}
+
+/* Rangée "Tour de piste prévu" dans la modale Édit Leg */
+.edit-leg-pattern-row {
+    margin: 6px 0 10px 0;
+    padding: 6px 10px;
+    background-color: #1a1a1a;
+    border: 1px solid #ff5252;
+    border-radius: 4px;
+}
+
+.pattern-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #e0e0e0;
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.pattern-checkbox {
+    accent-color: #ff5252;
+    cursor: pointer;
+    width: 14px;
+    height: 14px;
+}
+
+/* -------------------------------------------------- */
 /* Labels des waypoints du plan de vol                */
 /* (permanents à zoom >= 8, hover sinon)              */
 /* -------------------------------------------------- */

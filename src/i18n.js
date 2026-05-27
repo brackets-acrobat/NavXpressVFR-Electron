@@ -153,6 +153,14 @@ const TRANSLATIONS = {
     // Modale détails navaid
     navaidInfoTitle: "Informations Navaid",
 
+    // Tour de piste (pattern)
+    patternModalTitle: "Tour de piste / Toucher",
+    patternModalQuestion: "Effectuer un tour de piste / toucher à",
+    patternTooltip: "Tour de piste prévu",
+    patternCheckLabel: "Tour de piste prévu",
+    btnYes: "Oui",
+    btnNo: "Non",
+
     // Emport carburant
     fuelBtnTooltip: "Emport carburant",
     tankBtnTooltip: "Changement de réservoir",
@@ -345,6 +353,14 @@ const TRANSLATIONS = {
 
     // Navaid info modal
     navaidInfoTitle: "Navaid information",
+
+    // Pattern / Touch and go
+    patternModalTitle: "Pattern / Touch and Go",
+    patternModalQuestion: "Will you perform a pattern / touch and go at",
+    patternTooltip: "Pattern planned",
+    patternCheckLabel: "Pattern planned",
+    btnYes: "Yes",
+    btnNo: "No",
 
     // Fuel quantity
     fuelBtnTooltip: "Fuel Planner",

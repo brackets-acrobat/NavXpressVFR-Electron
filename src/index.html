@@ -276,6 +276,12 @@
                 <span id="search-status-edit-dep" class="search-status"
                     style="display:block; margin-bottom:6px;"></span>
                 <div id="search-results-edit-dep" class="wp-search-results"></div>
+                <div id="edit-leg-dep-pattern-row" class="edit-leg-pattern-row" style="display:none;">
+                    <label class="pattern-checkbox-label">
+                        <input type="checkbox" id="edit-leg-dep-pattern-cb" class="pattern-checkbox" checked>
+                        <span data-i18n="patternCheckLabel">Tour de piste prévu</span>
+                    </label>
+                </div>
                 <div class="insert-wp-coord-row">
                     <div class="input-group" style="flex:1;">
                         <label data-i18n="latitude">Latitude</label>
@@ -312,6 +318,12 @@
                 <span id="search-status-edit-arr" class="search-status"
                     style="display:block; margin-bottom:6px;"></span>
                 <div id="search-results-edit-arr" class="wp-search-results"></div>
+                <div id="edit-leg-arr-pattern-row" class="edit-leg-pattern-row" style="display:none;">
+                    <label class="pattern-checkbox-label">
+                        <input type="checkbox" id="edit-leg-arr-pattern-cb" class="pattern-checkbox" checked>
+                        <span data-i18n="patternCheckLabel">Tour de piste prévu</span>
+                    </label>
+                </div>
                 <div class="insert-wp-coord-row">
                     <div class="input-group" style="flex:1;">
                         <label data-i18n="latitude">Latitude</label>
@@ -911,6 +923,21 @@
                         placeholder="0">
                     <span class="conv-unit">L</span>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale "Tour de piste / Toucher prévu ?" -->
+    <div id="ask-pattern-overlay" class="modal-overlay">
+        <div class="modal-popup" style="width:380px;">
+            <h3 data-i18n="patternModalTitle" style="margin:0 0 6px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Tour de piste / Toucher</h3>
+            <p style="color:#e0e0e0; font-size:13px; margin:0 0 14px 0; line-height:1.6;">
+                <span data-i18n="patternModalQuestion">Effectuer un tour de piste / toucher à</span>
+                <strong id="ask-pattern-code" style="color:#00bcd4; font-family:'Consolas','Monaco',monospace;">XXXX</strong> ?
+            </p>
+            <div class="create-flight-actions">
+                <button id="btn-ask-pattern-no" class="btn-secondary" data-i18n="btnNo">Non</button>
+                <button id="btn-ask-pattern-yes" class="btn-primary" data-i18n="btnYes">Oui</button>
             </div>
         </div>
     </div>

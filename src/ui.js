@@ -1377,7 +1377,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       fermerModaleEditLeg();
   });
 
-  // Recherche multi pour Édit leg — Départ
+  // Helper : afficher/cacher + sync checkbox d'une rangée pattern d'Édit Leg
+  function _syncEditLegPatternRow(side) {
+    const nameEl = document.getElementById(`edit-leg-${side}-name`);
+    const row = document.getElementById(`edit-leg-${side}-pattern-row`);
+    const cb = document.getElementById(`edit-leg-${side}-pattern-cb`);
+    if (!nameEl || !row || !cb) return;
+    const isPattern = nameEl.dataset.pattern === 'true';
+    if (isPattern) {
+      row.style.display = 'block';
+      cb.checked = true;
+    } else {
+      // On garde la rangée visible si elle l'était déjà (l'utilisateur peut
+      // re-cocher après avoir décoché). Sinon, on la laisse cachée.
+      cb.checked = false;
+    }
+  }
+
+  // Recherche multi pour Édit leg — Départ (avec question Tour de piste si aéroport)
   document.getElementById('btn-search-edit-dep').addEventListener('click', () => {
     rechercherMulti({
       code: document.getElementById('edit-leg-dep-name').value,
@@ -1388,10 +1405,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       latRadioName: 'edit-dep-lat-dir',
       lonRadioName: 'edit-dep-lon-dir',
       nameEl: document.getElementById('edit-leg-dep-name'),
+      askPatternOnAirport: true,
+      onPatternSet: () => _syncEditLegPatternRow('dep'),
     });
   });
 
-  // Recherche multi pour Édit leg — Arrivée
+  // Recherche multi pour Édit leg — Arrivée (avec question Tour de piste si aéroport)
   document.getElementById('btn-search-edit-arr').addEventListener('click', () => {
     rechercherMulti({
       code: document.getElementById('edit-leg-arr-name').value,
@@ -1402,7 +1421,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       latRadioName: 'edit-arr-lat-dir',
       lonRadioName: 'edit-arr-lon-dir',
       nameEl: document.getElementById('edit-leg-arr-name'),
+      askPatternOnAirport: true,
+      onPatternSet: () => _syncEditLegPatternRow('arr'),
     });
+  });
+
+  // Décochage de la checkbox → met à jour dataset.pattern (la rangée reste visible
+  // pour permettre une re-cochage sans avoir à re-rechercher)
+  document.getElementById('edit-leg-dep-pattern-cb').addEventListener('change', e => {
+    document.getElementById('edit-leg-dep-name').dataset.pattern = e.target.checked ? 'true' : '';
+  });
+  document.getElementById('edit-leg-arr-pattern-cb').addEventListener('change', e => {
+    document.getElementById('edit-leg-arr-name').dataset.pattern = e.target.checked ? 'true' : '';
   });
 
   document.getElementById('btn-edit-leg-validate').addEventListener('click', () => {
@@ -1435,6 +1465,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
+    // Récupérer l'état "Tour de piste prévu" depuis dataset.pattern
+    newDep.pattern = document.getElementById('edit-leg-dep-name').dataset.pattern === 'true';
+    newArr.pattern = document.getElementById('edit-leg-arr-name').dataset.pattern === 'true';
+
     // Appliquer — les deux points sont partagés avec les legs adjacents
     flightPlan[legIndex - 1] = { ...flightPlan[legIndex - 1], ...newDep };
     flightPlan[legIndex] = { ...flightPlan[legIndex], ...newArr };
@@ -1463,10 +1497,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (btnCreate && createOverlay) {
     // Ouvrir la modale
     btnCreate.addEventListener('click', () => {
-      document.getElementById('create-icao-dep').value = '';
+      const depIcao = document.getElementById('create-icao-dep');
+      const arrIcao = document.getElementById('create-icao-arr');
+      depIcao.value = '';
+      arrIcao.value = '';
+      depIcao.dataset.pattern = ''; // reset des flags tour de piste
+      arrIcao.dataset.pattern = '';
       document.getElementById('create-lat-dep').value = '';
       document.getElementById('create-lon-dep').value = '';
-      document.getElementById('create-icao-arr').value = '';
       document.getElementById('create-lat-arr').value = '';
       document.getElementById('create-lon-arr').value = '';
       document.getElementById('create-flight-error').textContent = '';
@@ -1496,7 +1534,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('create-icao-dep').value,
         document.getElementById('search-status-dep'),
         document.getElementById('create-lat-dep'),
-        document.getElementById('create-lon-dep')
+        document.getElementById('create-lon-dep'),
+        document.getElementById('create-icao-dep')
       );
     });
 
@@ -1505,7 +1544,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('create-icao-arr').value,
         document.getElementById('search-status-arr'),
         document.getElementById('create-lat-arr'),
-        document.getElementById('create-lon-arr')
+        document.getElementById('create-lon-arr'),
+        document.getElementById('create-icao-arr')
       );
     });
 
@@ -1594,6 +1634,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         flightPlan.push({ name: icaoArr, ident: icaoArr, lat: latArr, lon: lonArr });
         legAltitudes = [undefined, ALT_DEFAULT];
       }
+
+      // Appliquer les flags "Tour de piste prévu" sur les waypoints concernés
+      const depPattern = document.getElementById('create-icao-dep').dataset.pattern === 'true';
+      const arrPattern = document.getElementById('create-icao-arr').dataset.pattern === 'true';
+      if (depPattern) flightPlan[0].pattern = true;
+      if (arrPattern) flightPlan[flightPlan.length - 1].pattern = true;
 
       // Injecter dans les champs ICAO de la config vol
       document.getElementById('input-icao-dep').value = icaoDep;
@@ -1720,12 +1766,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Re-peupler les waypoints
         for (const wp of data.waypoints) {
           if (typeof wp.lat === 'number' && typeof wp.lon === 'number') {
-            flightPlan.push({
+            const entry = {
               name: wp.name || wp.ident || '',
               ident: wp.ident || wp.name || '',
               lat: wp.lat,
               lon: wp.lon,
-            });
+            };
+            if (wp.pattern) entry.pattern = true;
+            flightPlan.push(entry);
           }
         }
 
@@ -1804,6 +1852,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           ident: wp.ident || wp.name,
           lat: wp.lat,
           lon: wp.lon,
+          pattern: !!wp.pattern,
         })),
         // legAltitudes : index 0 inutilisé → null en JSON (undefined non sérialisable)
         legAltitudes: legAltitudes.map(a => (a === undefined ? null : a)),
@@ -2844,6 +2893,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Recherche multi (airports + navaids) pour le point tournant
+    // — avec question Tour de piste si le résultat est un aéroport
     document.getElementById('btn-search-wp').addEventListener('click', () => {
       rechercherMulti({
         code: document.getElementById('insert-wp-icao').value,
@@ -2853,6 +2903,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         lonEl: document.getElementById('insert-wp-lon'),
         latRadioName: 'lat-dir',
         lonRadioName: 'lon-dir',
+        nameEl: document.getElementById('insert-wp-icao'),
+        askPatternOnAirport: true,
       });
     });
 
@@ -2878,7 +2930,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const lat = latDir === 'S' ? -Math.abs(latRaw) : Math.abs(latRaw);
       const lon = lonDir === 'W' ? -Math.abs(lonRaw) : Math.abs(lonRaw);
 
+      // Récupérer le flag "Tour de piste prévu" depuis dataset.pattern
+      const isPattern = document.getElementById('insert-wp-icao').dataset.pattern === 'true';
       const nouveauPoint = { name, ident: name, lat, lon };
+      if (isPattern) nouveauPoint.pattern = true;
       flightPlan.splice(insertLegIndex, 0, nouveauPoint);
 
       // Insérer une altitude par défaut pour le nouveau leg à insertLegIndex
@@ -2994,15 +3049,54 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // -------------------------------------------------------
+// Modale "Tour de piste / Toucher prévu ?" — simple Y/N
+// Renvoie une Promise<boolean>
+// -------------------------------------------------------
+function askPatternModal(airportCode) {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('ask-pattern-overlay');
+    const codeEl = document.getElementById('ask-pattern-code');
+    const btnYes = document.getElementById('btn-ask-pattern-yes');
+    const btnNo = document.getElementById('btn-ask-pattern-no');
+    if (!overlay || !codeEl || !btnYes || !btnNo) return resolve(false);
+
+    codeEl.textContent = airportCode || '';
+
+    let done = false;
+    function cleanup() {
+      done = true;
+      overlay.classList.remove('visible');
+      btnYes.removeEventListener('click', onYes);
+      btnNo.removeEventListener('click', onNo);
+      overlay.removeEventListener('click', onBg);
+      document.removeEventListener('keydown', onKey);
+    }
+    function onYes() { if (done) return; cleanup(); resolve(true); }
+    function onNo()  { if (done) return; cleanup(); resolve(false); }
+    function onBg(e) { if (e.target === overlay) onNo(); }
+    function onKey(e) { if (e.key === 'Escape') onNo(); }
+
+    btnYes.addEventListener('click', onYes);
+    btnNo.addEventListener('click', onNo);
+    overlay.addEventListener('click', onBg);
+    document.addEventListener('keydown', onKey);
+
+    overlay.classList.add('visible');
+  });
+}
+
+// -------------------------------------------------------
 // Recherche aéroport — utilise la base OurAirports locale
 // (utilisée par toutes les modales)
 // -------------------------------------------------------
-async function rechercherAeroport(icao, statusEl, latEl, lonEl) {
+async function rechercherAeroport(icao, statusEl, latEl, lonEl, nameEl) {
   const code = icao.trim().toUpperCase();
   if (!code) return;
 
   statusEl.className = 'search-status';
   statusEl.textContent = t('searchSearching');
+  // Réinitialise le flag tour de piste à chaque nouvelle recherche
+  if (nameEl) nameEl.dataset.pattern = '';
 
   try {
     const res = await window.api.rechercherAeroportOA(code);
@@ -3044,6 +3138,14 @@ async function rechercherAeroport(icao, statusEl, latEl, lonEl) {
 
     statusEl.className = 'search-status ok';
     statusEl.textContent = name || code;
+
+    // Si on a un nameEl associé, demander "Tour de piste / Toucher ?"
+    // (rechercherAeroport renvoie uniquement des aéroports, donc on demande
+    // toujours quand un résultat est trouvé)
+    if (nameEl) {
+      const yes = await askPatternModal(name || code);
+      if (yes) nameEl.dataset.pattern = 'true';
+    }
   } catch (err) {
     statusEl.className = 'search-status error';
     statusEl.textContent = t('searchNetworkError');
@@ -3144,7 +3246,7 @@ async function rechercherMulti(opts) {
     r.addEventListener('change', () => { btnSelect.disabled = false; });
   });
 
-  btnSelect.addEventListener('click', () => {
+  btnSelect.addEventListener('click', async () => {
     const checked = resultsEl.querySelector('input[type="radio"]:checked');
     if (!checked) return;
     const match = res.matches[parseInt(checked.value, 10)];
@@ -3169,6 +3271,20 @@ async function rechercherMulti(opts) {
     statusEl.textContent = match.name || match.code;
     resultsEl.innerHTML = '';
     resultsEl.classList.remove('visible');
+
+    // Question "Tour de piste prévu ?" — uniquement si activé par le caller
+    // ET si le match est bien un aéroport
+    if (opts.askPatternOnAirport && nameEl) {
+      nameEl.dataset.pattern = ''; // reset par défaut
+      if (match.kind === 'airport') {
+        const yes = await askPatternModal(match.code);
+        if (yes) nameEl.dataset.pattern = 'true';
+      }
+      // Notifier le caller pour qu'il puisse synchroniser son UI (checkbox)
+      if (typeof opts.onPatternSet === 'function') {
+        opts.onPatternSet(nameEl.dataset.pattern === 'true');
+      }
+    }
   });
 }
 
@@ -3684,6 +3800,25 @@ function ouvrirModaleEditLeg(legIndex) {
   document.getElementById('edit-leg-arr-name').value = ptB.name;
   fillCoord('edit-leg-arr-lat', 'edit-arr-lat-dir', 'edit-leg-arr-lon', 'edit-arr-lon-dir', ptB);
 
+  // État courant du flag "tour de piste" : préservé si l'utilisateur ne re-cherche pas
+  document.getElementById('edit-leg-dep-name').dataset.pattern = ptA.pattern ? 'true' : '';
+  document.getElementById('edit-leg-arr-name').dataset.pattern = ptB.pattern ? 'true' : '';
+
+  // Afficher ou cacher la rangée checkbox "Tour de piste prévu" pour chaque côté
+  ['dep', 'arr'].forEach(side => {
+    const wp = side === 'dep' ? ptA : ptB;
+    const row = document.getElementById(`edit-leg-${side}-pattern-row`);
+    const cb = document.getElementById(`edit-leg-${side}-pattern-cb`);
+    if (!row || !cb) return;
+    if (wp.pattern) {
+      row.style.display = 'block';
+      cb.checked = true;
+    } else {
+      row.style.display = 'none';
+      cb.checked = false;
+    }
+  });
+
   document.getElementById('edit-leg-error').textContent = '';
 
   // Stocker l'index courant pour la validation
@@ -3761,12 +3896,21 @@ function mettreAJourLogDeNav() {
   const vitVent = parseFloat(document.getElementById('input-wind-speed').value) || 0;
 
   // Cas : un seul point (départ uniquement)
+  // Helper : nom du waypoint avec indicateur "Tour de piste" si applicable
+  function _renderWpName(wp) {
+    const name = escapeHtml(wp.name || '');
+    if (wp.pattern) {
+      return `${name} <span class="pattern-indicator" title="${escapeHtml(t('patternTooltip'))}"></span>`;
+    }
+    return name;
+  }
+
   if (flightPlan.length === 1) {
     tbody.innerHTML = `
       <tr>
         <td>-</td>
         <td>${t('departure')}</td>
-        <td>${flightPlan[0].name}</td>
+        <td>${_renderWpName(flightPlan[0])}</td>
         <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
         <td><input type="checkbox" disabled></td>
       </tr>`;
@@ -3829,9 +3973,9 @@ function mettreAJourLogDeNav() {
     // Construire le HTML d'abord
     row.innerHTML = `
       <td><b>${i}</b></td>
-      <td>${ptA.name}</td>
+      <td>${_renderWpName(ptA)}</td>
       <td></td>
-      <td>${ptB.name}</td>
+      <td>${_renderWpName(ptB)}</td>
       <td><span class="alt-val">${altLeg}</span> <button class="btn-edit-alt" onclick="window.ouvrirModaleAltitude(${i})" title="${currentLang === 'fr' ? 'Modifier l\'altitude' : 'Edit altitude'}">✏️</button></td>
       <td>${distanceNM.toFixed(1)}</td>
       <td>${Math.round(rvDeg).toString().padStart(3, '0')}°</td>
@@ -3861,7 +4005,9 @@ function mettreAJourLogDeNav() {
       // (entre flightPlan[i-1] et flightPlan[i])
       insertLegIndex = i;
       const nomWP = prochainNomWP();
-      document.getElementById('insert-wp-icao').value = nomWP;
+      const icaoEl = document.getElementById('insert-wp-icao');
+      icaoEl.value = nomWP;
+      icaoEl.dataset.pattern = ''; // reset du flag tour de piste à chaque ouverture
       document.getElementById('insert-wp-lat').value = '';
       document.getElementById('insert-wp-lon').value = '';
       document.getElementById('insert-wp-error').textContent = '';
