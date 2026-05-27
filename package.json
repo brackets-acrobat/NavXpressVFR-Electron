@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "description": "Logiciel de navigation VFR et tracking temps réel pour Flight Simulator",
   "main": "main.js",
+  "author": "NavXpressVFR",
+  "license": "ISC",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:portable": "electron-builder --win portable"
   },
   "keywords": [
     "electron",
@@ -13,8 +17,6 @@
     "navigation",
     "simconnect"
   ],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@electron/get": "^5.0.0",
     "extract-zip": "^2.0.1",
@@ -24,6 +26,46 @@
     "wmm": "*"
   },
   "devDependencies": {
-    "electron": "^30.5.1"
+    "electron": "^30.5.1",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "com.navxpressvfr.app",
+    "productName": "NavXpressVFR",
+    "copyright": "Copyright © 2026 NavXpressVFR",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "**/*",
+      "!.git/**/*",
+      "!dist/**/*",
+      "!build/**/*",
+      "!SimConnect.dll",
+      "!fuel_selector.jpg",
+      "!logo_icone.png",
+      "!force-electron.js",
+      "!package-lock.json",
+      "!**/*.md"
+    ],
+    "extraResources": [],
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/node-simconnect/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "logo_icone.png",
+      "artifactName": "${productName}-${version}-portable.exe"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.exe"
+    }
   }
 }
