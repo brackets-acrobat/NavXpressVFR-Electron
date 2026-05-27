@@ -43,7 +43,7 @@ function showToast(message, type = 'info', duration = 2500) {
   container.appendChild(toast);
   setTimeout(() => {
     toast.classList.add('toast-fade-out');
-    setTimeout(() => { try { toast.remove(); } catch (_) {} }, 320);
+    setTimeout(() => { try { toast.remove(); } catch (_) { } }, 320);
   }, duration);
 }
 
@@ -67,13 +67,13 @@ function buildKVTable(rows) {
 async function ouvrirInfoAeroport(ident) {
   if (!ident) return;
   const overlay = document.getElementById('airport-info-overlay');
-  const codeEl  = document.getElementById('airport-info-code');
-  const nameEl  = document.getElementById('airport-info-name');
-  const typeEl  = document.getElementById('airport-info-type');
-  const genEl   = document.getElementById('airport-info-general');
-  const rwyEl   = document.getElementById('airport-info-runways');
-  const freqEl  = document.getElementById('airport-info-frequencies');
-  const cmtEl   = document.getElementById('airport-info-comments');
+  const codeEl = document.getElementById('airport-info-code');
+  const nameEl = document.getElementById('airport-info-name');
+  const typeEl = document.getElementById('airport-info-type');
+  const genEl = document.getElementById('airport-info-general');
+  const rwyEl = document.getElementById('airport-info-runways');
+  const freqEl = document.getElementById('airport-info-frequencies');
+  const cmtEl = document.getElementById('airport-info-comments');
   if (!overlay) return;
 
   // Loading state
@@ -137,7 +137,7 @@ async function ouvrirInfoAeroport(ident) {
     ['Lon', Number.isFinite(lon) ? lon.toFixed(6) + '°' : '—'],
     [currentLang === 'fr' ? 'Élévation' : 'Elevation', elev ? `${elev} ft` : '—'],
     [currentLang === 'fr' ? 'Vol commercial' : 'Scheduled service',
-      a.scheduled_service === 'yes' ? (currentLang === 'fr' ? 'Oui' : 'Yes') : (currentLang === 'fr' ? 'Non' : 'No')],
+    a.scheduled_service === 'yes' ? (currentLang === 'fr' ? 'Oui' : 'Yes') : (currentLang === 'fr' ? 'Non' : 'No')],
   ];
   if (a.home_link) rowsGen.push(['Web', `<a class="ap-info-link" href="${escapeHtml(a.home_link)}" target="_blank" rel="noopener">${escapeHtml(a.home_link)}</a>`]);
   if (a.wikipedia_link) rowsGen.push(['Wikipedia', `<a class="ap-info-link" href="${escapeHtml(a.wikipedia_link)}" target="_blank" rel="noopener">${escapeHtml(a.wikipedia_link)}</a>`]);
@@ -216,8 +216,8 @@ async function ouvrirInfoNavaid(id) {
   if (!id) return;
   const overlay = document.getElementById('navaid-info-overlay');
   const identEl = document.getElementById('navaid-info-ident');
-  const nameEl  = document.getElementById('navaid-info-name');
-  const typeEl  = document.getElementById('navaid-info-type');
+  const nameEl = document.getElementById('navaid-info-name');
+  const typeEl = document.getElementById('navaid-info-type');
   const tableEl = document.getElementById('navaid-info-table');
   if (!overlay) return;
 
@@ -430,16 +430,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // --- Bouton + Modale : API OpenAIP ---
-  const btnApiOpenAIP   = document.getElementById('btn-api-openaip');
-  const apiOverlay      = document.getElementById('api-openaip-overlay');
-  const apiInput        = document.getElementById('api-openaip-input');
-  const apiHint         = document.getElementById('api-openaip-hint');
-  const apiTestResult   = document.getElementById('api-test-result');
-  const apiError        = document.getElementById('api-openaip-error');
+  const btnApiOpenAIP = document.getElementById('btn-api-openaip');
+  const apiOverlay = document.getElementById('api-openaip-overlay');
+  const apiInput = document.getElementById('api-openaip-input');
+  const apiHint = document.getElementById('api-openaip-hint');
+  const apiTestResult = document.getElementById('api-test-result');
+  const apiError = document.getElementById('api-openaip-error');
   const btnApiVisibility = document.getElementById('btn-api-toggle-visibility');
-  const btnApiTest      = document.getElementById('btn-api-test');
-  const btnApiCancel    = document.getElementById('btn-api-cancel');
-  const btnApiValidate  = document.getElementById('btn-api-validate');
+  const btnApiTest = document.getElementById('btn-api-test');
+  const btnApiCancel = document.getElementById('btn-api-cancel');
+  const btnApiValidate = document.getElementById('btn-api-validate');
 
   if (btnApiOpenAIP) {
     btnApiOpenAIP.addEventListener('click', () => {
@@ -610,14 +610,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // --- Bouton + Modales : Import OurAirports ---
-  const btnImportOA       = document.getElementById('btn-import-ourairports');
-  const oaConfirmOverlay  = document.getElementById('oa-confirm-overlay');
+  const btnImportOA = document.getElementById('btn-import-ourairports');
+  const oaConfirmOverlay = document.getElementById('oa-confirm-overlay');
   const btnOaConfirmCancel = document.getElementById('btn-oa-confirm-cancel');
-  const btnOaConfirmOk    = document.getElementById('btn-oa-confirm-ok');
+  const btnOaConfirmOk = document.getElementById('btn-oa-confirm-ok');
   const oaProgressOverlay = document.getElementById('oa-progress-overlay');
-  const oaProgressList    = document.getElementById('oa-progress-list');
+  const oaProgressList = document.getElementById('oa-progress-list');
   const oaProgressBarFill = document.getElementById('oa-progress-bar-fill');
-  const oaProgressCount   = document.getElementById('oa-progress-count');
+  const oaProgressCount = document.getElementById('oa-progress-count');
   const oaProgressSummary = document.getElementById('oa-progress-summary');
   const btnOaProgressClose = document.getElementById('btn-oa-progress-close');
 
@@ -651,7 +651,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let doneCount = 0;
 
     // S'abonner aux events de progression
-    if (_oaProgressUnsub) { try { _oaProgressUnsub(); } catch(_) {} }
+    if (_oaProgressUnsub) { try { _oaProgressUnsub(); } catch (_) { } }
     _oaProgressUnsub = window.api.onOurAirportsProgress((data) => {
       if (data.type === 'start') {
         totalFiles = data.total;
@@ -717,7 +717,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (btnImportOA) {
     btnImportOA.addEventListener('click', async () => {
       let existe = false;
-      try { existe = await window.api.ourAirportsExiste(); } catch (_) {}
+      try { existe = await window.api.ourAirportsExiste(); } catch (_) { }
       if (existe) {
         applyI18nIn(oaConfirmOverlay);
         oaConfirmOverlay.classList.add('visible');
@@ -762,7 +762,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (chronoDisplay) {
     const chrono = new StopWatch(chronoDisplay, 'mmss', {
       start: document.getElementById('chrono-start'),
-      stop:  document.getElementById('chrono-stop'),
+      stop: document.getElementById('chrono-stop'),
       reset: document.getElementById('chrono-reset'),
     });
     document.getElementById('chrono-start')?.addEventListener('click', () => chrono.start());
@@ -774,7 +774,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (timerDisplay) {
     const timer = new StopWatch(timerDisplay, 'hhmmss', {
       start: document.getElementById('timer-start'),
-      stop:  document.getElementById('timer-stop'),
+      stop: document.getElementById('timer-stop'),
       reset: document.getElementById('timer-reset'),
     });
     document.getElementById('timer-start')?.addEventListener('click', () => timer.start());
@@ -827,15 +827,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const layers = [
       { key: 'satellite', layer: layerSatellite, label: '🛰️ Satellite', next: '🗺️ Topo' },
-      { key: 'topo',      layer: layerTopo,      label: '🗺️ Topo',      next: '🗺️ OSM' },
-      { key: 'osm',       layer: layerOSM,       label: '🗺️ OSM',       next: '🛰️ Satellite' },
+      { key: 'topo', layer: layerTopo, label: '🗺️ Topo', next: '🗺️ OSM' },
+      { key: 'osm', layer: layerOSM, label: '🗺️ OSM', next: '🛰️ Satellite' },
     ];
     let currentLayerIdx = 2;
     layers[currentLayerIdx].layer.addTo(map);
 
     // --- Bouton déroulant de changement de fond ---
     const btnLayerToggle = L.control({ position: 'topright' });
-    btnLayerToggle.onAdd = function() {
+    btnLayerToggle.onAdd = function () {
       const wrapper = L.DomUtil.create('div', 'layer-toggle-wrapper');
       L.DomEvent.disableClickPropagation(wrapper);
       L.DomEvent.disableScrollPropagation(wrapper);
@@ -848,8 +848,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const options = [
         { key: 'satellite', label: '🛰️ Satellite' },
-        { key: 'topo',      label: '🗺️ Topo' },
-        { key: 'osm',       label: '🗺️ OSM' },
+        { key: 'topo', label: '🗺️ Topo' },
+        { key: 'osm', label: '🗺️ OSM' },
       ];
 
       options.forEach(opt => {
@@ -893,7 +893,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let airspacesVisible = false;
     let airspaceTileLayer = null;
     let airportsEnabled = true;
-    let navaidsEnabled  = true;
+    let navaidsEnabled = true;
 
     function creerCoucheEspacesAeriens() {
       // La clé API est injectée automatiquement par le main process via
@@ -960,7 +960,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const lineExtent = r + 4;
       const rotation = heading - 90;
       const svg = `
-        <svg viewBox="-${size/2} -${size/2} ${size} ${size}" width="${size}" height="${size}" style="overflow:visible;">
+        <svg viewBox="-${size / 2} -${size / 2} ${size} ${size}" width="${size}" height="${size}" style="overflow:visible;">
           ${hasRunway ? `<line x1="-${lineExtent}" y1="0" x2="${lineExtent}" y2="0"
                 stroke="#000" stroke-width="2.2" stroke-linecap="round"
                 transform="rotate(${rotation})"/>` : ''}
@@ -1229,7 +1229,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Bouton déroulant des CALQUES (Espaces aériens / Aéroports / Navaids) ---
     // Placé à gauche du dropdown des fonds de carte (grâce au row-reverse CSS sur topright)
     const btnLayersFilter = L.control({ position: 'topright' });
-    btnLayersFilter.onAdd = function() {
+    btnLayersFilter.onAdd = function () {
       const wrapper = L.DomUtil.create('div', 'layer-toggle-wrapper layers-filter-wrapper');
       L.DomEvent.disableClickPropagation(wrapper);
       L.DomEvent.disableScrollPropagation(wrapper);
@@ -1244,8 +1244,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         dropdown.innerHTML = '';
         const items = [
           { id: 'airspaces', labelFr: 'Espaces aériens', labelEn: 'Airspaces', checked: airspacesVisible },
-          { id: 'airports',  labelFr: 'Aéroports',       labelEn: 'Airports',  checked: airportsEnabled },
-          { id: 'navaids',   labelFr: 'Navaids',          labelEn: 'Navaids',   checked: navaidsEnabled },
+          { id: 'airports', labelFr: 'Aéroports', labelEn: 'Airports', checked: airportsEnabled },
+          { id: 'navaids', labelFr: 'Navaids', labelEn: 'Navaids', checked: navaidsEnabled },
         ];
         items.forEach(it => {
           const row = L.DomUtil.create('label', 'layer-toggle-row', dropdown);
@@ -1437,7 +1437,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Appliquer — les deux points sont partagés avec les legs adjacents
     flightPlan[legIndex - 1] = { ...flightPlan[legIndex - 1], ...newDep };
-    flightPlan[legIndex]     = { ...flightPlan[legIndex],     ...newArr };
+    flightPlan[legIndex] = { ...flightPlan[legIndex], ...newArr };
 
     fermerModaleEditLeg();
 
@@ -1739,12 +1739,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Config (Vp + vent)
         if (data.config) {
-          const inputVp        = document.getElementById('input-vp');
-          const inputWindDir   = document.getElementById('input-wind-dir');
+          const inputVp = document.getElementById('input-vp');
+          const inputWindDir = document.getElementById('input-wind-dir');
           const inputWindSpeed = document.getElementById('input-wind-speed');
-          if (inputVp && typeof data.config.trueAirspeed === 'number')   inputVp.value        = data.config.trueAirspeed;
-          if (inputWindDir && typeof data.config.windDirection === 'number') inputWindDir.value   = data.config.windDirection;
-          if (inputWindSpeed && typeof data.config.windSpeed === 'number')   inputWindSpeed.value = data.config.windSpeed;
+          if (inputVp && typeof data.config.trueAirspeed === 'number') inputVp.value = data.config.trueAirspeed;
+          if (inputWindDir && typeof data.config.windDirection === 'number') inputWindDir.value = data.config.windDirection;
+          if (inputWindSpeed && typeof data.config.windSpeed === 'number') inputWindSpeed.value = data.config.windSpeed;
           // Rafraîchir la rose des vents
           if (typeof updateWindRose === 'function') {
             updateWindRose(
@@ -2011,7 +2011,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   //   joue waypoint_fr.wav / waypoint_en.wav quand < 1.5 NM.
   // ----------------------------------------------------------
   const WAYPOINT_RADIUS_NM = 1.5;
-  const DEVIATION_MAX_NM  = 1.2;
+  const DEVIATION_MAX_NM = 1.2;
   // Précharge des fichiers audio (situés dans src/sounds/)
   const _wpSounds = {
     fr: new Audio('sounds/waypoint_fr.wav'),
@@ -2046,7 +2046,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const Δφ = toRad(lat2 - lat1);
     const Δλ = toRad(lon2 - lon1);
     const a = Math.sin(Δφ / 2) ** 2
-            + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+      + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R_NM * c;
   }
@@ -2065,14 +2065,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const Δφap = φP - φA;
     const Δλap = λP - λA;
     const aap = Math.sin(Δφap / 2) ** 2
-              + Math.cos(φA) * Math.cos(φP) * Math.sin(Δλap / 2) ** 2;
+      + Math.cos(φA) * Math.cos(φP) * Math.sin(Δλap / 2) ** 2;
     const d_AP = 2 * Math.atan2(Math.sqrt(aap), Math.sqrt(1 - aap));
 
     // Relevement A→B et A→P
     function bearing(φ1, λ1, φ2, λ2) {
       const y = Math.sin(λ2 - λ1) * Math.cos(φ2);
       const x = Math.cos(φ1) * Math.sin(φ2)
-              - Math.sin(φ1) * Math.cos(φ2) * Math.cos(λ2 - λ1);
+        - Math.sin(φ1) * Math.cos(φ2) * Math.cos(λ2 - λ1);
       return Math.atan2(y, x);
     }
     const θ_AB = bearing(φA, λA, φB, λB);
@@ -2114,13 +2114,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const lat1Rad = toRad(latA);
     const lat2Rad = toRad(latB);
     const a = Math.sin(dLat / 2) ** 2
-            + Math.sin(dLon / 2) ** 2 * Math.cos(lat1Rad) * Math.cos(lat2Rad);
+      + Math.sin(dLon / 2) ** 2 * Math.cos(lat1Rad) * Math.cos(lat2Rad);
     const distanceNM = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     // Route vraie (bearing initial du grand-cercle)
     const y = Math.sin(dLon) * Math.cos(lat2Rad);
     const x = Math.cos(lat1Rad) * Math.sin(lat2Rad)
-            - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+      - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
     const rvDeg = ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 
     // Triangle des vitesses (dérive + GS)
@@ -2234,11 +2234,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ============================================================
   // EMPORT CARBURANT — calcul et affichage du total
   // ============================================================
-  const fuelConsoEl  = document.getElementById('fuel-conso');
-  const fuelNightEl  = document.getElementById('fuel-night');
+  const fuelConsoEl = document.getElementById('fuel-conso');
+  const fuelNightEl = document.getElementById('fuel-night');
   const fuelDistAltEl = document.getElementById('fuel-dist-alt');
   const fuelReserveEl = document.getElementById('fuel-reserve');
-  const fuelTotalEl   = document.getElementById('fuel-total');
+  const fuelTotalEl = document.getElementById('fuel-total');
 
   // Filtre décimal (réutilise la même logique que les conversions, déclarée
   // dans le bloc CONVERSIONS plus bas — on en redéfinit une locale ici par
@@ -2309,9 +2309,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // mettreAJourLogDeNav est déjà wrappé plus bas par le bloc Direct To, donc
   // pour ne pas perdre les autres effets on hook ici aussi.
   const _origMajLogForFuel = mettreAJourLogDeNav;
-  mettreAJourLogDeNav = function() {
+  mettreAJourLogDeNav = function () {
     const r = _origMajLogForFuel.apply(this, arguments);
-    try { updateFuelTotal(); } catch (_) {}
+    try { updateFuelTotal(); } catch (_) { }
     return r;
   };
 
@@ -2352,14 +2352,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // CHANGEMENT DE RÉSERVOIR (TANK SELECTOR)
   // ============================================================
   const btnTankSwitch = document.getElementById('btn-tank-switch');
-  const tankOverlay   = document.getElementById('tank-overlay');
-  const tankSlider    = document.getElementById('tank-slider');
-  const tankMinutes   = document.getElementById('tank-minutes');
+  const tankOverlay = document.getElementById('tank-overlay');
+  const tankSlider = document.getElementById('tank-slider');
+  const tankMinutes = document.getElementById('tank-minutes');
   const tankCountdown = document.getElementById('tank-countdown');
-  const btnTankStart  = document.getElementById('tank-start');
-  const btnTankStop   = document.getElementById('tank-stop');
-  const btnTankReset  = document.getElementById('tank-reset');
-  const btnTankClose  = document.getElementById('btn-tank-close');
+  const btnTankStart = document.getElementById('tank-start');
+  const btnTankStop = document.getElementById('tank-stop');
+  const btnTankReset = document.getElementById('tank-reset');
+  const btnTankClose = document.getElementById('btn-tank-close');
 
   // Préchargement des sons de changement de réservoir
   const _tankSounds = {
@@ -2425,7 +2425,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function _tankUpdateBtns() {
     if (btnTankStart) btnTankStart.disabled = _tankRunning || _tankRemainingMs <= 0;
-    if (btnTankStop)  btnTankStop.disabled  = !_tankRunning;
+    if (btnTankStop) btnTankStop.disabled = !_tankRunning;
     if (btnTankReset) btnTankReset.disabled = false;
   }
 
@@ -2438,7 +2438,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // ce que l'utilisateur clique sur Stop ou Reset.
       _jouerSonChangementReservoir();
       const m = parseInt(tankMinutes?.value, 10)
-              || parseInt(tankSlider?.value, 10) || 15;
+        || parseInt(tankSlider?.value, 10) || 15;
       _tankRemainingMs = m * 60 * 1000;
       _tankEndTime = Date.now() + _tankRemainingMs;
       _renderTankCountdown();
@@ -2487,7 +2487,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (btnTankStart) btnTankStart.addEventListener('click', _tankStart);
-  if (btnTankStop)  btnTankStop.addEventListener('click', () => _tankStop(false));
+  if (btnTankStop) btnTankStop.addEventListener('click', () => _tankStop(false));
   if (btnTankReset) btnTankReset.addEventListener('click', _tankReset);
 
   // --- Ouverture / fermeture de la modale ---
@@ -2501,7 +2501,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // au pilote de fermer la modale tout en laissant le compte à rebours actif.
   }
   if (btnTankSwitch) btnTankSwitch.addEventListener('click', _ouvrirTank);
-  if (btnTankClose)  btnTankClose.addEventListener('click', _fermerTank);
+  if (btnTankClose) btnTankClose.addEventListener('click', _fermerTank);
   if (tankOverlay) {
     tankOverlay.addEventListener('click', e => {
       if (e.target === tankOverlay) _fermerTank();
@@ -2562,8 +2562,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Lien à 3 unités (vitesse : kt, km/h, mph) via une base commune (kt)
   function linkTripletSpeed() {
     const items = [
-      { id: 'conv-kt',  toKt: v => v,           fromKt: v => v },
-      { id: 'conv-kmh', toKt: v => v / 1.852,   fromKt: v => v * 1.852 },
+      { id: 'conv-kt', toKt: v => v, fromKt: v => v },
+      { id: 'conv-kmh', toKt: v => v / 1.852, fromKt: v => v * 1.852 },
       { id: 'conv-mph', toKt: v => v / 1.150779, fromKt: v => v * 1.150779 },
     ];
     items.forEach(src => {
@@ -2653,15 +2653,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnDirectTo.disabled = !peut;
     btnDirectTo.title = peut
       ? (currentLang === 'fr' ? "Direct To — Aller directement vers un waypoint"
-                              : "Direct To — Fly directly to a waypoint")
+        : "Direct To — Fly directly to a waypoint")
       : (currentLang === 'fr' ? "Direct To — MSFS doit être connecté et un plan chargé"
-                              : "Direct To — MSFS must be connected and a flight plan loaded");
+        : "Direct To — MSFS must be connected and a flight plan loaded");
   }
   // Mise à jour à la connexion / déconnexion + après chaque rafraîchissement du nav log
   window.api.onStatusSimConnect(() => _majBoutonDirectTo());
   // Hook dans mettreAJourLogDeNav (ré-évalué à chaque redraw)
   const _origMajLog = mettreAJourLogDeNav;
-  mettreAJourLogDeNav = function() {
+  mettreAJourLogDeNav = function () {
     const r = _origMajLog.apply(this, arguments);
     _majBoutonDirectTo();
     return r;
@@ -2723,7 +2723,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // --- Ligne magenta dashed sur la carte ---
   function _supprimerLigneDirectTo() {
     if (_directToLayer) {
-      try { map.removeLayer(_directToLayer); } catch (_) {}
+      try { map.removeLayer(_directToLayer); } catch (_) { }
       _directToLayer = null;
     }
   }
@@ -3197,7 +3197,7 @@ function supprimerSegmentsCarte() {
 //   leg actif   (i === active) → magenta
 //   leg à faire (i > active)   → bleu
 function _legColor(legIndex, active) {
-  if (legIndex < active)  return '#888888';
+  if (legIndex < active) return '#888888';
   if (legIndex === active) return '#e91e63';
   return '#4088DC';
 }
@@ -3329,11 +3329,11 @@ function _wpDirectionAndOffset(index) {
   if (Math.abs(perpX) > Math.abs(perpY)) {
     return perpX > 0
       ? { direction: 'right', offset: [off, 0] }
-      : { direction: 'left',  offset: [-off, 0] };
+      : { direction: 'left', offset: [-off, 0] };
   }
   return perpY > 0
     ? { direction: 'bottom', offset: [0, off] }
-    : { direction: 'top',    offset: [0, -off] };
+    : { direction: 'top', offset: [0, -off] };
 }
 
 function _wpTooltipOptions(permanent, dirOpts) {

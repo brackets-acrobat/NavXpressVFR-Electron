@@ -149,7 +149,11 @@ function createWindow() {
   });
 
   mainWindow.setMenuBarVisibility(false);
-  mainWindow.webContents.openDevTools();
+  // DevTools (console de debug) seulement en mode développement,
+  // jamais dans la version packagée distribuée aux utilisateurs.
+  if (!app.isPackaged) {
+    mainWindow.webContents.openDevTools();
+  }
   mainWindow.loadFile(path.join(__dirname, 'src/index.html'));
 }
 

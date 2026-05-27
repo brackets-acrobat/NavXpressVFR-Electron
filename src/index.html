@@ -21,7 +21,8 @@
                     <span id="app-decl" class="app-decl"></span>
                 </h1>
                 <div class="header-right">
-                    <button type="button" class="status-badge" id="sim-status" title="" data-i18n="simDisconnected">MSFS Déconnecté</button>
+                    <button type="button" class="status-badge" id="sim-status" title="" data-i18n="simDisconnected">MSFS
+                        Déconnecté</button>
                     <!-- Bouton toggle bilingue FR / EN -->
                     <button id="btn-lang-toggle" class="btn-lang" title="Changer de langue / Switch language">
                         <span class="lang-fr lang-active">FR</span>
@@ -89,15 +90,18 @@
                             <button id="btn-create-flight" class="btn-secondary" data-i18n="btnCreate">🗺️ Créer plan de
                                 vol</button>
                             <button id="btn-new-flight" class="btn-secondary" data-i18n="btnNew">✨ Nouveau</button>
-                            <button id="btn-load-flight" class="btn-secondary" data-i18n="btnLoadFlight">📥 Charger plan de vol</button>
+                            <button id="btn-load-flight" class="btn-secondary" data-i18n="btnLoadFlight">📥 Charger plan
+                                de vol</button>
                             <button id="btn-import-lnm" class="btn-secondary" data-i18n="btnImport">📂 Importer
                                 LNMPLN</button>
                             <button id="btn-save-flight" class="btn-secondary" data-i18n="btnSave">💾
                                 Sauvegarder</button>
                         </div>
                         <div id="top-buttons-row2">
-                            <button id="btn-api-openaip" class="btn-secondary btn-api" data-i18n="btnApiOpenAIP">🔑 Ajouter API OpenAIP</button>
-                            <button id="btn-import-ourairports" class="btn-secondary btn-ourairports" data-i18n="btnImportOurAirports">🌐 Importer données OurAirports</button>
+                            <button id="btn-api-openaip" class="btn-secondary btn-api" data-i18n="btnApiOpenAIP">🔑
+                                Ajouter API OpenAIP</button>
+                            <button id="btn-import-ourairports" class="btn-secondary btn-ourairports"
+                                data-i18n="btnImportOurAirports">🌐 Importer données OurAirports</button>
                         </div>
 
                         <!-- Boîte Chronomètre + Timer -->
@@ -107,9 +111,12 @@
                                 <div class="chrono-label" data-i18n="chronoLabel">Chronomètre</div>
                                 <div class="chrono-display" id="chrono-display">00:00</div>
                                 <div class="chrono-buttons">
-                                    <button class="chrono-btn chrono-btn-start" id="chrono-start" data-i18n-title="chronoStart" title="Démarrer">▶</button>
-                                    <button class="chrono-btn chrono-btn-stop" id="chrono-stop" data-i18n-title="chronoStop" title="Arrêter">⏸</button>
-                                    <button class="chrono-btn chrono-btn-reset" id="chrono-reset" data-i18n-title="chronoReset" title="Remise à zéro">↺</button>
+                                    <button class="chrono-btn chrono-btn-start" id="chrono-start"
+                                        data-i18n-title="chronoStart" title="Démarrer">▶</button>
+                                    <button class="chrono-btn chrono-btn-stop" id="chrono-stop"
+                                        data-i18n-title="chronoStop" title="Arrêter">⏸</button>
+                                    <button class="chrono-btn chrono-btn-reset" id="chrono-reset"
+                                        data-i18n-title="chronoReset" title="Remise à zéro">↺</button>
                                 </div>
                             </div>
                             <!-- Timer HH:MM:SS -->
@@ -117,29 +124,33 @@
                                 <div class="chrono-label" data-i18n="timerLabel">Timer</div>
                                 <div class="chrono-display" id="timer-display">00:00:00</div>
                                 <div class="chrono-buttons">
-                                    <button class="chrono-btn chrono-btn-start" id="timer-start" data-i18n-title="chronoStart" title="Démarrer">▶</button>
-                                    <button class="chrono-btn chrono-btn-stop" id="timer-stop" data-i18n-title="chronoStop" title="Arrêter">⏸</button>
-                                    <button class="chrono-btn chrono-btn-reset" id="timer-reset" data-i18n-title="chronoReset" title="Remise à zéro">↺</button>
+                                    <button class="chrono-btn chrono-btn-start" id="timer-start"
+                                        data-i18n-title="chronoStart" title="Démarrer">▶</button>
+                                    <button class="chrono-btn chrono-btn-stop" id="timer-stop"
+                                        data-i18n-title="chronoStop" title="Arrêter">⏸</button>
+                                    <button class="chrono-btn chrono-btn-reset" id="timer-reset"
+                                        data-i18n-title="chronoReset" title="Remise à zéro">↺</button>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Boutons Carburant + Changement réservoir + Conversions + Direct To sur la même ligne -->
                         <div class="dt-conv-row">
-                            <button id="btn-fuel" class="btn-fuel"
-                                    data-i18n-title="fuelBtnTooltip" title="Emport carburant">
+                            <button id="btn-fuel" class="btn-fuel" data-i18n-title="fuelBtnTooltip"
+                                title="Emport carburant">
                                 <span class="fuel-btn-icon" aria-hidden="true">⛽</span>
                             </button>
-                            <button id="btn-tank-switch" class="btn-tank-switch"
-                                    data-i18n-title="tankBtnTooltip" title="Changement de réservoir">
-                                <img class="tank-icon" src="img/selector_lr.png" alt="Sélecteur de réservoir" aria-hidden="true">
+                            <button id="btn-tank-switch" class="btn-tank-switch" data-i18n-title="tankBtnTooltip"
+                                title="Changement de réservoir">
+                                <img class="tank-icon" src="img/selector_lr.png" alt="Sélecteur de réservoir"
+                                    aria-hidden="true">
                             </button>
-                            <button id="btn-conversions" class="btn-conversions"
-                                    data-i18n-title="convBtnTooltip" title="Conversions d'unités">
+                            <button id="btn-conversions" class="btn-conversions" data-i18n-title="convBtnTooltip"
+                                title="Conversions d'unités">
                                 <span class="conv-icon" aria-hidden="true">⇄</span>
                             </button>
                             <button id="btn-direct-to" class="btn-direct-to" disabled
-                                    data-i18n-title="dtBtnTooltipDisabled" title="Direct To — MSFS doit être connecté">
+                                data-i18n-title="dtBtnTooltipDisabled" title="Direct To — MSFS doit être connecté">
                                 <span class="dt-icon" aria-hidden="true">D&nbsp;➤</span>
                             </button>
                         </div>
@@ -184,23 +195,29 @@
                 <!-- Rose des vents SVG -->
                 <svg id="wind-rose-svg" viewBox="-100 -100 200 200" xmlns="http://www.w3.org/2000/svg">
                     <!-- Cercles concentriques -->
-                    <circle cx="0" cy="0" r="90" fill="none" stroke="#3a3a3a" stroke-width="1"/>
-                    <circle cx="0" cy="0" r="60" fill="none" stroke="#2a2a2a" stroke-width="1" stroke-dasharray="2 3"/>
-                    <circle cx="0" cy="0" r="30" fill="none" stroke="#2a2a2a" stroke-width="1" stroke-dasharray="2 3"/>
+                    <circle cx="0" cy="0" r="90" fill="none" stroke="#3a3a3a" stroke-width="1" />
+                    <circle cx="0" cy="0" r="60" fill="none" stroke="#2a2a2a" stroke-width="1" stroke-dasharray="2 3" />
+                    <circle cx="0" cy="0" r="30" fill="none" stroke="#2a2a2a" stroke-width="1" stroke-dasharray="2 3" />
 
                     <!-- Croix cardinale -->
-                    <line x1="0" y1="-90" x2="0" y2="90" stroke="#2a2a2a" stroke-width="1"/>
-                    <line x1="-90" y1="0" x2="90" y2="0" stroke="#2a2a2a" stroke-width="1"/>
+                    <line x1="0" y1="-90" x2="0" y2="90" stroke="#2a2a2a" stroke-width="1" />
+                    <line x1="-90" y1="0" x2="90" y2="0" stroke="#2a2a2a" stroke-width="1" />
 
                     <!-- Croix intercardinale (NE, SE, SW, NW) -->
-                    <line x1="-63.6" y1="-63.6" x2="63.6" y2="63.6" stroke="#222" stroke-width="1" stroke-dasharray="1 4"/>
-                    <line x1="-63.6" y1="63.6" x2="63.6" y2="-63.6" stroke="#222" stroke-width="1" stroke-dasharray="1 4"/>
+                    <line x1="-63.6" y1="-63.6" x2="63.6" y2="63.6" stroke="#222" stroke-width="1"
+                        stroke-dasharray="1 4" />
+                    <line x1="-63.6" y1="63.6" x2="63.6" y2="-63.6" stroke="#222" stroke-width="1"
+                        stroke-dasharray="1 4" />
 
                     <!-- Lettres cardinales -->
-                    <text x="0" y="-95" text-anchor="middle" fill="#ff5252" font-size="14" font-weight="bold" dominant-baseline="auto">N</text>
-                    <text x="0" y="105" text-anchor="middle" fill="#bbb" font-size="13" font-weight="bold" dominant-baseline="auto">S</text>
-                    <text x="98" y="5" text-anchor="start" fill="#bbb" font-size="13" font-weight="bold" dominant-baseline="middle">E</text>
-                    <text x="-98" y="5" text-anchor="end" fill="#bbb" font-size="13" font-weight="bold" dominant-baseline="middle">W</text>
+                    <text x="0" y="-95" text-anchor="middle" fill="#ff5252" font-size="14" font-weight="bold"
+                        dominant-baseline="auto">N</text>
+                    <text x="0" y="105" text-anchor="middle" fill="#bbb" font-size="13" font-weight="bold"
+                        dominant-baseline="auto">S</text>
+                    <text x="98" y="5" text-anchor="start" fill="#bbb" font-size="13" font-weight="bold"
+                        dominant-baseline="middle">E</text>
+                    <text x="-98" y="5" text-anchor="end" fill="#bbb" font-size="13" font-weight="bold"
+                        dominant-baseline="middle">W</text>
 
                     <!-- Sous-cardinaux -->
                     <text x="69" y="-66" text-anchor="middle" fill="#666" font-size="9">NE</text>
@@ -211,13 +228,13 @@
                     <!-- Flèche du vent (orientée vers le haut par défaut, rotation appliquée dynamiquement) -->
                     <g id="wind-arrow" transform="rotate(180)">
                         <!-- Hampe -->
-                        <line x1="0" y1="60" x2="0" y2="-50" stroke="#00bcd4" stroke-width="4" stroke-linecap="round"/>
+                        <line x1="0" y1="60" x2="0" y2="-50" stroke="#00bcd4" stroke-width="4" stroke-linecap="round" />
                         <!-- Pointe (triangle) -->
-                        <polygon points="0,-78 -12,-48 12,-48" fill="#00bcd4"/>
+                        <polygon points="0,-78 -12,-48 12,-48" fill="#00bcd4" />
                     </g>
 
                     <!-- Point central -->
-                    <circle cx="0" cy="0" r="3" fill="#00bcd4"/>
+                    <circle cx="0" cy="0" r="3" fill="#00bcd4" />
                 </svg>
 
                 <!-- Panneau de données vent -->
@@ -238,19 +255,26 @@
 
     <!-- Modale Insérer point tournant -->
     <!-- Modale édition leg -->
-    <div id="edit-leg-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.70); z-index:9999; align-items:center; justify-content:center;">
-        <div id="edit-leg-popup" style="background:#1a1a1a; border:1px solid #00bcd4; border-radius:10px; padding:28px 32px; width:420px; box-shadow:0 8px 40px rgba(0,0,0,0.7);">
-            <h3 id="edit-leg-title" style="margin:0 0 4px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="editLegTitle">Éditer le leg</h3>
+    <div id="edit-leg-overlay"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.70); z-index:9999; align-items:center; justify-content:center;">
+        <div id="edit-leg-popup"
+            style="background:#1a1a1a; border:1px solid #00bcd4; border-radius:10px; padding:28px 32px; width:420px; box-shadow:0 8px 40px rgba(0,0,0,0.7);">
+            <h3 id="edit-leg-title"
+                style="margin:0 0 4px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;"
+                data-i18n="editLegTitle">Éditer le leg</h3>
             <p id="edit-leg-subtitle" style="color:#888; font-size:12px; margin:0 0 18px 0;"></p>
 
             <!-- Départ -->
             <div style="margin-bottom:16px;">
-                <h4 style="color:#00bcd4; font-size:12px; text-transform:uppercase; margin:0 0 10px 0;" data-i18n="editLegDep">🛫 Point de départ</h4>
+                <h4 style="color:#00bcd4; font-size:12px; text-transform:uppercase; margin:0 0 10px 0;"
+                    data-i18n="editLegDep">🛫 Point de départ</h4>
                 <div class="insert-wp-name-row" style="margin-bottom:8px;">
-                    <input type="text" id="edit-leg-dep-name" class="insert-wp-name-input" autocomplete="off" spellcheck="false" placeholder="Nom / Ident">
+                    <input type="text" id="edit-leg-dep-name" class="insert-wp-name-input" autocomplete="off"
+                        spellcheck="false" placeholder="Nom / Ident">
                     <button id="btn-search-edit-dep" class="btn-search" data-i18n="btnSearch">Rechercher</button>
                 </div>
-                <span id="search-status-edit-dep" class="search-status" style="display:block; margin-bottom:6px;"></span>
+                <span id="search-status-edit-dep" class="search-status"
+                    style="display:block; margin-bottom:6px;"></span>
                 <div id="search-results-edit-dep" class="wp-search-results"></div>
                 <div class="insert-wp-coord-row">
                     <div class="input-group" style="flex:1;">
@@ -258,7 +282,8 @@
                         <input type="text" id="edit-leg-dep-lat" inputmode="decimal" placeholder="47.200000">
                     </div>
                     <div class="insert-wp-radio-group">
-                        <label class="radio-label"><input type="radio" name="edit-dep-lat-dir" value="N" checked> N</label>
+                        <label class="radio-label"><input type="radio" name="edit-dep-lat-dir" value="N" checked>
+                            N</label>
                         <label class="radio-label"><input type="radio" name="edit-dep-lat-dir" value="S"> S</label>
                     </div>
                 </div>
@@ -268,7 +293,8 @@
                         <input type="text" id="edit-leg-dep-lon" inputmode="decimal" placeholder="6.080000">
                     </div>
                     <div class="insert-wp-radio-group">
-                        <label class="radio-label"><input type="radio" name="edit-dep-lon-dir" value="E" checked> E</label>
+                        <label class="radio-label"><input type="radio" name="edit-dep-lon-dir" value="E" checked>
+                            E</label>
                         <label class="radio-label"><input type="radio" name="edit-dep-lon-dir" value="W"> W</label>
                     </div>
                 </div>
@@ -276,12 +302,15 @@
 
             <!-- Arrivée -->
             <div style="margin-bottom:16px;">
-                <h4 style="color:#00bcd4; font-size:12px; text-transform:uppercase; margin:0 0 10px 0;" data-i18n="editLegArr">🛬 Point d'arrivée</h4>
+                <h4 style="color:#00bcd4; font-size:12px; text-transform:uppercase; margin:0 0 10px 0;"
+                    data-i18n="editLegArr">🛬 Point d'arrivée</h4>
                 <div class="insert-wp-name-row" style="margin-bottom:8px;">
-                    <input type="text" id="edit-leg-arr-name" class="insert-wp-name-input" autocomplete="off" spellcheck="false" placeholder="Nom / Ident">
+                    <input type="text" id="edit-leg-arr-name" class="insert-wp-name-input" autocomplete="off"
+                        spellcheck="false" placeholder="Nom / Ident">
                     <button id="btn-search-edit-arr" class="btn-search" data-i18n="btnSearch">Rechercher</button>
                 </div>
-                <span id="search-status-edit-arr" class="search-status" style="display:block; margin-bottom:6px;"></span>
+                <span id="search-status-edit-arr" class="search-status"
+                    style="display:block; margin-bottom:6px;"></span>
                 <div id="search-results-edit-arr" class="wp-search-results"></div>
                 <div class="insert-wp-coord-row">
                     <div class="input-group" style="flex:1;">
@@ -289,7 +318,8 @@
                         <input type="text" id="edit-leg-arr-lat" inputmode="decimal" placeholder="47.200000">
                     </div>
                     <div class="insert-wp-radio-group">
-                        <label class="radio-label"><input type="radio" name="edit-arr-lat-dir" value="N" checked> N</label>
+                        <label class="radio-label"><input type="radio" name="edit-arr-lat-dir" value="N" checked>
+                            N</label>
                         <label class="radio-label"><input type="radio" name="edit-arr-lat-dir" value="S"> S</label>
                     </div>
                 </div>
@@ -299,7 +329,8 @@
                         <input type="text" id="edit-leg-arr-lon" inputmode="decimal" placeholder="6.080000">
                     </div>
                     <div class="insert-wp-radio-group">
-                        <label class="radio-label"><input type="radio" name="edit-arr-lon-dir" value="E" checked> E</label>
+                        <label class="radio-label"><input type="radio" name="edit-arr-lon-dir" value="E" checked>
+                            E</label>
                         <label class="radio-label"><input type="radio" name="edit-arr-lon-dir" value="W"> W</label>
                     </div>
                 </div>
@@ -480,7 +511,8 @@
             <div class="cf-section">
                 <div class="input-group" style="margin-bottom:12px;">
                     <label id="wp-confirm-name-label">Identifiant / Nom</label>
-                    <input type="text" id="wp-confirm-name" class="insert-wp-name-input" autocomplete="off" spellcheck="false">
+                    <input type="text" id="wp-confirm-name" class="insert-wp-name-input" autocomplete="off"
+                        spellcheck="false">
                 </div>
                 <div class="cf-coord-row">
                     <div class="input-group" style="flex:1;">
@@ -513,24 +545,34 @@
     </div>
 
     <!-- Modale confirmation suppression leg -->
-    <div id="confirm-delete-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.70); z-index:9999; align-items:center; justify-content:center;">
-        <div style="background:#1a1a1a; border:1px solid #ff1744; border-radius:10px; padding:28px 32px; width:340px; box-shadow:0 8px 40px rgba(0,0,0,0.7);">
-            <h3 style="margin:0 0 16px 0; color:#ff1744; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="deleteLegTitle">Supprimer le leg</h3>
+    <div id="confirm-delete-overlay"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.70); z-index:9999; align-items:center; justify-content:center;">
+        <div
+            style="background:#1a1a1a; border:1px solid #ff1744; border-radius:10px; padding:28px 32px; width:340px; box-shadow:0 8px 40px rgba(0,0,0,0.7);">
+            <h3 style="margin:0 0 16px 0; color:#ff1744; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;"
+                data-i18n="deleteLegTitle">Supprimer le leg</h3>
             <p id="confirm-delete-msg" style="color:#e0e0e0; font-size:14px; margin:0 0 20px 0;"></p>
             <div style="display:flex; gap:10px;">
-                <button id="btn-confirm-delete-cancel" class="btn-secondary" style="flex:1; text-align:center;" data-i18n="btnCancel">Annuler</button>
-                <button id="btn-confirm-delete-ok" style="flex:2; background:#ff1744; color:#fff; border:none; border-radius:4px; padding:8px; font-size:13px; font-weight:600; cursor:pointer;" data-i18n="deleteLegConfirm">Supprimer</button>
+                <button id="btn-confirm-delete-cancel" class="btn-secondary" style="flex:1; text-align:center;"
+                    data-i18n="btnCancel">Annuler</button>
+                <button id="btn-confirm-delete-ok"
+                    style="flex:2; background:#ff1744; color:#fff; border:none; border-radius:4px; padding:8px; font-size:13px; font-weight:600; cursor:pointer;"
+                    data-i18n="deleteLegConfirm">Supprimer</button>
             </div>
         </div>
     </div>
 
     <!-- Modale confirmation Nouveau plan de vol -->
-    <div id="confirm-reset-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.70); z-index:9999; align-items:center; justify-content:center;">
-        <div style="background:#1a1a1a; border:1px solid #00bcd4; border-radius:10px; padding:28px 32px; width:340px; box-shadow:0 8px 40px rgba(0,0,0,0.7);">
-            <h3 style="margin:0 0 16px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="confirmResetTitle">Nouveau plan de vol</h3>
+    <div id="confirm-reset-overlay"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.70); z-index:9999; align-items:center; justify-content:center;">
+        <div
+            style="background:#1a1a1a; border:1px solid #00bcd4; border-radius:10px; padding:28px 32px; width:340px; box-shadow:0 8px 40px rgba(0,0,0,0.7);">
+            <h3 style="margin:0 0 16px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;"
+                data-i18n="confirmResetTitle">Nouveau plan de vol</h3>
             <p style="color:#e0e0e0; font-size:14px; margin:0 0 20px 0;" data-i18n="confirmReset"></p>
             <div style="display:flex; gap:10px;">
-                <button id="btn-confirm-reset-cancel" class="btn-secondary" style="flex:1; text-align:center;" data-i18n="btnCancel">Annuler</button>
+                <button id="btn-confirm-reset-cancel" class="btn-secondary" style="flex:1; text-align:center;"
+                    data-i18n="btnCancel">Annuler</button>
                 <button id="btn-confirm-reset-ok" class="btn-primary" style="flex:2; margin-bottom:0;">OK</button>
             </div>
         </div>
@@ -539,26 +581,31 @@
     <!-- Modale Clé API OpenAIP -->
     <div id="api-openaip-overlay" class="modal-overlay">
         <div id="api-openaip-popup" class="modal-popup">
-            <h3 id="api-openaip-title" data-i18n="apiModalTitle" style="margin:0 0 6px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Clé API OpenAIP</h3>
+            <h3 id="api-openaip-title" data-i18n="apiModalTitle"
+                style="margin:0 0 6px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Clé API OpenAIP</h3>
 
-            <p id="api-openaip-hint" style="display:none; color:#ffb300; font-size:12px; margin:0 0 14px 0; line-height:1.5;" data-i18n="apiModalMaskedHint"></p>
+            <p id="api-openaip-hint"
+                style="display:none; color:#ffb300; font-size:12px; margin:0 0 14px 0; line-height:1.5;"
+                data-i18n="apiModalMaskedHint"></p>
 
             <div style="margin-bottom:14px;">
-                <label for="api-openaip-input" style="display:block; font-size:12px; color:#aaa; margin-bottom:6px;" data-i18n="apiModalLabel">Clé API</label>
+                <label for="api-openaip-input" style="display:block; font-size:12px; color:#aaa; margin-bottom:6px;"
+                    data-i18n="apiModalLabel">Clé API</label>
                 <div style="display:flex; gap:8px; align-items:center;">
-                    <input type="password" id="api-openaip-input"
-                        class="insert-wp-name-input"
-                        style="flex:1; letter-spacing:0.05em;"
-                        autocomplete="off" spellcheck="false"
-                        data-i18n-placeholder="apiModalPlaceholder"
-                        placeholder="Collez votre clé API ici">
-                    <button id="btn-api-toggle-visibility" class="btn-secondary" style="padding:6px 10px; flex-shrink:0;" title="Afficher / Masquer">👁️</button>
+                    <input type="password" id="api-openaip-input" class="insert-wp-name-input"
+                        style="flex:1; letter-spacing:0.05em;" autocomplete="off" spellcheck="false"
+                        data-i18n-placeholder="apiModalPlaceholder" placeholder="Collez votre clé API ici">
+                    <button id="btn-api-toggle-visibility" class="btn-secondary"
+                        style="padding:6px 10px; flex-shrink:0;" title="Afficher / Masquer">👁️</button>
                 </div>
             </div>
 
             <div style="margin-bottom:16px;">
-                <button id="btn-api-test" class="btn-secondary" style="width:100%;" data-i18n="btnTestKey">Tester la clé</button>
-                <p id="api-test-result" style="margin:8px 0 0 0; font-size:13px; min-height:18px; text-align:center;"></p>
+                <button id="btn-api-test" class="btn-secondary" style="width:100%;" data-i18n="btnTestKey">Tester la
+                    clé</button>
+                <p id="api-test-result" style="margin:8px 0 0 0; font-size:13px; min-height:18px; text-align:center;">
+                </p>
             </div>
 
             <div id="api-openaip-error" class="field-error"></div>
@@ -573,11 +620,16 @@
     <!-- Modale confirmation remplacement clé API OpenAIP (après dans le DOM = z-index supérieur) -->
     <div id="api-confirm-overlay" class="modal-overlay" style="z-index:10000;">
         <div class="modal-popup" style="width:360px; border-color:#ffb300;">
-            <h3 data-i18n="apiConfirmOverwriteTitle" style="margin:0 0 14px 0; color:#ffb300; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Remplacer la clé API ?</h3>
-            <p data-i18n="apiConfirmOverwriteMsg" style="color:#e0e0e0; font-size:14px; margin:0 0 22px 0; line-height:1.6;"></p>
+            <h3 data-i18n="apiConfirmOverwriteTitle"
+                style="margin:0 0 14px 0; color:#ffb300; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Remplacer la clé API ?</h3>
+            <p data-i18n="apiConfirmOverwriteMsg"
+                style="color:#e0e0e0; font-size:14px; margin:0 0 22px 0; line-height:1.6;"></p>
             <div class="create-flight-actions">
                 <button id="btn-api-confirm-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
-                <button id="btn-api-confirm-ok" class="btn-primary" style="background:#ffb300; border-color:#ffb300; color:#121212;" data-i18n="apiConfirmOverwriteBtn">Remplacer</button>
+                <button id="btn-api-confirm-ok" class="btn-primary"
+                    style="background:#ffb300; border-color:#ffb300; color:#121212;"
+                    data-i18n="apiConfirmOverwriteBtn">Remplacer</button>
             </div>
         </div>
     </div>
@@ -585,11 +637,16 @@
     <!-- Modale confirmation remplacement données OurAirports -->
     <div id="oa-confirm-overlay" class="modal-overlay" style="z-index:10000;">
         <div class="modal-popup" style="width:380px; border-color:#ffb300;">
-            <h3 data-i18n="oaConfirmOverwriteTitle" style="margin:0 0 14px 0; color:#ffb300; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Remplacer les données ?</h3>
-            <p data-i18n="oaConfirmOverwriteMsg" style="color:#e0e0e0; font-size:14px; margin:0 0 22px 0; line-height:1.6;"></p>
+            <h3 data-i18n="oaConfirmOverwriteTitle"
+                style="margin:0 0 14px 0; color:#ffb300; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Remplacer les données ?</h3>
+            <p data-i18n="oaConfirmOverwriteMsg"
+                style="color:#e0e0e0; font-size:14px; margin:0 0 22px 0; line-height:1.6;"></p>
             <div class="create-flight-actions">
                 <button id="btn-oa-confirm-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
-                <button id="btn-oa-confirm-ok" class="btn-primary" style="background:#ffb300; border-color:#ffb300; color:#121212;" data-i18n="oaConfirmOverwriteBtn">Remplacer</button>
+                <button id="btn-oa-confirm-ok" class="btn-primary"
+                    style="background:#ffb300; border-color:#ffb300; color:#121212;"
+                    data-i18n="oaConfirmOverwriteBtn">Remplacer</button>
             </div>
         </div>
     </div>
@@ -597,15 +654,22 @@
     <!-- Modale progression import OurAirports -->
     <div id="oa-progress-overlay" class="modal-overlay">
         <div class="modal-popup" style="width:480px;">
-            <h3 data-i18n="oaProgressTitle" style="margin:0 0 6px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Import OurAirports</h3>
-            <p id="oa-progress-subtitle" data-i18n="oaProgressSubtitle" style="color:#aaa; font-size:12px; margin:0 0 14px 0;">Téléchargement des données aéronautiques…</p>
+            <h3 data-i18n="oaProgressTitle"
+                style="margin:0 0 6px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Import OurAirports</h3>
+            <p id="oa-progress-subtitle" data-i18n="oaProgressSubtitle"
+                style="color:#aaa; font-size:12px; margin:0 0 14px 0;">Téléchargement des données aéronautiques…</p>
 
-            <div id="oa-progress-bar-wrap" style="background:#0e0e0e; border:1px solid #2a2a2a; border-radius:6px; height:10px; overflow:hidden; margin-bottom:6px;">
-                <div id="oa-progress-bar-fill" style="background:#00bcd4; height:100%; width:0%; transition:width 0.25s ease;"></div>
+            <div id="oa-progress-bar-wrap"
+                style="background:#0e0e0e; border:1px solid #2a2a2a; border-radius:6px; height:10px; overflow:hidden; margin-bottom:6px;">
+                <div id="oa-progress-bar-fill"
+                    style="background:#00bcd4; height:100%; width:0%; transition:width 0.25s ease;"></div>
             </div>
             <p id="oa-progress-count" style="color:#888; font-size:12px; margin:0 0 14px 0; text-align:right;">0 / 0</p>
 
-            <ul id="oa-progress-list" style="list-style:none; padding:0; margin:0 0 18px 0; max-height:240px; overflow-y:auto; font-family:'Consolas','Monaco',monospace; font-size:12px;"></ul>
+            <ul id="oa-progress-list"
+                style="list-style:none; padding:0; margin:0 0 18px 0; max-height:240px; overflow-y:auto; font-family:'Consolas','Monaco',monospace; font-size:12px;">
+            </ul>
 
             <div id="oa-progress-summary" style="color:#888; font-size:12px; margin:0 0 14px 0; min-height:18px;"></div>
 
@@ -673,10 +737,13 @@
     <!-- Modale Changement de réservoir (Tank Selector) -->
     <div id="tank-overlay" class="modal-overlay">
         <div id="tank-popup" class="modal-popup">
-            <h3 data-i18n="tankModalTitle" style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Changement de réservoir</h3>
+            <h3 data-i18n="tankModalTitle"
+                style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Changement de réservoir</h3>
 
             <div class="tank-section">
-                <label for="tank-slider" class="tank-section-label" data-i18n="tankSliderLabel">Durée avant changement (minutes)</label>
+                <label for="tank-slider" class="tank-section-label" data-i18n="tankSliderLabel">Durée avant changement
+                    (minutes)</label>
                 <div class="tank-slider-row">
                     <span class="tank-slider-bound">10</span>
                     <input type="range" id="tank-slider" class="tank-slider" min="10" max="45" step="1" value="15">
@@ -691,9 +758,12 @@
                 <div class="tank-countdown-row">
                     <div class="tank-countdown-display" id="tank-countdown">15:00</div>
                     <div class="tank-countdown-buttons">
-                        <button class="chrono-btn chrono-btn-start" id="tank-start" data-i18n-title="chronoStart" title="Démarrer">▶</button>
-                        <button class="chrono-btn chrono-btn-stop" id="tank-stop" data-i18n-title="chronoStop" title="Arrêter">⏸</button>
-                        <button class="chrono-btn chrono-btn-reset" id="tank-reset" data-i18n-title="chronoReset" title="Remise à zéro">↺</button>
+                        <button class="chrono-btn chrono-btn-start" id="tank-start" data-i18n-title="chronoStart"
+                            title="Démarrer">▶</button>
+                        <button class="chrono-btn chrono-btn-stop" id="tank-stop" data-i18n-title="chronoStop"
+                            title="Arrêter">⏸</button>
+                        <button class="chrono-btn chrono-btn-reset" id="tank-reset" data-i18n-title="chronoReset"
+                            title="Remise à zéro">↺</button>
                     </div>
                 </div>
             </div>
@@ -707,11 +777,14 @@
     <!-- Modale Emport Carburant -->
     <div id="fuel-overlay" class="modal-overlay">
         <div id="fuel-popup" class="modal-popup">
-            <h3 data-i18n="fuelBoxTitle" style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Emport Carburant</h3>
+            <h3 data-i18n="fuelBoxTitle"
+                style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Emport Carburant</h3>
 
             <div class="fuel-field-modal">
                 <label for="fuel-conso" data-i18n="fuelConso">Consommation croisière (USG/h)</label>
-                <input type="text" id="fuel-conso" class="fuel-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                <input type="text" id="fuel-conso" class="fuel-input" inputmode="decimal" autocomplete="off"
+                    placeholder="0">
             </div>
 
             <label class="fuel-check-row" style="margin: 10px 0;">
@@ -721,12 +794,14 @@
 
             <div class="fuel-field-modal">
                 <label for="fuel-dist-alt" data-i18n="fuelDistAlt">Dist. aéroport dég. (NM)</label>
-                <input type="text" id="fuel-dist-alt" class="fuel-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                <input type="text" id="fuel-dist-alt" class="fuel-input" inputmode="decimal" autocomplete="off"
+                    placeholder="0">
             </div>
 
             <div class="fuel-field-modal">
                 <label for="fuel-reserve" data-i18n="fuelReserve">Réserve discrétionnaire (USG)</label>
-                <input type="text" id="fuel-reserve" class="fuel-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                <input type="text" id="fuel-reserve" class="fuel-input" inputmode="decimal" autocomplete="off"
+                    placeholder="0">
             </div>
 
             <div class="fuel-total-row-modal">
@@ -743,22 +818,28 @@
     <!-- Modale Conversions d'unités -->
     <div id="conversions-overlay" class="modal-overlay">
         <div id="conversions-popup" class="modal-popup">
-            <h3 data-i18n="convTitle" style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Conversions d'unités</h3>
+            <h3 data-i18n="convTitle"
+                style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Conversions d'unités</h3>
 
             <div class="conv-section">
                 <h4 data-i18n="convDistance">Distance</h4>
                 <div class="conv-row">
-                    <input type="text" id="conv-nm" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <input type="text" id="conv-nm" class="conv-input" inputmode="decimal" autocomplete="off"
+                        placeholder="0">
                     <span class="conv-unit">NM</span>
                     <span class="conv-arrow">⇄</span>
-                    <input type="text" id="conv-km" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <input type="text" id="conv-km" class="conv-input" inputmode="decimal" autocomplete="off"
+                        placeholder="0">
                     <span class="conv-unit">km</span>
                 </div>
                 <div class="conv-row">
-                    <input type="text" id="conv-ft" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <input type="text" id="conv-ft" class="conv-input" inputmode="decimal" autocomplete="off"
+                        placeholder="0">
                     <span class="conv-unit">ft</span>
                     <span class="conv-arrow">⇄</span>
-                    <input type="text" id="conv-m" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <input type="text" id="conv-m" class="conv-input" inputmode="decimal" autocomplete="off"
+                        placeholder="0">
                     <span class="conv-unit">m</span>
                 </div>
             </div>
@@ -766,13 +847,16 @@
             <div class="conv-section">
                 <h4 data-i18n="convSpeed">Vitesse</h4>
                 <div class="conv-row">
-                    <input type="text" id="conv-kt" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <input type="text" id="conv-kt" class="conv-input" inputmode="decimal" autocomplete="off"
+                        placeholder="0">
                     <span class="conv-unit">kt</span>
                     <span class="conv-arrow">⇄</span>
-                    <input type="text" id="conv-kmh" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <input type="text" id="conv-kmh" class="conv-input" inputmode="decimal" autocomplete="off"
+                        placeholder="0">
                     <span class="conv-unit">km/h</span>
                     <span class="conv-arrow">⇄</span>
-                    <input type="text" id="conv-mph" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <input type="text" id="conv-mph" class="conv-input" inputmode="decimal" autocomplete="off"
+                        placeholder="0">
                     <span class="conv-unit">mph</span>
                 </div>
             </div>
@@ -780,10 +864,12 @@
             <div class="conv-section">
                 <h4 data-i18n="convTemperature">Température</h4>
                 <div class="conv-row">
-                    <input type="text" id="conv-c" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <input type="text" id="conv-c" class="conv-input" inputmode="decimal" autocomplete="off"
+                        placeholder="0">
                     <span class="conv-unit">°C</span>
                     <span class="conv-arrow">⇄</span>
-                    <input type="text" id="conv-f" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <input type="text" id="conv-f" class="conv-input" inputmode="decimal" autocomplete="off"
+                        placeholder="0">
                     <span class="conv-unit">°F</span>
                 </div>
             </div>
@@ -791,10 +877,12 @@
             <div class="conv-section">
                 <h4 data-i18n="convPressure">Pression</h4>
                 <div class="conv-row">
-                    <input type="text" id="conv-hpa" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <input type="text" id="conv-hpa" class="conv-input" inputmode="decimal" autocomplete="off"
+                        placeholder="0">
                     <span class="conv-unit">hPa</span>
                     <span class="conv-arrow">⇄</span>
-                    <input type="text" id="conv-inhg" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <input type="text" id="conv-inhg" class="conv-input" inputmode="decimal" autocomplete="off"
+                        placeholder="0">
                     <span class="conv-unit">inHg</span>
                 </div>
             </div>
@@ -802,10 +890,12 @@
             <div class="conv-section">
                 <h4 data-i18n="convWeight">Poids</h4>
                 <div class="conv-row">
-                    <input type="text" id="conv-kg" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <input type="text" id="conv-kg" class="conv-input" inputmode="decimal" autocomplete="off"
+                        placeholder="0">
                     <span class="conv-unit">kg</span>
                     <span class="conv-arrow">⇄</span>
-                    <input type="text" id="conv-lb" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <input type="text" id="conv-lb" class="conv-input" inputmode="decimal" autocomplete="off"
+                        placeholder="0">
                     <span class="conv-unit">lb</span>
                 </div>
             </div>
@@ -813,10 +903,12 @@
             <div class="conv-section">
                 <h4 data-i18n="convVolume">Volume</h4>
                 <div class="conv-row">
-                    <input type="text" id="conv-usgal" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <input type="text" id="conv-usgal" class="conv-input" inputmode="decimal" autocomplete="off"
+                        placeholder="0">
                     <span class="conv-unit">USG</span>
                     <span class="conv-arrow">⇄</span>
-                    <input type="text" id="conv-l" class="conv-input" inputmode="decimal" autocomplete="off" placeholder="0">
+                    <input type="text" id="conv-l" class="conv-input" inputmode="decimal" autocomplete="off"
+                        placeholder="0">
                     <span class="conv-unit">L</span>
                 </div>
             </div>
@@ -826,13 +918,17 @@
     <!-- Modale Direct To — Sélection du waypoint cible -->
     <div id="direct-to-overlay" class="modal-overlay">
         <div class="modal-popup" style="width:420px;">
-            <h3 data-i18n="dtModalTitle" style="margin:0 0 6px 0; color:#e91e63; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Direct To</h3>
-            <p data-i18n="dtModalHint" style="color:#888; font-size:12px; margin:0 0 14px 0;">Sélectionnez un waypoint cible :</p>
+            <h3 data-i18n="dtModalTitle"
+                style="margin:0 0 6px 0; color:#e91e63; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Direct To</h3>
+            <p data-i18n="dtModalHint" style="color:#888; font-size:12px; margin:0 0 14px 0;">Sélectionnez un waypoint
+                cible :</p>
             <div id="dt-wp-list" class="dt-wp-list"></div>
             <div id="dt-error" class="field-error"></div>
             <div class="create-flight-actions">
                 <button id="btn-dt-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
-                <button id="btn-dt-validate" class="btn-primary" data-i18n="btnValidate" disabled style="background:#e91e63; border-color:#e91e63;">Valider</button>
+                <button id="btn-dt-validate" class="btn-primary" data-i18n="btnValidate" disabled
+                    style="background:#e91e63; border-color:#e91e63;">Valider</button>
             </div>
         </div>
     </div>
@@ -840,7 +936,9 @@
     <!-- Modale Direct To — Info cap + temps + auto-close 10s -->
     <div id="direct-to-info-overlay" class="modal-overlay">
         <div class="modal-popup" style="width:380px;">
-            <h3 id="dt-info-title" style="margin:0 0 6px 0; color:#e91e63; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Direct To</h3>
+            <h3 id="dt-info-title"
+                style="margin:0 0 6px 0; color:#e91e63; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Direct To</h3>
             <p id="dt-info-target" style="color:#e0e0e0; font-size:13px; margin:0 0 14px 0;"></p>
             <div class="dt-info-grid">
                 <div class="dt-info-row">
@@ -860,7 +958,8 @@
                 <div id="dt-progress-fill" class="dt-progress-fill"></div>
             </div>
             <div class="create-flight-actions" style="margin-top:14px;">
-                <button id="btn-dt-info-close" class="btn-primary" data-i18n="btnClose" style="background:#e91e63; border-color:#e91e63;">Fermer</button>
+                <button id="btn-dt-info-close" class="btn-primary" data-i18n="btnClose"
+                    style="background:#e91e63; border-color:#e91e63;">Fermer</button>
             </div>
         </div>
     </div>
