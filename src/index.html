@@ -16,7 +16,10 @@
     <div id="app-container">
         <main id="left-panel">
             <header>
-                <h1 id="app-title">NavXpressVFR</h1>
+                <h1 id="app-title">
+                    <img src="img/logo_navxpressvfr.png" alt="NavXpressVFR" class="app-logo">
+                    <span id="app-decl" class="app-decl"></span>
+                </h1>
                 <div class="header-right">
                     <button type="button" class="status-badge" id="sim-status" title="" data-i18n="simDisconnected">MSFS Déconnecté</button>
                     <!-- Bouton toggle bilingue FR / EN -->
@@ -121,11 +124,15 @@
                             </div>
                         </div>
 
-                        <!-- Boutons Carburant + Conversions + Direct To sur la même ligne -->
+                        <!-- Boutons Carburant + Changement réservoir + Conversions + Direct To sur la même ligne -->
                         <div class="dt-conv-row">
                             <button id="btn-fuel" class="btn-fuel"
                                     data-i18n-title="fuelBtnTooltip" title="Emport carburant">
                                 <span class="fuel-btn-icon" aria-hidden="true">⛽</span>
+                            </button>
+                            <button id="btn-tank-switch" class="btn-tank-switch"
+                                    data-i18n-title="tankBtnTooltip" title="Changement de réservoir">
+                                <img class="tank-icon" src="img/selector_lr.png" alt="Sélecteur de réservoir" aria-hidden="true">
                             </button>
                             <button id="btn-conversions" class="btn-conversions"
                                     data-i18n-title="convBtnTooltip" title="Conversions d'unités">
@@ -659,6 +666,40 @@
                     <h4 data-i18n="navaidInfoTitle">Informations Navaid</h4>
                     <div id="navaid-info-table"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Changement de réservoir (Tank Selector) -->
+    <div id="tank-overlay" class="modal-overlay">
+        <div id="tank-popup" class="modal-popup">
+            <h3 data-i18n="tankModalTitle" style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Changement de réservoir</h3>
+
+            <div class="tank-section">
+                <label for="tank-slider" class="tank-section-label" data-i18n="tankSliderLabel">Durée avant changement (minutes)</label>
+                <div class="tank-slider-row">
+                    <span class="tank-slider-bound">10</span>
+                    <input type="range" id="tank-slider" class="tank-slider" min="10" max="45" step="1" value="15">
+                    <span class="tank-slider-bound">45</span>
+                    <input type="text" id="tank-minutes" class="tank-minutes-input" inputmode="numeric" value="15">
+                    <span class="tank-min-suffix">min</span>
+                </div>
+            </div>
+
+            <div class="tank-section">
+                <div class="tank-section-label" data-i18n="tankTimerLabel">Compte à rebours</div>
+                <div class="tank-countdown-row">
+                    <div class="tank-countdown-display" id="tank-countdown">15:00</div>
+                    <div class="tank-countdown-buttons">
+                        <button class="chrono-btn chrono-btn-start" id="tank-start" data-i18n-title="chronoStart" title="Démarrer">▶</button>
+                        <button class="chrono-btn chrono-btn-stop" id="tank-stop" data-i18n-title="chronoStop" title="Arrêter">⏸</button>
+                        <button class="chrono-btn chrono-btn-reset" id="tank-reset" data-i18n-title="chronoReset" title="Remise à zéro">↺</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="create-flight-actions" style="margin-top:16px;">
+                <button id="btn-tank-close" class="btn-primary" data-i18n="btnClose">Fermer</button>
             </div>
         </div>
     </div>

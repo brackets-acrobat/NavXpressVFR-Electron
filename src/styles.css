@@ -201,6 +201,25 @@ h1 {
     margin: 0;
 }
 
+#app-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-logo {
+    /* Hauteur calibrée pour correspondre à la hauteur du texte h1 d'origine */
+    height: 40px;
+    width: auto;
+    display: block;
+}
+
+.app-decl {
+    font-size: 13px;
+    color: #888;
+    font-weight: normal;
+}
+
 .status-badge {
     display: inline-block;
     padding: 5px 10px;
@@ -374,6 +393,177 @@ h1 {
 .btn-fuel .fuel-btn-icon {
     font-size: 22px;
     line-height: 1;
+}
+
+/* -------------------------------------------------- */
+/* Bouton Changement de réservoir                     */
+/* -------------------------------------------------- */
+.btn-tank-switch {
+    width: 72px;
+    height: 46px;
+    background-color: #1a1a1a;
+    border: 1px solid #00bcd4;
+    border-radius: 6px;
+    color: #00bcd4;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.btn-tank-switch:hover {
+    background-color: #00bcd4;
+    color: #1a1a1a;
+}
+
+.btn-tank-switch .tank-icon {
+    display: block;
+    /* L'image est plus large que haute (~2:1). On la dimensionne pour
+       tenir confortablement dans le bouton 72×46 avec un peu de marge. */
+    max-width: 56px;
+    max-height: 34px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+/* -------------------------------------------------- */
+/* Modale Changement de réservoir (Tank Selector)     */
+/* -------------------------------------------------- */
+#tank-popup {
+    width: 460px;
+}
+
+.tank-section {
+    margin-bottom: 16px;
+}
+
+.tank-section:last-of-type {
+    margin-bottom: 0;
+}
+
+.tank-section-label {
+    display: block;
+    color: #aaa;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 8px;
+}
+
+.tank-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tank-slider-bound {
+    color: #888;
+    font-size: 11px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.tank-slider {
+    flex: 1;
+    min-width: 0;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #2a2a2a;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+/* Thumb (le curseur) WebKit */
+.tank-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #00bcd4;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #1a1a1a;
+    box-shadow: 0 0 0 1px #00bcd4;
+}
+
+.tank-slider::-webkit-slider-thumb:hover {
+    background: #00e5ff;
+}
+
+/* Champ texte des minutes */
+.tank-minutes-input {
+    width: 52px;
+    background-color: #0e0e0e;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+    color: #00bcd4;
+    padding: 6px 8px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.15s;
+    flex-shrink: 0;
+}
+
+.tank-minutes-input:focus {
+    border-color: #00bcd4;
+}
+
+.tank-min-suffix {
+    color: #888;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+/* Compte à rebours */
+.tank-countdown-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: #0e0e0e;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    padding: 10px 14px;
+}
+
+.tank-countdown-display {
+    flex: 1;
+    color: #00bcd4;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 32px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-align: center;
+    line-height: 1;
+}
+
+.tank-countdown-display.running {
+    color: #00e676;
+}
+
+.tank-countdown-display.finished {
+    color: #ff5252;
+    animation: tank-blink 0.6s ease-in-out 6;
+}
+
+@keyframes tank-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.tank-countdown-buttons {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
 /* -------------------------------------------------- */

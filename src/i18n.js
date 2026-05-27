@@ -155,6 +155,10 @@ const TRANSLATIONS = {
 
     // Emport carburant
     fuelBtnTooltip: "Emport carburant",
+    tankBtnTooltip: "Changement de réservoir",
+    tankModalTitle: "Changement de réservoir",
+    tankSliderLabel: "Durée avant changement (minutes)",
+    tankTimerLabel: "Compte à rebours",
     fuelBoxTitle: "Emport Carburant",
     fuelConso: "Consommation croisière (USG/h)",
     fuelNight: "VFR de nuit",
@@ -344,6 +348,10 @@ const TRANSLATIONS = {
 
     // Fuel quantity
     fuelBtnTooltip: "Fuel Planner",
+    tankBtnTooltip: "Tank selector",
+    tankModalTitle: "Tank Selector",
+    tankSliderLabel: "Time before switch (minutes)",
+    tankTimerLabel: "Countdown",
     fuelBoxTitle: "Fuel Planner",
     fuelConso: "Cruise fuel flow (USG/h)",
     fuelNight: "Night VFR",
