@@ -2061,6 +2061,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ----------------------------------------------------------
   const WAYPOINT_RADIUS_NM = 1.5;
   const DEVIATION_MAX_NM = 1.2;
+  const PATTERN_RADIUS_NM = 2;
   // Précharge des fichiers audio (situés dans src/sounds/)
   const _wpSounds = {
     fr: new Audio('sounds/waypoint_fr.wav'),
@@ -2071,12 +2072,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     fr: new Audio('sounds/deviation_fr.wav'),
     en: new Audio('sounds/deviation_en.wav'),
   };
+  const _touchSounds = {
+    fr: new Audio('sounds/touch_fr.wav'),
+    en: new Audio('sounds/touch_en.wav'),
+  };
   // Pré-chargement (au cas où le 1er play soit en différé)
   _wpSounds.fr.preload = 'auto';
   _wpSounds.en.preload = 'auto';
   _arrivalSound.preload = 'auto';
   _devSounds.fr.preload = 'auto';
   _devSounds.en.preload = 'auto';
+  _touchSounds.fr.preload = 'auto';
+  _touchSounds.en.preload = 'auto';
 
   let _lastSoundLegIndex = null;     // index du leg pour lequel le son d'arrivée a déjà été joué
   let _lastSoundSession = false;     // mémoire qu'on était DANS le rayon au précédent tick
@@ -2146,6 +2153,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   function _jouerSonDeviation() {
     _jouerSon(_devSounds[currentLang] || _devSounds.fr);
+  }
+  function _jouerSonTouch() {
+    _jouerSon(_touchSounds[currentLang] || _touchSounds.fr);
   }
 
   // Calcul cap magnétique + temps + distance pour une trajectoire (A → B).
@@ -2227,34 +2237,57 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Vérification de l'écart latéral à la trajectoire du leg actif ---
     if (dep) {
-      const xtd = _crossTrackNM(pos.lat, pos.lon, dep.lat, dep.lon, arr.lat, arr.lon);
-      const horsCouloir = Math.abs(xtd) > DEVIATION_MAX_NM;
-      if (horsCouloir) {
-        const now = Date.now();
-        if (!_deviationOutside) {
-          // 1ère alerte (transition dans → hors couloir)
-          _jouerSonDeviation();
-          _deviationOutside = true;
-          _deviationLegIndex = activeLegIndex;
-          _deviationLastAlertTime = now;
-        } else if (now - _deviationLastAlertTime >= DEVIATION_REMIND_MS) {
-          // Rappel : toujours hors couloir et 2 minutes se sont écoulées
-          _jouerSonDeviation();
-          _deviationLastAlertTime = now;
+      // ZONE DE TOUR DE PISTE : si l'avion est à < 2 NM d'un aéroport du leg
+      // actif marqué pour un tour de piste (départ ou arrivée), on suspend
+      // les alertes de déviation. Le pilote tourne autour de l'aéroport, l'écart
+      // à la trajectoire est attendu et ne doit pas déclencher d'alarme.
+      // L'annonce d'arrivée (1.5 NM) reste active.
+      const distToDep = _distanceNM(pos.lat, pos.lon, dep.lat, dep.lon);
+      const inPatternZone =
+        (dep.pattern && distToDep < PATTERN_RADIUS_NM) ||
+        (arr.pattern && distance < PATTERN_RADIUS_NM);
+
+      if (inPatternZone) {
+        // Reset le tracking : à la sortie du rayon, une déviation effective
+        // sera détectée fraîchement et alertée normalement.
+        if (_deviationOutside) {
+          _deviationOutside = false;
+          _deviationLastAlertTime = 0;
         }
-      } else if (_deviationOutside) {
-        // Retour dans le couloir → reset complet, la prochaine déviation rejouera
-        _deviationOutside = false;
-        _deviationLastAlertTime = 0;
+      } else {
+        const xtd = _crossTrackNM(pos.lat, pos.lon, dep.lat, dep.lon, arr.lat, arr.lon);
+        const horsCouloir = Math.abs(xtd) > DEVIATION_MAX_NM;
+        if (horsCouloir) {
+          const now = Date.now();
+          if (!_deviationOutside) {
+            // 1ère alerte (transition dans → hors couloir)
+            _jouerSonDeviation();
+            _deviationOutside = true;
+            _deviationLegIndex = activeLegIndex;
+            _deviationLastAlertTime = now;
+          } else if (now - _deviationLastAlertTime >= DEVIATION_REMIND_MS) {
+            // Rappel : toujours hors couloir et 2 minutes se sont écoulées
+            _jouerSonDeviation();
+            _deviationLastAlertTime = now;
+          }
+        } else if (_deviationOutside) {
+          // Retour dans le couloir → reset complet, la prochaine déviation rejouera
+          _deviationOutside = false;
+          _deviationLastAlertTime = 0;
+        }
       }
     }
 
     // Détection de FRANCHISSEMENT du seuil (transition extérieur → intérieur)
     // pour ne jouer le son qu'une fois par entrée dans le rayon.
     if (insideRadius && _lastSoundLegIndex !== activeLegIndex) {
-      // Dernier leg → son d'arrivée finale (cuckoo), sinon son de waypoint
+      // Si un toucher est prévu à l'arrivée → on joue le son "touch" et on
+      // remplace les sons waypoint/cuckoo habituels.
+      // Sinon : dernier leg → cuckoo, leg intermédiaire → waypoint.
       const estDernierLeg = (activeLegIndex === flightPlan.length - 1);
-      if (estDernierLeg) {
+      if (arr.pattern) {
+        _jouerSonTouch();
+      } else if (estDernierLeg) {
         _jouerSonArrivee();
       } else {
         _jouerSonWaypoint();
