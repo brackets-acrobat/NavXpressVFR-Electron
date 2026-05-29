@@ -23,6 +23,9 @@ let _directToTargetIndex = null;  // index dans flightPlan du waypoint cible
 let _directToLayer = null;        // L.polyline magenta dashed sur la carte
 let _lastAircraftPos = null;      // {lat, lon} : dernière position avion reçue de MSFS
 
+// État connexion simulateur (hissé en Phase 2 — Lot C ; lu par sim, Direct To, toggle i18n)
+let _simState = 'disconnected';   // disconnected | connecting | connected
+
 const ALT_MIN = 500;
 const ALT_MAX = 15000;
 const ALT_DEFAULT = 3000;
