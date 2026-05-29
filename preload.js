@@ -18,6 +18,9 @@ contextBridge.exposeInMainWorld('api', {
     sauvegarderNavXpv: (planData) => ipcRenderer.invoke('sauvegarder-navxpv', planData),
     ouvrirNavXpv: () => ipcRenderer.invoke('ouvrir-navxpv'),
 
+    // PROFIL VERTICAL — relief GLOBE échantillonné le long du plan de vol
+    profilVertical: (payload) => ipcRenderer.invoke('profil-vertical', payload),
+
     // GESTION CLÉ OpenAIP
     lireCleOpenAIP: () => ipcRenderer.invoke('lire-cle-openaip'),
     sauvegarderCleOpenAIP: (key) => ipcRenderer.invoke('sauvegarder-cle-openaip', key),

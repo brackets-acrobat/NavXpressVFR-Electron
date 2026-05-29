@@ -61,6 +61,12 @@ const TRANSLATIONS = {
     colDuration: "Durée",
     colDone: "Fait",
     emptyPlan: "Aucun point dans le plan de vol",
+    vertProfileTitle: "Profil vertical",
+    vertProfileEmpty: "Créez un plan de vol pour afficher le profil vertical.",
+    vertProfileNoData: "Relief indisponible (données GLOBE introuvables dans Documents/NavXpressVFR/elevation).",
+    vertProfileTerrain: "Relief",
+    vertProfilePlanned: "Alt. prévue",
+    profileToggleTooltip: "Afficher / Masquer le profil vertical",
     departure: "DÉPART",
 
     // Alerts & confirms
@@ -282,6 +288,12 @@ const TRANSLATIONS = {
     colDuration: "Duration",
     colDone: "Done",
     emptyPlan: "No waypoints in flight plan",
+    vertProfileTitle: "Vertical profile",
+    vertProfileEmpty: "Create a flight plan to display the vertical profile.",
+    vertProfileNoData: "Terrain unavailable (GLOBE data not found in Documents/NavXpressVFR/elevation).",
+    vertProfileTerrain: "Terrain",
+    vertProfilePlanned: "Planned alt.",
+    profileToggleTooltip: "Show / Hide the vertical profile",
     departure: "DEPARTURE",
 
     // Alerts & confirms

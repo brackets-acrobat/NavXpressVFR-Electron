@@ -101,6 +101,36 @@ body {
     overflow-y: auto;
 }
 
+/* Bandeau Profil vertical : hauteur fixe sous la liste des legs (même largeur) */
+#flight-info>#vertical-profile-section {
+    flex: 0 0 auto;
+    margin-top: 12px;
+    margin-bottom: 0;
+    padding: 10px 12px;
+}
+
+#vertical-profile-section>h3 {
+    flex-shrink: 0;
+    margin-bottom: 6px;
+}
+
+#vertical-profile-graph {
+    width: 100%;
+}
+
+#vertical-profile-graph svg {
+    display: block;
+    width: 100%;
+}
+
+#vertical-profile-graph .vp-empty {
+    color: #777;
+    font-size: 12px;
+    font-style: italic;
+    padding: 14px 4px;
+    text-align: center;
+}
+
 #right-panel {
     flex: 0 0 40%;
     min-width: 480px;
@@ -841,6 +871,34 @@ h1 {
 .btn-conversions .conv-icon {
     font-size: 22px;
     font-weight: bold;
+    line-height: 1;
+}
+
+/* -------------------------------------------------- */
+/* Bouton Afficher / Masquer le profil vertical       */
+/* -------------------------------------------------- */
+.btn-profil {
+    width: 72px;
+    height: 46px;
+    background-color: #1a1a1a;
+    border: 1px solid #00bcd4;
+    border-radius: 6px;
+    color: #00bcd4;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-profil:hover {
+    background-color: #00bcd4;
+    color: #1a1a1a;
+}
+
+.btn-profil .profil-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     line-height: 1;
 }
 

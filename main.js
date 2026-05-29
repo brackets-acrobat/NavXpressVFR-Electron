@@ -22,7 +22,8 @@ function getNavXpressDirs() {
   const apiDir       = path.join(root, 'API');
   const fpDir        = path.join(root, 'Flight plans');
   const ourAirportsDir = path.join(root, 'ourairports data');
-  return { root, apiDir, fpDir, ourAirportsDir };
+  const elevationDir = path.join(root, 'elevation');
+  return { root, apiDir, fpDir, ourAirportsDir, elevationDir };
 }
 
 function getApiKeyPath() {
@@ -30,10 +31,64 @@ function getApiKeyPath() {
 }
 
 function ensureNavXpressDirs() {
-  const { root, apiDir, fpDir, ourAirportsDir } = getNavXpressDirs();
-  [root, apiDir, fpDir, ourAirportsDir].forEach(dir => {
+  const { root, apiDir, fpDir, ourAirportsDir, elevationDir } = getNavXpressDirs();
+  [root, apiDir, fpDir, ourAirportsDir, elevationDir].forEach(dir => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   });
+}
+
+// --- ÉLÉVATION (dataset GLOBE 30 arc-sec, ~1 km) ---
+// 16 tuiles a10g..p10g pavant le globe ; entiers 16-bit signés little-endian,
+// en mètres, rangés depuis le coin NO de chaque tuile. Océan / no-data = -500.
+const GLOBE_COLS = 10800;          // colonnes par tuile (90° à 30")
+const GLOBE_CELL = 1 / 120;        // degrés par cellule (30 arc-sec)
+const GLOBE_BANDS = [
+  { latMax: 90,  rows: 4800, tiles: ['a10g', 'b10g', 'c10g', 'd10g'] }, // 50°N..90°N
+  { latMax: 50,  rows: 6000, tiles: ['e10g', 'f10g', 'g10g', 'h10g'] }, // 0°..50°N
+  { latMax: 0,   rows: 6000, tiles: ['i10g', 'j10g', 'k10g', 'l10g'] }, // 50°S..0°
+  { latMax: -50, rows: 4800, tiles: ['m10g', 'n10g', 'o10g', 'p10g'] }, // 90°S..50°S
+];
+const _globeFds = new Map(); // nom tuile -> descripteur (null si fichier absent)
+
+function _globeFd(tile) {
+  if (_globeFds.has(tile)) return _globeFds.get(tile);
+  let fd = null;
+  try { fd = fs.openSync(path.join(getNavXpressDirs().elevationDir, tile), 'r'); }
+  catch (e) { fd = null; }
+  _globeFds.set(tile, fd);
+  return fd;
+}
+
+// Élévation en mètres à (lat, lon). null si tuile absente, 0 pour océan/no-data.
+const _globeBuf = Buffer.alloc(2);
+function lireElevation(lat, lon) {
+  if (!isFinite(lat) || !isFinite(lon)) return 0;
+  const la = Math.max(-90, Math.min(90, lat));
+  const lo = ((lon + 180) % 360 + 360) % 360 - 180; // normalise dans [-180,180)
+  let b;
+  if (la >= 50) b = 0; else if (la >= 0) b = 1; else if (la >= -50) b = 2; else b = 3;
+  const band = GLOBE_BANDS[b];
+  let g = Math.floor((lo + 180) / 90);
+  if (g < 0) g = 0; else if (g > 3) g = 3;
+  const fd = _globeFd(band.tiles[g]);
+  if (fd == null) return null;
+  let row = Math.floor((band.latMax - la) / GLOBE_CELL);
+  if (row < 0) row = 0; else if (row >= band.rows) row = band.rows - 1;
+  let col = Math.floor((lo - (-180 + g * 90)) / GLOBE_CELL);
+  if (col < 0) col = 0; else if (col >= GLOBE_COLS) col = GLOBE_COLS - 1;
+  try { fs.readSync(fd, _globeBuf, 0, 2, (row * GLOBE_COLS + col) * 2); }
+  catch (e) { return null; }
+  const v = _globeBuf.readInt16LE(0);
+  return v <= -500 ? 0 : v;
+}
+
+// Distance grand-cercle en milles nautiques.
+function _distNM(aLat, aLon, bLat, bLon) {
+  const R = 3440.065, toRad = Math.PI / 180;
+  const dLat = (bLat - aLat) * toRad, dLon = (bLon - aLon) * toRad;
+  const s = Math.sin(dLat / 2) ** 2 +
+    Math.cos(aLat * toRad) * Math.cos(bLat * toRad) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
 }
 
 // --- OURAIRPORTS : liste des fichiers à récupérer ---
@@ -177,6 +232,64 @@ ipcMain.handle('calculer-declinaison', async (event, { lat, lon, alt }) => {
     console.error("Erreur calcul Geomagnetism dans Main Process:", err);
     return { valeur: "0.00", direction: "E" };
   }
+});
+
+// 1bis. Profil vertical : échantillonne le relief GLOBE le long du plan de vol.
+// payload = { waypoints: [{lat,lon,name}], legAltitudes: [null, alt1, alt2, ...] }
+// Renvoie distances (NM), terrain (ft) et altitude prévue (ft) par échantillon.
+ipcMain.handle('profil-vertical', async (event, payload) => {
+  const wps = Array.isArray(payload && payload.waypoints) ? payload.waypoints : [];
+  const legAlt = Array.isArray(payload && payload.legAltitudes) ? payload.legAltitudes : [];
+  if (wps.length < 2) return { ok: false, dist: [], terrain: [], planned: [], waypoints: [] };
+
+  const M2FT = 3.28084;
+  const ALT_FALLBACK = 3000;
+
+  // Distance par leg (NM) — legDist[i] = wp[i-1] -> wp[i]
+  const legDist = [];
+  let totalNM = 0;
+  for (let i = 1; i < wps.length; i++) {
+    const d = _distNM(wps[i - 1].lat, wps[i - 1].lon, wps[i].lat, wps[i].lon);
+    legDist[i] = d;
+    totalNM += d;
+  }
+
+  // Pas d'échantillonnage : ~1 km (résolution GLOBE), borné à MAX_SAMPLES points.
+  const MAX_SAMPLES = 1500;
+  const totalKm = totalNM * 1.852;
+  let stepKm = 1.0;
+  if (totalKm / stepKm > MAX_SAMPLES) stepKm = totalKm / MAX_SAMPLES;
+
+  const dist = [], terrain = [], planned = [], waypoints = [];
+  let cumNM = 0;
+  let gotData = false; // au moins une tuile GLOBE a pu être lue
+  waypoints.push({ d: 0, name: (wps[0].name || '') });
+
+  for (let i = 1; i < wps.length; i++) {
+    const a = wps[i - 1], b = wps[i];
+    const legNM = legDist[i];
+    const altFt = (legAlt[i] != null ? legAlt[i] : ALT_FALLBACK);
+    const nSeg = Math.max(1, Math.round((legNM * 1.852) / stepKm));
+    // s commence à 0 sur le 1er leg (inclut le point de départ), sinon à 1
+    // pour ne pas dupliquer le waypoint partagé entre deux legs.
+    for (let s = (i === 1 ? 0 : 1); s <= nSeg; s++) {
+      const f = s / nSeg;
+      const lat = a.lat + (b.lat - a.lat) * f;
+      const lon = a.lon + (b.lon - a.lon) * f;
+      let e = lireElevation(lat, lon);
+      if (e == null) e = 0; else gotData = true;
+      dist.push(cumNM + legNM * f);
+      terrain.push(e * M2FT);
+      planned.push(altFt);
+    }
+    cumNM += legNM;
+    waypoints.push({ d: cumNM, name: (b.name || '') });
+  }
+
+  // Aucune tuile lisible → relief indisponible (dossier elevation absent)
+  if (!gotData) return { ok: false, reason: 'no-data', dist: [], terrain: [], planned: [], waypoints: [] };
+
+  return { ok: true, totalNM, dist, terrain, planned, waypoints };
 });
 
 // 2. Écouteur pour Ouvrir un fichier .lnmpln
