@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const https = require('https');
+const extract = require('extract-zip'); // Extraction d'archives ZIP (données d'élévation)
 const geomagnetism = require('geomagnetism'); // Le NOUVEAU module magnétique fiable
 const {
   open: scOpen,
@@ -91,6 +92,20 @@ function _distNM(aLat, aLon, bLat, bLon) {
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
 }
 
+// Les tuiles GLOBE sont-elles déjà installées (à la racine de elevation/) ?
+function elevationTilesPresent() {
+  const { elevationDir } = getNavXpressDirs();
+  return ['a10g', 'g10g', 'p10g'].every(t => fs.existsSync(path.join(elevationDir, t)));
+}
+
+// Ferme et oublie les descripteurs GLOBE ouverts (avant un (ré)import).
+function resetGlobeFds() {
+  for (const fd of _globeFds.values()) {
+    if (fd != null) { try { fs.closeSync(fd); } catch (e) { /* silencieux */ } }
+  }
+  _globeFds.clear();
+}
+
 // --- OURAIRPORTS : liste des fichiers à récupérer ---
 const OURAIRPORTS_FILES = [
   { name: 'airports',            url: 'https://davidmegginson.github.io/ourairports-data/airports.csv' },
@@ -133,6 +148,41 @@ function httpsGetFollow(url, maxRedirects = 5) {
       req.setTimeout(60000, () => {
         req.destroy(new Error('Timeout (60s) pour ' + currentUrl));
       });
+    };
+    doGet(url, maxRedirects);
+  });
+}
+
+// Télécharge une URL HTTPS en streaming vers un fichier (binaire, gros volumes).
+// Suit les redirections, signale la progression via onProgress(reçu, total).
+function downloadToFile(url, destPath, onProgress, maxRedirects = 5) {
+  return new Promise((resolve, reject) => {
+    const doGet = (currentUrl, redirectsLeft) => {
+      const req = https.get(currentUrl, { headers: { 'User-Agent': 'NavXpressVFR-Electron' } }, (res) => {
+        const { statusCode, headers } = res;
+        if (statusCode >= 300 && statusCode < 400 && headers.location) {
+          if (redirectsLeft <= 0) { res.resume(); reject(new Error('Trop de redirections pour ' + url)); return; }
+          res.resume();
+          doGet(new URL(headers.location, currentUrl).toString(), redirectsLeft - 1);
+          return;
+        }
+        if (statusCode !== 200) { res.resume(); reject(new Error('HTTP ' + statusCode + ' pour ' + currentUrl)); return; }
+
+        const total = parseInt(headers['content-length'] || '0', 10);
+        let received = 0;
+        const out = fs.createWriteStream(destPath);
+        res.on('data', (chunk) => {
+          received += chunk.length;
+          if (onProgress) onProgress(received, total);
+        });
+        res.on('error', (e) => { out.destroy(); reject(e); });
+        out.on('error', (e) => reject(e));
+        out.on('finish', () => out.close(() => resolve({ received, total })));
+        res.pipe(out);
+      });
+      req.on('error', reject);
+      // Timeout d'inactivité : se déclenche seulement si aucune donnée ne circule.
+      req.setTimeout(90000, () => req.destroy(new Error('Timeout (90 s sans données) pour ' + currentUrl)));
     };
     doGet(url, maxRedirects);
   });
@@ -290,6 +340,68 @@ ipcMain.handle('profil-vertical', async (event, payload) => {
   if (!gotData) return { ok: false, reason: 'no-data', dist: [], terrain: [], planned: [], waypoints: [] };
 
   return { ok: true, totalNM, dist, terrain, planned, waypoints };
+});
+
+// 1ter. Données d'élévation déjà présentes ?
+ipcMain.handle('elevation-existe', async () => {
+  try { ensureNavXpressDirs(); return elevationTilesPresent(); }
+  catch (e) { return false; }
+});
+
+// 1quater. Importer les données d'élévation : crée Documents/NavXpressVFR/elevation,
+// télécharge all10g.zip (dataset GLOBE complet), l'extrait, aplatit le sous-dossier
+// all10/ et supprime l'archive. Progression via events 'elevation-progress'.
+const ELEVATION_ZIP_URL = 'https://www.ngdc.noaa.gov/mgg/topo/DATATILES/elev/all10g.zip';
+ipcMain.handle('importer-elevation', async (event) => {
+  ensureNavXpressDirs();
+  const { elevationDir } = getNavXpressDirs();
+  const wc = event.sender;
+  const zipPath = path.join(elevationDir, 'all10g.zip');
+
+  resetGlobeFds(); // libère d'éventuels descripteurs ouverts (cas du réimport)
+
+  try {
+    wc.send('elevation-progress', { type: 'start' });
+
+    // 1) Téléchargement (progression limitée à ~4 msg/s)
+    let lastSent = 0;
+    await downloadToFile(ELEVATION_ZIP_URL, zipPath, (received, total) => {
+      const now = Date.now();
+      if (now - lastSent >= 250 || (total && received >= total)) {
+        lastSent = now;
+        wc.send('elevation-progress', { type: 'download', received, total });
+      }
+    });
+
+    // 2) Extraction de l'archive
+    wc.send('elevation-progress', { type: 'extract' });
+    await extract(zipPath, { dir: elevationDir });
+
+    // 3) Aplatissement : déplace elevation/all10/* vers elevation/
+    wc.send('elevation-progress', { type: 'flatten' });
+    const all10Dir = path.join(elevationDir, 'all10');
+    if (fs.existsSync(all10Dir)) {
+      for (const name of fs.readdirSync(all10Dir)) {
+        const src = path.join(all10Dir, name);
+        const dst = path.join(elevationDir, name);
+        try { if (fs.existsSync(dst)) fs.rmSync(dst, { force: true }); } catch (e) { /* silencieux */ }
+        fs.renameSync(src, dst);
+      }
+      try { fs.rmSync(all10Dir, { recursive: true, force: true }); } catch (e) { /* silencieux */ }
+    }
+
+    // 4) Nettoyage de l'archive
+    try { fs.rmSync(zipPath, { force: true }); } catch (e) { /* silencieux */ }
+
+    const ok = elevationTilesPresent();
+    wc.send('elevation-progress', { type: 'done', dir: elevationDir, ok });
+    return { ok, dir: elevationDir };
+  } catch (err) {
+    console.error('[Elevation] Import échec :', err);
+    try { if (fs.existsSync(zipPath)) fs.rmSync(zipPath, { force: true }); } catch (e) { /* silencieux */ }
+    wc.send('elevation-progress', { type: 'error', error: err.message });
+    return { ok: false, error: err.message };
+  }
 });
 
 // 2. Écouteur pour Ouvrir un fichier .lnmpln

@@ -397,6 +397,22 @@ h1 {
     border-color: #00bcd4;
 }
 
+#top-buttons-row2 .btn-elevation {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.2;
+    border-color: #00bcd4;
+    color: #00bcd4;
+}
+
+#top-buttons-row2 .btn-elevation:hover {
+    background-color: #00bcd4;
+    color: #121212;
+    border-color: #00bcd4;
+}
+
 /* -------------------------------------------------- */
 /* Boîte Chronomètre + Timer                          */
 /* -------------------------------------------------- */

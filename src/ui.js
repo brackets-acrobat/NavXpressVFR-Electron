@@ -801,6 +801,135 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // --- Bouton + Modales : Import données d'élévation (GLOBE all10g.zip) ---
+  const btnImportElev = document.getElementById('btn-import-elevation');
+  const elevConfirmOverlay = document.getElementById('elev-confirm-overlay');
+  const btnElevConfirmCancel = document.getElementById('btn-elev-confirm-cancel');
+  const btnElevConfirmOk = document.getElementById('btn-elev-confirm-ok');
+  const elevProgressOverlay = document.getElementById('elev-progress-overlay');
+  const elevProgressPhase = document.getElementById('elev-progress-phase');
+  const elevProgressBarFill = document.getElementById('elev-progress-bar-fill');
+  const elevProgressSize = document.getElementById('elev-progress-size');
+  const elevProgressSummary = document.getElementById('elev-progress-summary');
+  const btnElevProgressClose = document.getElementById('btn-elev-progress-close');
+
+  let _elevImportInProgress = false;
+  let _elevProgressUnsub = null;
+
+  function fmtMo(bytes) {
+    return (bytes / (1024 * 1024)).toFixed(1) + ' Mo';
+  }
+
+  async function lancerImportElevation() {
+    if (_elevImportInProgress) return;
+    _elevImportInProgress = true;
+
+    // Réinitialiser la modale de progression
+    applyI18nIn(elevProgressOverlay);
+    elevProgressPhase.textContent = t('elevPhaseStarting');
+    elevProgressPhase.style.color = '#aaa';
+    elevProgressBarFill.style.width = '0%';
+    elevProgressBarFill.style.background = '#00bcd4';
+    elevProgressSize.textContent = '—';
+    elevProgressSummary.textContent = '';
+    elevProgressSummary.style.color = '#888';
+    btnElevProgressClose.disabled = true;
+    elevProgressOverlay.classList.add('visible');
+
+    // S'abonner aux events de progression
+    if (_elevProgressUnsub) { try { _elevProgressUnsub(); } catch (_) { } }
+    _elevProgressUnsub = window.api.onElevationProgress((data) => {
+      if (data.type === 'start') {
+        elevProgressPhase.textContent = t('elevPhaseStarting');
+        elevProgressBarFill.style.width = '0%';
+      } else if (data.type === 'download') {
+        elevProgressPhase.textContent = t('elevPhaseDownloading');
+        if (data.total) {
+          const pct = Math.round((data.received / data.total) * 100);
+          elevProgressBarFill.style.width = pct + '%';
+          elevProgressSize.textContent = `${fmtMo(data.received)} / ${fmtMo(data.total)} (${pct}%)`;
+        } else {
+          elevProgressBarFill.style.width = '100%';
+          elevProgressSize.textContent = fmtMo(data.received);
+        }
+      } else if (data.type === 'extract') {
+        elevProgressPhase.textContent = t('elevPhaseExtracting');
+        elevProgressBarFill.style.width = '100%';
+        elevProgressSize.textContent = '';
+      } else if (data.type === 'flatten') {
+        elevProgressPhase.textContent = t('elevPhaseFlattening');
+        elevProgressBarFill.style.width = '100%';
+      } else if (data.type === 'done') {
+        elevProgressPhase.textContent = '';
+        elevProgressBarFill.style.width = '100%';
+        elevProgressBarFill.style.background = data.ok ? '#00e676' : '#ffb300';
+        elevProgressSummary.style.color = data.ok ? '#00e676' : '#ffb300';
+        elevProgressSummary.innerHTML =
+          `<div>${t('elevProgressDone')}</div>` +
+          `<div style="margin-top:4px; color:#888; font-size:11px; white-space:pre-wrap;">${t('elevProgressDoneDir')(data.dir)}</div>`;
+        btnElevProgressClose.disabled = false;
+      } else if (data.type === 'error') {
+        elevProgressPhase.textContent = '';
+        elevProgressBarFill.style.background = '#ff5252';
+        elevProgressSummary.style.color = '#ff5252';
+        elevProgressSummary.textContent = t('elevProgressError') + ' — ' + (data.error || '');
+        btnElevProgressClose.disabled = false;
+      }
+    });
+
+    try {
+      await window.api.importerElevation();
+    } catch (err) {
+      console.error('Import élévation échec:', err);
+      elevProgressSummary.style.color = '#ff5252';
+      elevProgressSummary.textContent = '❌ ' + err.message;
+      btnElevProgressClose.disabled = false;
+    } finally {
+      _elevImportInProgress = false;
+    }
+  }
+
+  if (btnImportElev) {
+    btnImportElev.addEventListener('click', async () => {
+      let existe = false;
+      try { existe = await window.api.elevationExiste(); } catch (_) { }
+      if (existe) {
+        applyI18nIn(elevConfirmOverlay);
+        elevConfirmOverlay.classList.add('visible');
+      } else {
+        await lancerImportElevation();
+      }
+    });
+  }
+
+  if (btnElevConfirmCancel) {
+    btnElevConfirmCancel.addEventListener('click', () => elevConfirmOverlay.classList.remove('visible'));
+  }
+  if (elevConfirmOverlay) {
+    elevConfirmOverlay.addEventListener('click', (e) => {
+      if (e.target === elevConfirmOverlay) elevConfirmOverlay.classList.remove('visible');
+    });
+  }
+  if (btnElevConfirmOk) {
+    btnElevConfirmOk.addEventListener('click', async () => {
+      elevConfirmOverlay.classList.remove('visible');
+      await lancerImportElevation();
+    });
+  }
+
+  if (btnElevProgressClose) {
+    btnElevProgressClose.addEventListener('click', () => {
+      if (!btnElevProgressClose.disabled) elevProgressOverlay.classList.remove('visible');
+    });
+  }
+  if (elevProgressOverlay) {
+    elevProgressOverlay.addEventListener('click', (e) => {
+      if (e.target === elevProgressOverlay && !btnElevProgressClose.disabled) {
+        elevProgressOverlay.classList.remove('visible');
+      }
+    });
+  }
+
   // --- Bouton + Modale : Import Aéroports MSFS 2024 ---
   const btnImportMsfs = document.getElementById('btn-import-msfs');
   const msfsConfirmOverlay = document.getElementById('msfs-confirm-overlay');

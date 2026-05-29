@@ -102,6 +102,8 @@
                                 Ajouter API OpenAIP</button>
                             <button id="btn-import-msfs" class="btn-secondary btn-msfs"
                                 data-i18n="btnImportMsfs">🛫 Importer Aéroports MSFS 2024</button>
+                            <button id="btn-import-elevation" class="btn-secondary btn-elevation"
+                                data-i18n="btnImportElevation">⛰️ Importer données d'élévation</button>
                             <button id="btn-import-ourairports" class="btn-secondary btn-ourairports"
                                 data-i18n="btnImportOurAirports">🌐 Importer données OurAirports</button>
                         </div>
@@ -751,6 +753,48 @@
 
             <div class="create-flight-actions">
                 <button id="btn-oa-progress-close" class="btn-primary" data-i18n="btnClose" disabled>Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale : confirmer le re-téléchargement des données d'élévation -->
+    <div id="elev-confirm-overlay" class="modal-overlay" style="z-index:10000;">
+        <div class="modal-popup" style="width:400px; border-color:#ffb300;">
+            <h3 data-i18n="elevConfirmTitle"
+                style="margin:0 0 14px 0; color:#ffb300; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Re-télécharger les données ?</h3>
+            <p data-i18n="elevConfirmMsg"
+                style="color:#e0e0e0; font-size:14px; margin:0 0 22px 0; line-height:1.6;"></p>
+            <div class="create-flight-actions">
+                <button id="btn-elev-confirm-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
+                <button id="btn-elev-confirm-ok" class="btn-primary"
+                    style="background:#ffb300; border-color:#ffb300; color:#121212;"
+                    data-i18n="elevConfirmBtn">Re-télécharger</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale progression import données d'élévation -->
+    <div id="elev-progress-overlay" class="modal-overlay">
+        <div class="modal-popup" style="width:480px;">
+            <h3 data-i18n="elevProgressTitle"
+                style="margin:0 0 6px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Import données d'élévation</h3>
+            <p id="elev-progress-phase" data-i18n="elevPhaseStarting"
+                style="color:#aaa; font-size:12px; margin:0 0 14px 0;">Préparation…</p>
+
+            <div id="elev-progress-bar-wrap"
+                style="background:#0e0e0e; border:1px solid #2a2a2a; border-radius:6px; height:10px; overflow:hidden; margin-bottom:6px;">
+                <div id="elev-progress-bar-fill"
+                    style="background:#00bcd4; height:100%; width:0%; transition:width 0.25s ease;"></div>
+            </div>
+            <p id="elev-progress-size" style="color:#888; font-size:12px; margin:0 0 14px 0; text-align:right;">—</p>
+
+            <div id="elev-progress-summary"
+                style="color:#888; font-size:12px; margin:0 0 14px 0; min-height:18px; white-space:pre-wrap;"></div>
+
+            <div class="create-flight-actions">
+                <button id="btn-elev-progress-close" class="btn-primary" data-i18n="btnClose" disabled>Fermer</button>
             </div>
         </div>
     </div>

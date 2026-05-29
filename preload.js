@@ -21,6 +21,15 @@ contextBridge.exposeInMainWorld('api', {
     // PROFIL VERTICAL — relief GLOBE échantillonné le long du plan de vol
     profilVertical: (payload) => ipcRenderer.invoke('profil-vertical', payload),
 
+    // IMPORT DONNÉES D'ÉLÉVATION (dataset GLOBE all10g.zip)
+    elevationExiste: () => ipcRenderer.invoke('elevation-existe'),
+    importerElevation: () => ipcRenderer.invoke('importer-elevation'),
+    onElevationProgress: (callback) => {
+        const listener = (_event, data) => callback(data);
+        ipcRenderer.on('elevation-progress', listener);
+        return () => ipcRenderer.removeListener('elevation-progress', listener);
+    },
+
     // GESTION CLÉ OpenAIP
     lireCleOpenAIP: () => ipcRenderer.invoke('lire-cle-openaip'),
     sauvegarderCleOpenAIP: (key) => ipcRenderer.invoke('sauvegarder-cle-openaip', key),
