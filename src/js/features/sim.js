@@ -315,7 +315,6 @@ function initSim() {
         _directToActive = false;
         _directToOrigin = null;
         _directToTargetIndex = null;
-        window._supprimerLigneDirectTo?.(); // pont (Direct To extrait au Lot C / C4)
       }
       if (typeof mettreAJourLogDeNav === 'function') mettreAJourLogDeNav();
     } else if (!insideRadius && _lastSoundSession) {

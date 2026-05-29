@@ -2,7 +2,7 @@
 // NavXpressVFR — direct-to.js
 // Direct To : bouton + 2 modales + logique.
 // Extrait de ui.js (Phase 2 — Lot C).
-// Utilise calcLegInfo (nav-core), _simState (globals). Installe le décorateur #2 ; pose window._supprimerLigneDirectTo.
+// Utilise calcLegInfo (nav-core), _simState (globals). Installe le décorateur #2.
 // ============================================================
 
 function initDirectTo() {
@@ -97,25 +97,6 @@ function initDirectTo() {
     });
   }
 
-  // --- Ligne magenta dashed sur la carte ---
-  function _supprimerLigneDirectTo() {
-    if (_directToLayer) {
-      try { map.removeLayer(_directToLayer); } catch (_) { }
-      _directToLayer = null;
-    }
-  }
-  // Exposer pour le bloc auto-validation arrivée (qui appelle aussi cette fonction)
-  window._supprimerLigneDirectTo = _supprimerLigneDirectTo;
-
-  function _tracerLigneDirectTo(origin, target) {
-    _supprimerLigneDirectTo();
-    if (!map || !origin || !target) return;
-    _directToLayer = L.polyline(
-      [[origin.lat, origin.lon], [target.lat, target.lon]],
-      { color: '#e91e63', weight: 3, opacity: 0.9, dashArray: '10 6' }
-    ).addTo(map);
-  }
-
   // --- Activation : passage en mode Direct To ---
   function _activerDirectTo(targetIdx) {
     const target = flightPlan[targetIdx];
@@ -137,9 +118,6 @@ function initDirectTo() {
     // Si l'utilisateur cible le waypoint #0 (départ), activeLegIndex = 0
     // (= "rien encore fait"). Sinon, activeLegIndex = targetIdx.
     activeLegIndex = targetIdx;
-
-    // Trace la ligne magenta sur la carte
-    _tracerLigneDirectTo(_directToOrigin, target);
 
     // Redessine table + segments (couleurs mises à jour selon activeLegIndex)
     mettreAJourLogDeNav();

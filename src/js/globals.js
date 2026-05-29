@@ -20,7 +20,6 @@ let insertLegIndex = 0; // Index d'insertion du point tournant (position dans fl
 let _directToActive = false;
 let _directToOrigin = null;       // {lat, lon} = position avion au moment de l'activation
 let _directToTargetIndex = null;  // index dans flightPlan du waypoint cible
-let _directToLayer = null;        // L.polyline magenta dashed sur la carte
 let _lastAircraftPos = null;      // {lat, lon} : dernière position avion reçue de MSFS
 
 // État connexion simulateur (hissé en Phase 2 — Lot C ; lu par sim, Direct To, toggle i18n)
