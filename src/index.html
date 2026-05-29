@@ -1105,8 +1105,23 @@
         </div>
     </div>
 
-    <!-- i18n chargé AVANT ui.js -->
+    <!-- i18n chargé AVANT tous les modules -->
     <script src="i18n.js"></script>
+    <!-- Modules extraits de ui.js (Phase 1). L'ORDRE compte (scope global partagé) :
+         globals.js en premier ; nav-log.js avant profil-vertical.js ; ui.js en dernier. -->
+    <script src="js/globals.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/info-modals.js"></script>
+    <script src="js/stopwatch.js"></script>
+    <script src="js/windrose.js"></script>
+    <script src="js/recherche.js"></script>
+    <script src="js/carte-segments.js"></script>
+    <script src="js/waypoint-labels.js"></script>
+    <script src="js/modales-legs.js"></script>
+    <script src="js/declinaison.js"></script>
+    <script src="js/nav-log.js"></script>
+    <script src="js/profil-vertical.js"></script>
+    <!-- Grand bloc DOMContentLoaded (init + câblage) — chargé en dernier -->
     <script src="ui.js"></script>
 </body>
 
