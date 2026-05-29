@@ -122,6 +122,25 @@ const TRANSLATIONS = {
     searchCoordsNotFound: "Coordonnées introuvables",
     searchNetworkError: "Erreur réseau",
 
+    // Import Aéroports MSFS 2024
+    btnImportMsfs: "🛫 Importer Aéroports MSFS 2024",
+    msfsConfirmTitle: "Avez-vous lancé MSFS 2024 ?",
+    msfsConfirmMsg: "L'extraction lit la base de données de Microsoft Flight Simulator 2024 en direct. MSFS 2024 doit être lancé, avec un vol en cours, avant de continuer.",
+    btnMsfsCheck: "Vérifier MSFS 2024",
+    msfsCheckChecking: "⏳ Vérification de MSFS 2024…",
+    msfsCheckRunning: (app) => `✅ MSFS 2024 détecté (${app}).`,
+    msfsCheckNotRunning: "❌ MSFS 2024 ne répond pas. Lancez le simulateur avec un vol en cours, puis réessayez.",
+    msfsProgressTitle: "Extraction aéroports MSFS 2024",
+    msfsPhaseConnecting: "Connexion au simulateur…",
+    msfsPhaseEnumerate: (n) => `Énumération des aéroports… (${n})`,
+    msfsPhaseDetail: "Extraction des détails (pistes, fréquences, hélipads)…",
+    msfsPhaseRetry: "Reprise des aéroports en échec…",
+    msfsProgressStats: (rate, eta) => `${rate}/s · temps restant estimé ${eta}`,
+    msfsProgressOkFailed: (ok, failed) => `${ok} OK · ${failed} échec(s)`,
+    msfsExtractDone: (n) => `✅ Extraction terminée : ${n} aéroports enregistrés. La base MSFS 2024 est active.`,
+    msfsExtractEmpty: "⚠️ Aucun aéroport extrait. Vérifiez que MSFS 2024 tourne avec un vol en cours.",
+    msfsExtractError: (msg) => `❌ Extraction échouée : ${msg}`,
+
     // Import données OurAirports
     btnImportOurAirports: "🌐 Importer données OurAirports",
     btnClose: "Fermer",
@@ -147,6 +166,7 @@ const TRANSLATIONS = {
     // Modale détails aéroport
     apInfoGeneral: "Informations générales",
     apInfoRunways: "Pistes",
+    apInfoHelipads: "Hélipads",
     apInfoFrequencies: "Fréquences",
     apInfoComments: "Commentaires",
 
@@ -156,7 +176,7 @@ const TRANSLATIONS = {
     // Tour de piste (pattern)
     patternModalTitle: "Tour de piste / Toucher",
     patternModalQuestion: "Effectuer un tour de piste / toucher à",
-    patternTooltip: "Tour de piste prévu",
+    patternTooltip: "Tour de piste / Toucher prévu",
     patternCheckLabel: "Tour de piste prévu",
     btnYes: "Oui",
     btnNo: "Non",
@@ -323,6 +343,25 @@ const TRANSLATIONS = {
     searchCoordsNotFound: "Coordinates not found",
     searchNetworkError: "Network error",
 
+    // MSFS 2024 airports import
+    btnImportMsfs: "🛫 Import MSFS 2024 Airports",
+    msfsConfirmTitle: "Have you launched MSFS 2024?",
+    msfsConfirmMsg: "The extraction reads the Microsoft Flight Simulator 2024 database live. MSFS 2024 must be running, with a flight loaded, before continuing.",
+    btnMsfsCheck: "Check MSFS 2024",
+    msfsCheckChecking: "⏳ Checking MSFS 2024…",
+    msfsCheckRunning: (app) => `✅ MSFS 2024 detected (${app}).`,
+    msfsCheckNotRunning: "❌ MSFS 2024 is not responding. Launch the simulator with a flight loaded, then try again.",
+    msfsProgressTitle: "MSFS 2024 airports extraction",
+    msfsPhaseConnecting: "Connecting to the simulator…",
+    msfsPhaseEnumerate: (n) => `Enumerating airports… (${n})`,
+    msfsPhaseDetail: "Extracting details (runways, frequencies, helipads)…",
+    msfsPhaseRetry: "Retrying failed airports…",
+    msfsProgressStats: (rate, eta) => `${rate}/s · est. time remaining ${eta}`,
+    msfsProgressOkFailed: (ok, failed) => `${ok} OK · ${failed} failed`,
+    msfsExtractDone: (n) => `✅ Extraction complete: ${n} airports saved. The MSFS 2024 database is now active.`,
+    msfsExtractEmpty: "⚠️ No airport extracted. Make sure MSFS 2024 is running with a flight loaded.",
+    msfsExtractError: (msg) => `❌ Extraction failed: ${msg}`,
+
     // OurAirports data import
     btnImportOurAirports: "🌐 Import OurAirports data",
     btnClose: "Close",
@@ -348,6 +387,7 @@ const TRANSLATIONS = {
     // Airport info modal
     apInfoGeneral: "General information",
     apInfoRunways: "Runways",
+    apInfoHelipads: "Helipads",
     apInfoFrequencies: "Frequencies",
     apInfoComments: "Comments",
 
@@ -357,7 +397,7 @@ const TRANSLATIONS = {
     // Pattern / Touch and go
     patternModalTitle: "Pattern / Touch and Go",
     patternModalQuestion: "Will you perform a pattern / touch and go at",
-    patternTooltip: "Pattern planned",
+    patternTooltip: "Pattern / Touch and go planned",
     patternCheckLabel: "Pattern planned",
     btnYes: "Yes",
     btnNo: "No",

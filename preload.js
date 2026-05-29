@@ -22,6 +22,15 @@ contextBridge.exposeInMainWorld('api', {
     lireCleOpenAIP: () => ipcRenderer.invoke('lire-cle-openaip'),
     sauvegarderCleOpenAIP: (key) => ipcRenderer.invoke('sauvegarder-cle-openaip', key),
 
+    // EXTRACTION AÉROPORTS MSFS 2024
+    msfsVerifierLancement: () => ipcRenderer.invoke('msfs-verifier-lancement'),
+    msfsExtraireAeroports: (options) => ipcRenderer.invoke('extraire-aeroports-msfs', options),
+    onMsfsExtractProgress: (callback) => {
+        const listener = (_event, data) => callback(data);
+        ipcRenderer.on('msfs-extract-progress', listener);
+        return () => ipcRenderer.removeListener('msfs-extract-progress', listener);
+    },
+
     // IMPORT DONNÉES OurAirports
     ourAirportsExiste: () => ipcRenderer.invoke('ourairports-existe'),
     importerOurAirports: () => ipcRenderer.invoke('importer-ourairports'),

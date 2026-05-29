@@ -12,6 +12,9 @@ const {
   SimConnectConstants: SCConst,
 } = require('node-simconnect');
 
+// Moteur d'extraction des aéroports MSFS 2024 (module partagé avec le CLI).
+const { runExtraction: runMsfsExtraction } = require('./extract-airports-msfs');
+
 // --- CHEMINS DE STOCKAGE ---
 function getNavXpressDirs() {
   const docs = app.getPath('documents');
@@ -280,7 +283,14 @@ ipcMain.handle('sauvegarder-cle-openaip', async (event, apiKey) => {
 // --- INDEX EN MÉMOIRE des aéroports OurAirports (chargé à la 1re recherche) ---
 let _oaAirportsIndex = null; // Map<UPPER_CODE, airportObj>
 
+// Quand la base MSFS (airports-msfs.jsonl) est présente, elle REMPLACE
+// totalement les aéroports OurAirports : tous les index aéroports sont
+// construits depuis ce fichier (les navaids restent sur OurAirports).
+const MSFS_AIRPORTS_FILE = 'airports-msfs.jsonl';
+let _msfsActive = false;
+
 function loadOurAirportsIndex() {
+  if (ensureAirportsLoaded()) return true;
   const { ourAirportsDir } = getNavXpressDirs();
   const jsonlPath = path.join(ourAirportsDir, 'airports.jsonl');
   if (!fs.existsSync(jsonlPath)) {
@@ -315,6 +325,7 @@ function invalidateOurAirportsIndex() {
   _oaCommentsByAirport = null;
   _oaNavaidsList = null;
   _oaNavaidsByIdent = null;
+  _msfsActive = false;
 }
 
 // --- INDEX NAVAIDS : liste plate filtrée + map par (ident+id) pour détails ---
@@ -368,6 +379,7 @@ function loadOurAirportsNavaidsList() {
 let _oaFrequenciesByAirport = null;
 
 function loadOurAirportsFrequenciesIndex() {
+  if (ensureAirportsLoaded()) return true;
   const { ourAirportsDir } = getNavXpressDirs();
   const jsonlPath = path.join(ourAirportsDir, 'airport-frequencies.jsonl');
   if (!fs.existsSync(jsonlPath)) {
@@ -400,6 +412,7 @@ function loadOurAirportsFrequenciesIndex() {
 let _oaCommentsByAirport = null;
 
 function loadOurAirportsCommentsIndex() {
+  if (ensureAirportsLoaded()) return true;
   const { ourAirportsDir } = getNavXpressDirs();
   const jsonlPath = path.join(ourAirportsDir, 'airport-comments.jsonl');
   if (!fs.existsSync(jsonlPath)) {
@@ -434,6 +447,7 @@ function loadOurAirportsCommentsIndex() {
 let _oaRunwaysByAirport = null; // Map<UPPER_IDENT, Array<runway>>
 
 function loadOurAirportsRunwaysIndex() {
+  if (ensureAirportsLoaded()) return true;
   const { ourAirportsDir } = getNavXpressDirs();
   const jsonlPath = path.join(ourAirportsDir, 'runways.jsonl');
   if (!fs.existsSync(jsonlPath)) {
@@ -490,6 +504,7 @@ let _oaAirportsList = null;       // [{ident, name, lat, lon, type, runway?}]
 let _oaAirportsRawByIdent = null; // Map<UPPER_IDENT, full airport object>
 
 function loadOurAirportsListForMap() {
+  if (ensureAirportsLoaded()) return true;
   if (_oaAirportsList) return true;
   const { ourAirportsDir } = getNavXpressDirs();
   const jsonlPath = path.join(ourAirportsDir, 'airports.jsonl');
@@ -499,7 +514,7 @@ function loadOurAirportsListForMap() {
   }
   if (!_oaRunwaysByAirport) loadOurAirportsRunwaysIndex();
 
-  const TYPES_OK = new Set(['large_airport', 'medium_airport', 'small_airport']);
+  const TYPES_OK = new Set(['large_airport', 'medium_airport', 'small_airport', 'heliport']);
   const text = fs.readFileSync(jsonlPath, 'utf-8');
   const lines = text.split('\n');
   const list = [];
@@ -551,6 +566,133 @@ function loadOurAirportsListForMap() {
   _oaAirportsList = list;
   _oaAirportsRawByIdent = rawIdx;
   console.log('[OurAirports] Liste chargée pour la carte :', list.length, 'aéroports');
+  return true;
+}
+
+// ============================================================
+// BASE AÉROPORTS MSFS (airports-msfs.jsonl)
+// ------------------------------------------------------------
+// Si ce fichier est présent, il REMPLACE entièrement les aéroports
+// OurAirports. On construit en UNE seule passe TOUS les index aéroports
+// (recherche, carte, runways, fréquences) depuis les enregistrements
+// imbriqués (runways[], frequencies[]). Les commentaires n'existent pas
+// dans cette base (Map vide). Les navaids restent gérés par OurAirports.
+// ============================================================
+function msfsAirportsAvailable() {
+  const { ourAirportsDir } = getNavXpressDirs();
+  return fs.existsSync(path.join(ourAirportsDir, MSFS_AIRPORTS_FILE));
+}
+
+function buildFromMsfs() {
+  const { ourAirportsDir } = getNavXpressDirs();
+  const p = path.join(ourAirportsDir, MSFS_AIRPORTS_FILE);
+  const text = fs.readFileSync(p, 'utf-8');
+  const lines = text.split('\n');
+
+  const TYPES_OK = new Set(['large_airport', 'medium_airport', 'small_airport', 'heliport']);
+  const index = new Map();      // recherche : tous codes -> objet
+  const list = [];              // carte : large/medium/small
+  const rawIdx = new Map();     // ident -> objet complet (tous types)
+  const runwaysIdx = new Map(); // ident -> [pistes normalisées]
+  const freqIdx = new Map();    // ident -> [fréquences]
+
+  for (const line of lines) {
+    if (!line) continue;
+    let a;
+    try { a = JSON.parse(line); } catch (_) { continue; }
+    if (a.__meta) continue; // ligne d'en-tête (date d'extraction, etc.)
+
+    // Index de recherche sur tous les codes (premier arrivé gagne)
+    const keys = [a.ident, a.icao_code, a.gps_code, a.iata_code, a.local_code];
+    for (const k of keys) {
+      if (!k) continue;
+      const up = String(k).toUpperCase();
+      if (!index.has(up)) index.set(up, a);
+    }
+
+    const identUp = (a.ident || '').toUpperCase();
+    if (a.ident) rawIdx.set(identUp, a);
+
+    // Pistes : normaliser vers la forme attendue par les handlers/_oaMainRunway
+    const rws = Array.isArray(a.runways) ? a.runways.map((r) => ({
+      le_ident: r.le_ident || '',
+      he_ident: r.he_ident || '',
+      headingDegT: Number.isFinite(r.headingDegT) ? r.headingDegT : null,
+      length_ft: Number(r.length_ft) || 0,
+      width_ft: Number(r.width_ft) || 0,
+      surface: r.surface || '',
+      lighted: r.lighted === true || r.lighted === 1 || r.lighted === '1',
+      closed: r.closed === true || r.closed === 1 || r.closed === '1',
+    })) : [];
+    if (a.ident) runwaysIdx.set(identUp, rws);
+
+    // Fréquences
+    const fqs = Array.isArray(a.frequencies) ? a.frequencies.map((f) => ({
+      type: f.type || '',
+      description: f.description || '',
+      frequency_mhz: f.frequency_mhz != null ? f.frequency_mhz : '',
+    })) : [];
+    if (a.ident) freqIdx.set(identUp, fqs);
+
+    // Liste carte : uniquement large/medium/small avec position valide
+    if (!TYPES_OK.has(a.type)) continue;
+    const lat = parseFloat(a.latitude_deg);
+    const lon = parseFloat(a.longitude_deg);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+    // Filtre décors/POI : MSFS expose des points de repère (stades, ponts,
+    // monuments, forts…) comme « airports » sans aucune piste ni hélipad.
+    // deriveType les classe en small_airport par défaut. On les masque de la
+    // carte tant qu'ils n'ont ni piste ni hélipad (NRD50/NRD51, etc.).
+    const nbHelipads = Array.isArray(a.helipads) ? a.helipads.length : 0;
+    if (rws.length === 0 && nbHelipads === 0) continue;
+
+    const runway = _oaMainRunway(rws);
+    const displayCode =
+      (a.icao_code  && String(a.icao_code).trim())  ||
+      (a.gps_code   && String(a.gps_code).trim())   ||
+      (a.local_code && String(a.local_code).trim()) ||
+      a.ident || '';
+
+    list.push({
+      ident: a.ident,
+      icao: a.icao_code || '',
+      iata: a.iata_code || '',
+      gps: a.gps_code || '',
+      local: a.local_code || '',
+      code: displayCode,
+      name: a.name || a.ident,
+      country: a.iso_country || '',
+      lat, lon,
+      type: a.type,
+      runway: runway ? {
+        name: runway.le_ident + (runway.he_ident ? '/' + runway.he_ident : ''),
+        headingDegT: runway.headingDegT,
+        length_ft: runway.length_ft,
+      } : null,
+    });
+  }
+
+  _oaAirportsIndex = index;
+  _oaAirportsList = list;
+  _oaAirportsRawByIdent = rawIdx;
+  _oaRunwaysByAirport = runwaysIdx;
+  _oaFrequenciesByAirport = freqIdx;
+  _oaCommentsByAirport = new Map(); // pas de commentaires dans la base MSFS
+  _msfsActive = true;
+  console.log('[MSFS] Base aéroports chargée :', list.length, 'sur carte /', rawIdx.size, 'au total');
+}
+
+// Construit (une fois) tous les index aéroports depuis la base MSFS si elle
+// existe. Renvoie true si la base MSFS est active (les loaders OurAirports
+// doivent alors court-circuiter). Renvoie false sinon (fallback OurAirports).
+function ensureAirportsLoaded() {
+  if (!msfsAirportsAvailable()) return false;
+  if (_msfsActive && _oaAirportsIndex && _oaAirportsList && _oaAirportsRawByIdent
+      && _oaRunwaysByAirport && _oaFrequenciesByAirport && _oaCommentsByAirport) {
+    return true;
+  }
+  buildFromMsfs();
   return true;
 }
 
@@ -745,11 +887,14 @@ ipcMain.handle('details-aeroport', async (event, ident) => {
   const runways = (_oaRunwaysByAirport && _oaRunwaysByAirport.get(up)) || [];
   const frequencies = (_oaFrequenciesByAirport && _oaFrequenciesByAirport.get(up)) || [];
   const comments = (_oaCommentsByAirport && _oaCommentsByAirport.get(up)) || [];
+  // Hélipads : rangés directement dans l'enregistrement (base MSFS). Absents
+  // d'OurAirports → tableau vide par défaut.
+  const helipads = Array.isArray(airport.helipads) ? airport.helipads : [];
 
   // Trier les commentaires du plus récent au plus ancien
   comments.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
-  return { ok: true, airport, runways, frequencies, comments };
+  return { ok: true, airport, runways, frequencies, comments, helipads };
 });
 
 // 9. Renvoie tous les aéroports (large/medium/small) dans une bounding box.
@@ -973,6 +1118,93 @@ ipcMain.handle('simconnect-etat', async () => {
   if (_scHandle) return { state: 'connected' };
   if (_scConnecting) return { state: 'connecting' };
   return { state: 'disconnected' };
+});
+
+// --- Vérifie que MSFS 2024 est lancé (pour l'extraction des aéroports) ---
+// On ouvre une connexion SimConnect SunRise (protocole MSFS 2024) dédiée et
+// éphémère, avec un timeout court : si elle réussit, le simulateur tourne.
+// Cette connexion est indépendante du handle FSX_SP2 (_scHandle) utilisé pour
+// le vent/la position, et on la ferme immédiatement après la vérification.
+ipcMain.handle('msfs-verifier-lancement', async () => {
+  return await new Promise((resolve) => {
+    let settled = false;
+    let timer = null;
+    const done = (result) => {
+      if (settled) return;
+      settled = true;
+      if (timer) { clearTimeout(timer); timer = null; }
+      if (result.running) console.log('[MSFS] Vérification lancement : OK (' + result.app + ')');
+      else console.log('[MSFS] Vérification lancement : non détecté (' + result.error + ')');
+      resolve(result);
+    };
+
+    // Garde-fou : autodetectServerAddress() peut rejeter sans émettre 'error'
+    // (la promesse interne n'a pas de .catch), auquel cas open() ne se résout
+    // jamais. Ce timeout couvre ce cas.
+    timer = setTimeout(() => done({ running: false, error: 'timeout (aucune réponse du simulateur en 8 s)' }), 8000);
+
+    let openP;
+    try {
+      openP = scOpen('NavXpressVFR-Check', SCProtocol.SunRise);
+    } catch (err) {
+      done({ running: false, error: 'scOpen a échoué : ' + (err && err.message) });
+      return;
+    }
+    openP.then((res) => {
+      try { res.handle.close(); } catch (_) {}
+      const appName = (res.recvOpen && res.recvOpen.applicationName) || 'MSFS';
+      done({ running: true, app: appName });
+    }).catch((err) => {
+      done({ running: false, error: (err && err.message) || 'connexion refusée' });
+    });
+  });
+});
+
+// --- Extraction in-app de la base d'aéroports MSFS 2024 ---
+// Ouvre sa propre connexion SunRise (dédiée), énumère puis lit en détail tous
+// les aéroports, écrit Documents/NavXpressVFR/ourairports data/airports-msfs.jsonl,
+// et relaie la progression au renderer via 'msfs-extract-progress'. Une fois le
+// fichier écrit, on invalide les index pour que les loaders se reconstruisent
+// depuis la base MSFS fraîche.
+let _msfsExtractRunning = false;
+ipcMain.handle('extraire-aeroports-msfs', async (event, options) => {
+  if (_msfsExtractRunning) {
+    return { ok: false, error: 'Une extraction est déjà en cours.' };
+  }
+  _msfsExtractRunning = true;
+  const wc = event.sender;
+  ensureNavXpressDirs();
+  const { ourAirportsDir } = getNavXpressDirs();
+  const limit = options && Number.isFinite(options.limit) ? options.limit : 0;
+
+  const sendProgress = (p) => {
+    if (wc && !wc.isDestroyed()) wc.send('msfs-extract-progress', p);
+  };
+
+  try {
+    const summary = await runMsfsExtraction({
+      outDir: ourAirportsDir,
+      window: 100,
+      limit,
+      appName: 'NavXpressVFR-Extract',
+      onProgress: sendProgress,
+    });
+
+    // Le fichier a été écrit : on force la reconstruction des index aéroports
+    // (la prochaine requête repartira de airports-msfs.jsonl).
+    if (summary.file) {
+      invalidateOurAirportsIndex();
+      console.log('[MSFS] Extraction terminée :', summary.written, 'aéroports →', summary.file);
+    } else {
+      console.log('[MSFS] Extraction terminée sans fichier (', summary.reason, ')');
+    }
+    return { ok: true, summary };
+  } catch (err) {
+    console.error('[MSFS] Extraction échouée :', err && err.message);
+    return { ok: false, error: (err && err.message) || 'extraction échouée' };
+  } finally {
+    _msfsExtractRunning = false;
+  }
 });
 
 // --- ENREGISTREMENT DE L'APP ---

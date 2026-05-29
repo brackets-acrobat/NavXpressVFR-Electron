@@ -64,6 +64,23 @@ function buildKVTable(rows) {
   return `<table class="ap-info-table"><tbody>${ths}</tbody></table>`;
 }
 
+// Libellé localisé du type d'aéroport (FR traduit, EN = type nettoyé)
+function formatAirportType(type) {
+  const t = (type || '').trim();
+  if (currentLang === 'fr') {
+    const FR = {
+      small_airport: 'Petit aéroport',
+      medium_airport: 'Aéroport moyen',
+      large_airport: 'Grand aéroport',
+      heliport: 'Héliport',
+      seaplane_base: 'Hydrobase',
+      closed: 'Fermé',
+    };
+    return FR[t] || t.replace(/_/g, ' ');
+  }
+  return t.replace(/_/g, ' ');
+}
+
 async function ouvrirInfoAeroport(ident) {
   if (!ident) return;
   const overlay = document.getElementById('airport-info-overlay');
@@ -72,6 +89,8 @@ async function ouvrirInfoAeroport(ident) {
   const typeEl = document.getElementById('airport-info-type');
   const genEl = document.getElementById('airport-info-general');
   const rwyEl = document.getElementById('airport-info-runways');
+  const heliEl = document.getElementById('airport-info-helipads');
+  const heliSection = document.getElementById('airport-info-helipads-section');
   const freqEl = document.getElementById('airport-info-frequencies');
   const cmtEl = document.getElementById('airport-info-comments');
   if (!overlay) return;
@@ -82,6 +101,8 @@ async function ouvrirInfoAeroport(ident) {
   typeEl.textContent = '';
   genEl.innerHTML = '<div class="ap-info-empty">…</div>';
   rwyEl.innerHTML = '';
+  if (heliEl) heliEl.innerHTML = '';
+  if (heliSection) heliSection.style.display = 'none';
   freqEl.innerHTML = '';
   cmtEl.innerHTML = '';
   overlay.classList.add('visible');
@@ -108,7 +129,7 @@ async function ouvrirInfoAeroport(ident) {
     || a.ident || '';
   codeEl.textContent = code;
   nameEl.textContent = a.name || a.ident;
-  typeEl.textContent = (a.type || '').replace(/_/g, ' ');
+  typeEl.textContent = formatAirportType(a.type);
 
   // --- Général ---
   const lat = parseFloat(a.latitude_deg);
@@ -126,13 +147,8 @@ async function ouvrirInfoAeroport(ident) {
 
   const rowsGen = [
     [currentLang === 'fr' ? 'ICAO' : 'ICAO', escapeHtml(icaoAffiche || '—')],
-    [currentLang === 'fr' ? 'IATA' : 'IATA', escapeHtml(a.iata_code || '—')],
-    ['GPS code', escapeHtml(a.gps_code || '—')],
-    [currentLang === 'fr' ? 'Code local' : 'Local code', escapeHtml(a.local_code || '—')],
     ['Ident', escapeHtml(a.ident || '—')],
-    [currentLang === 'fr' ? 'Pays' : 'Country', escapeHtml(a.iso_country || '—')],
     [currentLang === 'fr' ? 'Région' : 'Region', escapeHtml(a.iso_region || '—')],
-    [currentLang === 'fr' ? 'Ville' : 'City', escapeHtml(a.municipality || '—')],
     ['Lat', Number.isFinite(lat) ? lat.toFixed(6) + '°' : '—'],
     ['Lon', Number.isFinite(lon) ? lon.toFixed(6) + '°' : '—'],
     [currentLang === 'fr' ? 'Élévation' : 'Elevation', elev ? `${elev} ft` : '—'],
@@ -153,9 +169,13 @@ async function ouvrirInfoAeroport(ident) {
       : '<tr><th>Designation</th><th>Length</th><th>Width</th><th>Surface</th><th>Hdg (°true)</th><th>Lit</th><th>Status</th></tr>';
     const rows = res.runways.map(r => {
       const name = r.le_ident + (r.he_ident ? '/' + r.he_ident : '');
-      const heading = r.headingDegT !== null
-        ? String(Math.round(r.headingDegT) % 360).padStart(3, '0') + '°'
-        : '—';
+      // Cap vrai des DEUX extrémités : le cap fourni (le_) + son opposé (+180°)
+      let heading = '—';
+      if (Number.isFinite(r.headingDegT)) {
+        const h1 = ((Math.round(r.headingDegT) % 360) + 360) % 360;
+        const h2 = (h1 + 180) % 360;
+        heading = String(h1).padStart(3, '0') + '° / ' + String(h2).padStart(3, '0') + '°';
+      }
       const len = r.length_ft ? `${r.length_ft} ft` : '—';
       const wid = r.width_ft ? `${r.width_ft} ft` : '—';
       const status = r.closed
@@ -165,6 +185,32 @@ async function ouvrirInfoAeroport(ident) {
       return `<tr><td>${escapeHtml(name)}</td><td>${len}</td><td>${wid}</td><td>${escapeHtml(r.surface || '—')}</td><td>${heading}</td><td>${lit}</td><td>${status}</td></tr>`;
     }).join('');
     rwyEl.innerHTML = `<table class="ap-info-table"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+  }
+
+  // --- Hélipads --- (section masquée s'il n'y en a aucun)
+  const helipads = Array.isArray(res.helipads) ? res.helipads : [];
+  if (heliSection && heliEl) {
+    if (helipads.length === 0) {
+      heliSection.style.display = 'none';
+      heliEl.innerHTML = '';
+    } else {
+      heliSection.style.display = '';
+      const hHead = currentLang === 'fr'
+        ? '<tr><th>#</th><th>Long.</th><th>Larg.</th><th>Surface</th><th>Cap (°vrai)</th><th>Élév.</th></tr>'
+        : '<tr><th>#</th><th>Length</th><th>Width</th><th>Surface</th><th>Hdg (°true)</th><th>Elev.</th></tr>';
+      const hRows = helipads.map((h, i) => {
+        let heading = '—';
+        if (Number.isFinite(h.headingDegT)) {
+          const hh = ((Math.round(h.headingDegT) % 360) + 360) % 360;
+          heading = String(hh).padStart(3, '0') + '°';
+        }
+        const len = h.length_ft ? `${h.length_ft} ft` : '—';
+        const wid = h.width_ft ? `${h.width_ft} ft` : '—';
+        const elev = Number.isFinite(h.elevation_ft) ? `${h.elevation_ft} ft` : '—';
+        return `<tr><td>H${i + 1}</td><td>${len}</td><td>${wid}</td><td>${escapeHtml(h.surface || '—')}</td><td>${heading}</td><td>${elev}</td></tr>`;
+      }).join('');
+      heliEl.innerHTML = `<table class="ap-info-table"><thead>${hHead}</thead><tbody>${hRows}</tbody></table>`;
+    }
   }
 
   // --- Fréquences ---
@@ -755,6 +801,186 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // --- Bouton + Modale : Import Aéroports MSFS 2024 ---
+  const btnImportMsfs = document.getElementById('btn-import-msfs');
+  const msfsConfirmOverlay = document.getElementById('msfs-confirm-overlay');
+  const btnMsfsConfirmCancel = document.getElementById('btn-msfs-confirm-cancel');
+  const btnMsfsConfirmOk = document.getElementById('btn-msfs-confirm-ok');
+  const msfsCheckStatus = document.getElementById('msfs-check-status');
+
+  let _msfsChecking = false;
+
+  function openMsfsConfirm() {
+    applyI18nIn(msfsConfirmOverlay);
+    if (msfsCheckStatus) { msfsCheckStatus.textContent = ''; msfsCheckStatus.style.color = '#aaa'; }
+    if (btnMsfsConfirmOk) btnMsfsConfirmOk.disabled = false;
+    if (btnMsfsConfirmCancel) btnMsfsConfirmCancel.disabled = false;
+    msfsConfirmOverlay.classList.add('visible');
+  }
+  function closeMsfsConfirm() {
+    if (_msfsChecking) return; // ne pas fermer pendant la vérification
+    msfsConfirmOverlay.classList.remove('visible');
+  }
+
+  if (btnImportMsfs) {
+    btnImportMsfs.addEventListener('click', openMsfsConfirm);
+  }
+  if (btnMsfsConfirmCancel) {
+    btnMsfsConfirmCancel.addEventListener('click', closeMsfsConfirm);
+  }
+  if (msfsConfirmOverlay) {
+    msfsConfirmOverlay.addEventListener('click', (e) => {
+      if (e.target === msfsConfirmOverlay) closeMsfsConfirm();
+    });
+  }
+  if (btnMsfsConfirmOk) {
+    btnMsfsConfirmOk.addEventListener('click', async () => {
+      if (_msfsChecking) return;
+      _msfsChecking = true;
+      btnMsfsConfirmOk.disabled = true;
+      if (btnMsfsConfirmCancel) btnMsfsConfirmCancel.disabled = true;
+      if (msfsCheckStatus) {
+        msfsCheckStatus.style.color = '#00bcd4';
+        msfsCheckStatus.textContent = t('msfsCheckChecking');
+      }
+
+      let res = { running: false };
+      try {
+        res = await window.api.msfsVerifierLancement();
+      } catch (err) {
+        res = { running: false, error: (err && err.message) || String(err) };
+      }
+
+      _msfsChecking = false;
+      btnMsfsConfirmOk.disabled = false;
+      if (btnMsfsConfirmCancel) btnMsfsConfirmCancel.disabled = false;
+
+      if (res && res.running) {
+        if (msfsCheckStatus) {
+          msfsCheckStatus.style.color = '#00e676';
+          msfsCheckStatus.textContent = t('msfsCheckRunning')(res.app || 'MSFS');
+        }
+        // MSFS détecté : on enchaîne sur l'extraction in-app + modale de progression.
+        startMsfsExtraction();
+      } else {
+        if (msfsCheckStatus) {
+          msfsCheckStatus.style.color = '#ff5252';
+          msfsCheckStatus.textContent = t('msfsCheckNotRunning');
+        }
+      }
+    });
+  }
+
+  // --- Modale progression : extraction des aéroports MSFS 2024 ---
+  const msfsProgressOverlay = document.getElementById('msfs-progress-overlay');
+  const msfsProgressPhase = document.getElementById('msfs-progress-phase');
+  const msfsProgressBarFill = document.getElementById('msfs-progress-bar-fill');
+  const msfsProgressCount = document.getElementById('msfs-progress-count');
+  const msfsProgressStatsEl = document.getElementById('msfs-progress-stats');
+  const msfsProgressSummary = document.getElementById('msfs-progress-summary');
+  const btnMsfsProgressClose = document.getElementById('btn-msfs-progress-close');
+
+  let _msfsExtracting = false;
+  let _msfsUnsubProgress = null;
+
+  function fmtMsDuration(ms) {
+    const s = Math.max(0, Math.round((ms || 0) / 1000));
+    const m = Math.floor(s / 60);
+    return `${m}m${String(s % 60).padStart(2, '0')}s`;
+  }
+
+  function openMsfsProgress() {
+    if (!msfsProgressOverlay) return;
+    applyI18nIn(msfsProgressOverlay);
+    if (msfsProgressBarFill) msfsProgressBarFill.style.width = '0%';
+    if (msfsProgressCount) msfsProgressCount.textContent = '0 / 0';
+    if (msfsProgressStatsEl) msfsProgressStatsEl.textContent = '';
+    if (msfsProgressSummary) { msfsProgressSummary.textContent = ''; msfsProgressSummary.style.color = '#888'; }
+    if (msfsProgressPhase) { msfsProgressPhase.style.color = '#aaa'; msfsProgressPhase.textContent = t('msfsPhaseConnecting'); }
+    if (btnMsfsProgressClose) btnMsfsProgressClose.disabled = true;
+    msfsProgressOverlay.classList.add('visible');
+  }
+  function closeMsfsProgress() {
+    if (_msfsExtracting) return; // pas de fermeture pendant l'extraction
+    if (msfsProgressOverlay) msfsProgressOverlay.classList.remove('visible');
+  }
+
+  function handleMsfsProgress(p) {
+    if (!p) return;
+    if (p.phase === 'connect' || p.phase === 'connected') {
+      if (msfsProgressPhase) msfsProgressPhase.textContent = t('msfsPhaseConnecting');
+    } else if (p.phase === 'enumerate') {
+      if (msfsProgressPhase) msfsProgressPhase.textContent = t('msfsPhaseEnumerate')(p.enumerated);
+      if (msfsProgressBarFill && p.totalPackets) {
+        const pct = Math.min(100, Math.round((p.packet / p.totalPackets) * 100));
+        msfsProgressBarFill.style.width = pct + '%';
+      }
+      if (msfsProgressCount) msfsProgressCount.textContent = String(p.enumerated);
+    } else if (p.phase === 'detail') {
+      if (msfsProgressPhase) msfsProgressPhase.textContent = p.retry ? t('msfsPhaseRetry') : t('msfsPhaseDetail');
+      const pct = p.target > 0 ? Math.min(100, Math.round((p.treated / p.target) * 100)) : 0;
+      if (msfsProgressBarFill) msfsProgressBarFill.style.width = pct + '%';
+      if (msfsProgressCount) msfsProgressCount.textContent = `${p.treated} / ${p.target}`;
+      if (msfsProgressStatsEl) {
+        const rate = Math.round(p.ratePerSec || 0);
+        msfsProgressStatsEl.textContent =
+          t('msfsProgressStats')(rate, fmtMsDuration(p.etaMs)) + '  ·  ' + t('msfsProgressOkFailed')(p.ok, p.failed);
+      }
+    } else if (p.phase === 'done') {
+      if (msfsProgressBarFill) msfsProgressBarFill.style.width = '100%';
+      if (msfsProgressCount) msfsProgressCount.textContent = `${p.written} / ${p.enumerated}`;
+    }
+  }
+
+  async function startMsfsExtraction() {
+    if (_msfsExtracting) return;
+    // Ferme la confirmation, ouvre la progression.
+    _msfsChecking = false;
+    if (msfsConfirmOverlay) msfsConfirmOverlay.classList.remove('visible');
+    openMsfsProgress();
+
+    _msfsExtracting = true;
+    if (_msfsUnsubProgress) { try { _msfsUnsubProgress(); } catch (_) {} _msfsUnsubProgress = null; }
+    if (window.api.onMsfsExtractProgress) _msfsUnsubProgress = window.api.onMsfsExtractProgress(handleMsfsProgress);
+
+    let result;
+    try {
+      result = await window.api.msfsExtraireAeroports({ limit: 0 });
+    } catch (err) {
+      result = { ok: false, error: (err && err.message) || String(err) };
+    }
+
+    _msfsExtracting = false;
+    if (_msfsUnsubProgress) { try { _msfsUnsubProgress(); } catch (_) {} _msfsUnsubProgress = null; }
+    if (btnMsfsProgressClose) btnMsfsProgressClose.disabled = false;
+
+    if (result && result.ok && result.summary && result.summary.file) {
+      if (msfsProgressSummary) {
+        msfsProgressSummary.style.color = '#00e676';
+        msfsProgressSummary.textContent = t('msfsExtractDone')(result.summary.written);
+      }
+    } else if (result && result.ok && result.summary) {
+      if (msfsProgressSummary) {
+        msfsProgressSummary.style.color = '#ffb300';
+        msfsProgressSummary.textContent = t('msfsExtractEmpty');
+      }
+    } else {
+      if (msfsProgressSummary) {
+        msfsProgressSummary.style.color = '#ff5252';
+        msfsProgressSummary.textContent = t('msfsExtractError')((result && result.error) || '?');
+      }
+    }
+  }
+
+  if (btnMsfsProgressClose) {
+    btnMsfsProgressClose.addEventListener('click', closeMsfsProgress);
+  }
+  if (msfsProgressOverlay) {
+    msfsProgressOverlay.addEventListener('click', (e) => {
+      if (e.target === msfsProgressOverlay) closeMsfsProgress();
+    });
+  }
+
   // ----------------------------------------------------------
   // Chronomètre (MM:SS) + Timer (HH:MM:SS)
   // ----------------------------------------------------------
@@ -893,6 +1119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let airspacesVisible = false;
     let airspaceTileLayer = null;
     let airportsEnabled = true;
+    let heliportsEnabled = true;
     let navaidsEnabled = true;
 
     function creerCoucheEspacesAeriens() {
@@ -936,6 +1163,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // -------------------------------------------------------
     const ZOOM_MIN_AEROPORTS = 8;
     const airportsLayer = L.layerGroup().addTo(map);
+    const heliportsLayer = L.layerGroup().addTo(map);
     let _aeroportsMoveTimer = null;
     let _aeroportsLastRequestId = 0;
 
@@ -944,10 +1172,31 @@ document.addEventListener('DOMContentLoaded', async () => {
       large_airport: 9,
       medium_airport: 7,
       small_airport: 5,
+      heliport: 6,
     };
 
     // Construit l'icône SVG d'un aéroport (cercle + trait piste orienté)
     function makeAirportIcon(airport) {
+      // Hélistation : cercle blanc avec un « H » noir au centre (pas de piste)
+      if (airport.type === 'heliport') {
+        const rh = TAILLES_AEROPORT.heliport || 6;
+        const sizeH = rh * 2 + 12;
+        const fs = Math.round(rh * 1.7);
+        const svgH = `
+          <svg viewBox="-${sizeH / 2} -${sizeH / 2} ${sizeH} ${sizeH}" width="${sizeH}" height="${sizeH}" style="overflow:visible;">
+            <circle cx="0" cy="0" r="${rh}" fill="#fff" stroke="#000" stroke-width="1.6"/>
+            <text x="0" y="0" text-anchor="middle" dominant-baseline="central"
+                  font-family="Arial, sans-serif" font-weight="700" font-size="${fs}" fill="#000">H</text>
+          </svg>
+        `;
+        return L.divIcon({
+          className: 'airport-marker heliport-marker',
+          html: svgH,
+          iconSize: [sizeH, sizeH],
+          iconAnchor: [sizeH / 2, sizeH / 2],
+        });
+      }
+
       const r = TAILLES_AEROPORT[airport.type] || 5;
       const size = r * 2 + 12; // marge pour la piste qui dépasse + tooltip
       const heading = airport.runway ? airport.runway.headingDegT : 0;
@@ -994,13 +1243,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function refreshAirportsOnMap() {
       if (!map) return;
-      if (!airportsEnabled) {
+      // Aéroports et hélistations partagent la même requête bbox mais sont
+      // rendus dans deux couches distinctes, pilotées par deux toggles.
+      if (!airportsEnabled && !heliportsEnabled) {
         airportsLayer.clearLayers();
+        heliportsLayer.clearLayers();
         return;
       }
       const zoom = map.getZoom();
       if (zoom < ZOOM_MIN_AEROPORTS) {
         airportsLayer.clearLayers();
+        heliportsLayer.clearLayers();
         return;
       }
       const b = map.getBounds();
@@ -1025,11 +1278,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!res || !res.ok) {
         // Pas de données = silencieux (l'utilisateur n'a peut-être pas encore importé)
         airportsLayer.clearLayers();
+        heliportsLayer.clearLayers();
         return;
       }
 
       airportsLayer.clearLayers();
+      heliportsLayer.clearLayers();
       for (const a of res.airports) {
+        const isHeli = a.type === 'heliport';
+        // Chaque type respecte son propre toggle
+        if (isHeli ? !heliportsEnabled : !airportsEnabled) continue;
         const marker = L.marker([a.lat, a.lon], {
           icon: makeAirportIcon(a),
           interactive: true,
@@ -1044,7 +1302,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         // Click → ouvrir la modale d'informations détaillées
         marker.on('click', () => ouvrirInfoAeroport(a.ident));
-        marker.addTo(airportsLayer);
+        marker.addTo(isHeli ? heliportsLayer : airportsLayer);
       }
     }
 
@@ -1245,6 +1503,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const items = [
           { id: 'airspaces', labelFr: 'Espaces aériens', labelEn: 'Airspaces', checked: airspacesVisible },
           { id: 'airports', labelFr: 'Aéroports', labelEn: 'Airports', checked: airportsEnabled },
+          { id: 'heliports', labelFr: 'Hélistations', labelEn: 'Heliports', checked: heliportsEnabled },
           { id: 'navaids', labelFr: 'Navaids', labelEn: 'Navaids', checked: navaidsEnabled },
         ];
         items.forEach(it => {
@@ -1263,6 +1522,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else if (it.id === 'airports') {
               airportsEnabled = on;
               if (on) refreshAirportsOnMap(); else airportsLayer.clearLayers();
+            } else if (it.id === 'heliports') {
+              heliportsEnabled = on;
+              if (on) refreshAirportsOnMap(); else heliportsLayer.clearLayers();
             } else if (it.id === 'navaids') {
               navaidsEnabled = on;
               if (on) refreshNavaidsOnMap(); else navaidsLayer.clearLayers();
@@ -3251,7 +3513,7 @@ async function rechercherMulti(opts) {
   res.matches.forEach((m, idx) => {
     const item = document.createElement('label');
     item.className = 'wp-result-item';
-    const typeLabel = m.kind === 'airport' ? m.type.replace(/_/g, ' ') : m.type;
+    const typeLabel = m.kind === 'airport' ? formatAirportType(m.type) : m.type;
     item.innerHTML = `
       <input type="radio" name="${groupName}" value="${idx}">
       <span class="wp-result-code">${escapeHtml(m.code)}</span>
