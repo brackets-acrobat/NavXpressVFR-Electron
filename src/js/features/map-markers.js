@@ -4,7 +4,8 @@
 //
 // Un repère = cercle jaune (Ø ~6px) à contour rouge 2px, posé librement.
 // Création via une modale (nom + description), clic sur le repère pour
-// rouvrir une modale d'info avec suppression (confirmée).
+// rouvrir une modale d'info ÉDITABLE (modifier nom/description → « Valider »)
+// avec suppression (confirmée).
 // Persistés dans le plan .navxpv (cf. flightplan-io.js, tableau global
 // `reperesVisuels` défini dans globals.js).
 //
@@ -29,8 +30,10 @@ function initMapMarkers() {
   const infoOverlay = document.getElementById('repere-info-overlay');
   const infoName = document.getElementById('repere-info-name');
   const infoDesc = document.getElementById('repere-info-desc');
+  const infoError = document.getElementById('repere-info-error');
   const btnInfoClose = document.getElementById('btn-repere-info-close');
   const btnInfoDelete = document.getElementById('btn-repere-info-delete');
+  const btnInfoValidate = document.getElementById('btn-repere-info-validate');
 
   // --- Réfs modale de confirmation suppression ---
   const delOverlay = document.getElementById('repere-delete-confirm-overlay');
@@ -55,14 +58,34 @@ function initMapMarkers() {
       className: 'repere-visuel-marker',
       interactive: true,
     }).addTo(map);
-    if (repere.name) {
-      marqueur.bindTooltip(repere.name, { direction: 'top', offset: [0, -4] });
-    }
     marqueur.on('click', (e) => {
       if (e && e.originalEvent) L.DomEvent.stopPropagation(e);
       _ouvrirInfo(repere);
     });
     repere.marker = marqueur;
+    _majTooltip(repere);
+  }
+
+  // (Re)définit le tooltip du marqueur au survol : nom (gras) + description
+  // en dessous. Contenu échappé (escapeHtml) car rendu en HTML par Leaflet.
+  function _majTooltip(repere) {
+    const mk = repere && repere.marker;
+    if (!mk) return;
+    if (repere.name || repere.description) {
+      const html =
+        (repere.name ? `<div class="repere-tooltip-name">${escapeHtml(repere.name)}</div>` : '') +
+        (repere.description ? `<div class="repere-tooltip-desc">${escapeHtml(repere.description)}</div>` : '');
+      if (mk.getTooltip()) mk.setTooltipContent(html);
+      else mk.bindTooltip(html, {
+        direction: 'top',
+        offset: [0, -8],
+        className: 'repere-tooltip',
+        opacity: 1,
+        sticky: false,
+      });
+    } else if (mk.getTooltip()) {
+      mk.unbindTooltip();
+    }
   }
 
   // -------------------------------------------------------
@@ -119,15 +142,38 @@ function initMapMarkers() {
   function _ouvrirInfo(repere) {
     if (!infoOverlay || !repere) return;
     _repereCourant = repere;
-    if (infoName) infoName.textContent = repere.name || '';
-    if (infoDesc) infoDesc.textContent = repere.description || '';
+    if (infoName) infoName.value = repere.name || '';
+    if (infoDesc) infoDesc.value = repere.description || '';
+    if (infoError) infoError.textContent = '';
     infoOverlay.classList.add('visible');
+    if (infoName) setTimeout(() => infoName.focus(), 30);
   }
   function _fermerInfo() {
     if (infoOverlay) infoOverlay.classList.remove('visible');
     _repereCourant = null;
   }
+  // Enregistre les modifs (nom requis) puis ferme la modale.
+  function _validerInfo() {
+    if (!_repereCourant) { _fermerInfo(); return; }
+    const name = (infoName ? infoName.value : '').trim();
+    const description = (infoDesc ? infoDesc.value : '').trim();
+    if (!name) {
+      if (infoError) infoError.textContent = t('repereNameRequired');
+      if (infoName) infoName.focus();
+      return;
+    }
+    _repereCourant.name = name;
+    _repereCourant.description = description;
+    _majTooltip(_repereCourant);   // nom au survol
+    _fermerInfo();
+  }
   if (btnInfoClose) btnInfoClose.addEventListener('click', _fermerInfo);
+  if (btnInfoValidate) btnInfoValidate.addEventListener('click', _validerInfo);
+  if (infoName) {
+    infoName.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); _validerInfo(); }
+    });
+  }
   if (infoOverlay) {
     infoOverlay.addEventListener('click', e => { if (e.target === infoOverlay) _fermerInfo(); });
   }

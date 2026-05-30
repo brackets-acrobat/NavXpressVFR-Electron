@@ -1128,6 +1128,38 @@ h1 {
     cursor: pointer;
 }
 
+/* Tooltip du repère visuel : même apparence que les tooltips d'aéroport
+   (fond sombre, bordure cyan, pas de flèche). Nom en cyan gras, description
+   en gris en dessous. */
+.leaflet-tooltip.repere-tooltip {
+    background-color: #1a1a1a !important;
+    border: 1px solid #00bcd4 !important;
+    color: #e0e0e0 !important;
+    font-size: 12px !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7) !important;
+    padding: 6px 10px !important;
+    line-height: 1.4 !important;
+    white-space: nowrap;
+}
+
+.repere-tooltip::before {
+    display: none !important;
+}
+
+.repere-tooltip .repere-tooltip-name {
+    color: #00bcd4;
+    font-weight: bold;
+    font-size: 13px;
+    letter-spacing: 0.3px;
+}
+
+.repere-tooltip .repere-tooltip-desc {
+    color: #e0e0e0;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
 /* Champ description (textarea) des modales — aligne sur le style des inputs */
 .input-group textarea {
     background-color: #262626;

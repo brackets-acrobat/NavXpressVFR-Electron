@@ -24,7 +24,7 @@ source correspondant(s). Le frontend est découpé en modules `src/js/` (état/h
 - **Drag pour scinder un leg** (insérer un point tournant en glissant sur la carte).
 - **Menu contextuel** (clic droit) extensible : Direct To, ajout de repère visuel, outil de mesure, etc.
 - **Outil de mesure** : 1er point sur clic droit → « Distance à partir de ce point », tracé bleu en temps réel jusqu'au curseur, finalisé au 2e clic gauche. Affiche **route vraie / magnétique / distance NM** au milieu du tracé. Échap pour annuler ; « Effacer la mesure » dans le menu contextuel.
-- **Repères visuels** : clic droit → « Ajouter un repère visuel » → modale **nom + description**. Posé comme un **cercle jaune (Ø ~10px) à contour rouge 2px** (nom en tooltip au survol). Clic sur un repère → modale d'info avec **suppression confirmée**. Nombre illimité ; **sauvegardés dans le plan `.navxpv`**.
+- **Repères visuels** : clic droit → « Ajouter un repère visuel » → modale **nom + description**. Posé comme un **cercle jaune (Ø ~10px) à contour rouge 2px** (nom + description en tooltip au survol). Clic sur un repère → modale d'info **éditable** (modifier nom/description → « Valider ») avec **suppression confirmée**. Nombre illimité ; **sauvegardés dans le plan `.navxpv`**.
 - *Modules :* `src/js/features/map.js` · `src/js/features/map-context-menu.js` · `src/js/features/map-measure.js` · `src/js/features/map-markers.js` · `src/js/carte-segments.js` · `src/js/waypoint-labels.js`.
 
 ## 3. Création & édition du plan de vol

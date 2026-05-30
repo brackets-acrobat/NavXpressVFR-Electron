@@ -1165,19 +1165,31 @@
         </div>
     </div>
 
-    <!-- Modale info repère visuel — nom + description + suppression -->
+    <!-- Modale info/édition repère visuel — nom + description (éditables) + suppression -->
     <div id="repere-info-overlay" class="modal-overlay">
         <div class="modal-popup" style="width:420px;">
             <div data-i18n="repereInfoKicker"
-                style="color:#888; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">
+                style="color:#888; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">
                 Repère visuel</div>
-            <h3 id="repere-info-name" style="margin:0 0 12px 0; color:#ffeb3b; font-size:17px;"></h3>
-            <p id="repere-info-desc"
-                style="color:#e0e0e0; font-size:13px; margin:0 0 16px 0; line-height:1.6; white-space:pre-wrap; word-break:break-word;"></p>
+            <div class="input-group" style="margin-bottom:14px;">
+                <label data-i18n="repereNameLabel">Nom du repère</label>
+                <input type="text" id="repere-info-name" maxlength="60"
+                    data-i18n-placeholder="repereNamePlaceholder" placeholder="ex: Château d'eau"
+                    autocomplete="off" spellcheck="false">
+            </div>
+            <div class="input-group">
+                <label data-i18n="repereDescLabel">Description</label>
+                <textarea id="repere-info-desc" rows="4" maxlength="500"
+                    data-i18n-placeholder="repereDescPlaceholder"
+                    placeholder="Description du repère visuel" spellcheck="false"></textarea>
+            </div>
+            <div id="repere-info-error" class="field-error"></div>
             <div class="create-flight-actions">
                 <button id="btn-repere-info-delete" class="btn-secondary" data-i18n="repereDeleteBtn"
                     style="border-color:#e53935; color:#ff8a80;">Supprimer</button>
-                <button id="btn-repere-info-close" class="btn-primary" data-i18n="btnClose">Fermer</button>
+                <button id="btn-repere-info-close" class="btn-secondary" data-i18n="btnClose">Fermer</button>
+                <button id="btn-repere-info-validate" class="btn-primary" data-i18n="btnValidate"
+                    style="background:#fbc02d; border-color:#fbc02d; color:#121212;">Valider</button>
             </div>
         </div>
     </div>
