@@ -1194,6 +1194,20 @@
         </div>
     </div>
 
+    <!-- Modale "cooldown cercle d'incertitude" — auto-fermée à 5 s ; aussi fermée
+         par la × ou par un clic ailleurs dans l'appli (overlay = fond pleine fenêtre). -->
+    <div id="uncertainty-cooldown-overlay" class="modal-overlay">
+        <div class="modal-popup" style="width:440px; border-color:#ffb300; position:relative;">
+            <button class="airport-info-close" id="btn-uncertainty-cooldown-close"
+                title="Fermer">×</button>
+            <div style="display:flex; align-items:center; gap:14px; padding-right:18px;">
+                <div style="font-size:28px; line-height:1;">⏱️</div>
+                <div id="uncertainty-cooldown-msg"
+                    style="color:#e0e0e0; font-size:14px; line-height:1.5;"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modale confirmation suppression repère visuel -->
     <div id="repere-delete-confirm-overlay" class="modal-overlay">
         <div class="modal-popup" style="width:360px;">
@@ -1242,6 +1256,7 @@
     <script src="js/features/direct-to.js"></script>
     <script src="js/features/map-measure.js"></script>
     <script src="js/features/map-markers.js"></script>
+    <script src="js/features/uncertainty-circle.js"></script>
     <script src="js/features/map-context-menu.js"></script>
     <script src="js/features/timers.js"></script>
     <script src="js/features/reset.js"></script>

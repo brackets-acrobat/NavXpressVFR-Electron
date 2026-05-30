@@ -50,6 +50,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // effacerTousReperesVisuels (menu contextuel + flightplan-io + reset).
   initMapMarkers();
 
+  // Cercle d'incertitude : bouton flottant carte (3 NM gris anthracite, 5 s).
+  // Doit être appelé APRÈS initMap (le bouton est un contrôle Leaflet).
+  initUncertaintyCircle();
+
   // Doit être appelé APRÈS initMap (carte présente), initDirectTo (expose
   // window.demanderDirectToPoint), initMapMeasure (fonctions de mesure) et
   // initMapMarkers (window.demanderAjoutRepere) — toutes utilisées par le menu.

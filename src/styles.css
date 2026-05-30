@@ -2134,6 +2134,15 @@ tr:hover {
     color: #121212;
 }
 
+.btn-layer-toggle:disabled,
+.btn-layer-toggle:disabled:hover {
+    background-color: #1a1a1a;
+    color: #666;
+    border-color: #3a3a3a;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
 .layer-dropdown {
     position: absolute;
     top: calc(100% + 4px);

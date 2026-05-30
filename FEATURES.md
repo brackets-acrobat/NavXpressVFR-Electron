@@ -25,7 +25,8 @@ source correspondant(s). Le frontend est découpé en modules `src/js/` (état/h
 - **Menu contextuel** (clic droit) extensible : Direct To, ajout de repère visuel, outil de mesure, etc.
 - **Outil de mesure** : 1er point sur clic droit → « Distance à partir de ce point », tracé bleu en temps réel jusqu'au curseur, finalisé au 2e clic gauche. Affiche **route vraie / magnétique / distance NM** au milieu du tracé. Échap pour annuler ; « Effacer la mesure » dans le menu contextuel.
 - **Repères visuels** : clic droit → « Ajouter un repère visuel » → modale **nom + description**. Posé comme un **cercle jaune (Ø ~10px) à contour rouge 2px** (nom + description en tooltip au survol). Clic sur un repère → modale d'info **éditable** (modifier nom/description → « Valider ») avec **suppression confirmée**. Nombre illimité ; **sauvegardés dans le plan `.navxpv`**.
-- *Modules :* `src/js/features/map.js` · `src/js/features/map-context-menu.js` · `src/js/features/map-measure.js` · `src/js/features/map-markers.js` · `src/js/carte-segments.js` · `src/js/waypoint-labels.js`.
+- **Cercle d'incertitude** : bouton flottant à gauche du menu Calques. Au clic, affiche **5 secondes** un disque **gris anthracite (opacité 0.75) de 3 NM** positionné aléatoirement, avec la **position avion garantie à l'intérieur** (centre tiré uniformément dans un disque de rayon 3 NM autour de l'avion). Bouton **désactivé** tant que MSFS n'est pas connecté avec position avion reçue. **Cooldown 5 min** entre deux tirages : un clic prématuré affiche pendant 5 s une modale indiquant le temps restant (mm:ss). Aucune persistance.
+- *Modules :* `src/js/features/map.js` · `src/js/features/map-context-menu.js` · `src/js/features/map-measure.js` · `src/js/features/map-markers.js` · `src/js/features/uncertainty-circle.js` · `src/js/carte-segments.js` · `src/js/waypoint-labels.js`.
 
 ## 3. Création & édition du plan de vol
 - **Créer un plan** (modale Départ/Arrivée avec recherche d'aéroport).

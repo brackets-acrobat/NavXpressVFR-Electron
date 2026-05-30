@@ -265,6 +265,12 @@ const TRANSLATIONS = {
     repereDeleteConfirmTitle: "Supprimer le repère",
     repereDeleteConfirmText: "Supprimer ce repère visuel ?",
 
+    // Cercle d'incertitude (bouton flottant carte)
+    uncertaintyBtnLabel: "◯ Cercle d’incertitude",
+    uncertaintyBtnTooltipReady: "Affiche un cercle de 3 NM placé aléatoirement autour de votre position (5 s)",
+    uncertaintyBtnTooltipDisabled: "Cercle d’incertitude — MSFS doit être connecté et la position avion reçue",
+    uncertaintyCooldownMsgFmt: (mmss) => `Il est impossible d’afficher le cercle d’incertitude avant ${mmss}`,
+
     // Chronomètre / Timer
     chronoLabel: "Chronomètre",
     timerLabel: "Timer",
@@ -534,6 +540,12 @@ const TRANSLATIONS = {
     repereDeleteBtn: "Delete",
     repereDeleteConfirmTitle: "Delete marker",
     repereDeleteConfirmText: "Delete this visual marker?",
+
+    // Uncertainty circle (floating map button)
+    uncertaintyBtnLabel: "◯ Uncertainty circle",
+    uncertaintyBtnTooltipReady: "Display a 3 NM circle randomly placed around your position (5 s)",
+    uncertaintyBtnTooltipDisabled: "Uncertainty circle — MSFS must be connected with aircraft position available",
+    uncertaintyCooldownMsgFmt: (mmss) => `The uncertainty circle cannot be displayed before ${mmss}`,
 
     // Stopwatch / Timer
     chronoLabel: "Stopwatch",

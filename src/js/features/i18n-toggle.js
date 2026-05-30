@@ -21,6 +21,8 @@ function initI18nToggle() {
       actualiserAffichageDeclinaison();
       // Régénérer le dropdown des calques (libellés des toggles)
       if (typeof window._refreshLayersDropdown === 'function') window._refreshLayersDropdown();
+      // Rafraîchir le libellé du bouton « Cercle d'incertitude »
+      if (typeof window._refreshUncertaintyBtn === 'function') window._refreshUncertaintyBtn();
       // Régénérer les tooltips aéroports (langue dans "Piste / Runway")
       if (typeof window._refreshAirports === 'function') window._refreshAirports();
     });
