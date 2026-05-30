@@ -245,6 +245,10 @@ const TRANSLATIONS = {
     dtAirportFoundFmt: (code, name, dist) => `${code} — ${name} — ${dist} NM`,
     dtAirportConfirmTitle: "Confirmer Direct To",
     dtAirportConfirmTextFmt: (code, dist) => `Direct To vers ${code} — ${dist} NM. Confirmer ?`,
+    // Menu contextuel carte + Direct To vers point carte
+    mapCtxDirectTo: "Direct To",
+    dtPointName: "Point sur la carte",
+    dtPointConfirmTextFmt: (dist) => `Effectuer un Direct To sur ce point (${dist} NM) ?`,
 
     // Chronomètre / Timer
     chronoLabel: "Chronomètre",
@@ -496,6 +500,10 @@ const TRANSLATIONS = {
     dtAirportFoundFmt: (code, name, dist) => `${code} — ${name} — ${dist} NM`,
     dtAirportConfirmTitle: "Confirm Direct To",
     dtAirportConfirmTextFmt: (code, dist) => `Direct To ${code} — ${dist} NM. Confirm?`,
+    // Map context menu + Direct To to map point
+    mapCtxDirectTo: "Direct To",
+    dtPointName: "Map point",
+    dtPointConfirmTextFmt: (dist) => `Direct To this point (${dist} NM)?`,
 
     // Stopwatch / Timer
     chronoLabel: "Stopwatch",

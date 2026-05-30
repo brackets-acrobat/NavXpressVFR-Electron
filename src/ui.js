@@ -42,6 +42,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initDirectTo();
 
+  // Doit être appelé APRÈS initMap (carte présente) et initDirectTo
+  // (expose window.demanderDirectToPoint, utilisé par le menu).
+  initMapContextMenu();
+
   initWaypointModals();
 
 });

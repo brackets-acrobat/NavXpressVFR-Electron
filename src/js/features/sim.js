@@ -356,7 +356,7 @@ function initSim() {
       _lastSoundSession = true;
 
       if (mode === 'ext') {
-        // Arrivée à l'aéroport hors plan : on sort du mode externe.
+        // Arrivée à l'aéroport / point hors plan : on sort du mode externe.
         // Le leg actif devient le leg qui SUIT celui qu'on a quitté à l'activation.
         // C'est ensuite à l'utilisateur de décider quoi faire.
         //
@@ -370,6 +370,10 @@ function initSim() {
         _directToExternalTarget = null;
         _directToReturnLegIndex = null;
         _directToOrigin = null;
+        // Retire le marqueur rouge si la cible était un point carte
+        if (typeof window._supprimerMarqueurPointDt === 'function') {
+          window._supprimerMarqueurPointDt();
+        }
       } else {
         // Comportement existant : auto-validation du leg
         activeLegIndex = activeLegIndex + 1;

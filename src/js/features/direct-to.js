@@ -195,11 +195,12 @@ function initDirectTo() {
     });
   }
 
-  // --- Modale de confirmation Direct To airport (Promise<boolean>) ---
-  function _confirmDirectToAirport(code, distStr) {
+  // --- Modale de confirmation Direct To générique (Promise<boolean>) ---
+  // Utilisée pour DT airport ET DT point carte (même overlay réutilisé).
+  function _confirmDirectTo(messageText) {
     return new Promise(resolve => {
       if (!dtConfirmOverlay || !dtConfirmText) return resolve(false);
-      dtConfirmText.textContent = t('dtAirportConfirmTextFmt')(code, distStr);
+      dtConfirmText.textContent = messageText;
       let done = false;
       function cleanup() {
         done = true;
@@ -232,7 +233,7 @@ function initDirectTo() {
         }
         const cand = _dtAirportCandidate;
         const distStr = cand.distance.toFixed(1);
-        const ok = await _confirmDirectToAirport(cand.code, distStr);
+        const ok = await _confirmDirectTo(t('dtAirportConfirmTextFmt')(cand.code, distStr));
         if (!ok) return;
         // IMPORTANT : fermer la modale Direct To AVANT d'ouvrir askPatternModal.
         // ask-pattern-overlay est déclaré AVANT direct-to-overlay dans le DOM
@@ -274,6 +275,9 @@ function initDirectTo() {
     const target = flightPlan[targetIdx];
     if (!target || !_lastAircraftPos) return;
 
+    // Nouveau DT plan → on retire un éventuel marqueur point carte précédent
+    _supprimerMarqueurPointDt();
+
     // Etat
     _directToActive = true;
     _directToOrigin = { lat: _lastAircraftPos.lat, lon: _lastAircraftPos.lon };
@@ -299,10 +303,15 @@ function initDirectTo() {
     _afficherInfoDirectTo(target, info);
   }
 
-  // --- Activation Direct To externe (aéroport HORS plan) ---
+  // --- Activation Direct To externe (aéroport HORS plan OU point carte) ---
   // target = { lat, lon, code, name, pattern }
+  // Le marqueur rouge du Direct To point précédent est retiré ; il est replacé
+  // ensuite par _activerDirectToPoint() seulement si la cible est un point carte.
   function _activerDirectToExterne(target) {
     if (!target || !_lastAircraftPos) return;
+
+    // Nouveau DT → on retire un éventuel marqueur point carte précédent
+    _supprimerMarqueurPointDt();
 
     // Désactive un éventuel Direct To "plan" en cours
     _directToActive = false;
@@ -332,6 +341,62 @@ function initDirectTo() {
     // Format compatible avec _afficherInfoDirectTo (utilise target.name)
     _afficherInfoDirectTo({ name: target.name || target.code }, info);
   }
+
+  // --- Marqueur rouge du point cible d'un Direct To "point carte" ---
+  function _placerMarqueurPointDt(lat, lon) {
+    if (typeof map === 'undefined' || !map || typeof L === 'undefined') return;
+    _supprimerMarqueurPointDt();
+    _directToPointMarker = L.circleMarker([lat, lon], {
+      radius: 6,
+      color: '#ff1744',
+      weight: 2,
+      fillColor: '#ff1744',
+      fillOpacity: 1,
+      className: 'dt-point-marker',
+      interactive: false,
+    }).addTo(map);
+  }
+  function _supprimerMarqueurPointDt() {
+    if (_directToPointMarker && typeof map !== 'undefined' && map) {
+      try { map.removeLayer(_directToPointMarker); } catch (_) { }
+    }
+    _directToPointMarker = null;
+  }
+  // Pont pour sim.js (suppression à l'arrivée, via la transition ext → plan)
+  window._supprimerMarqueurPointDt = _supprimerMarqueurPointDt;
+
+  // --- Activation Direct To "point carte" ---
+  // Réutilise tout le mécanisme du Direct To externe (state, tracking sim.js,
+  // suspension de déviation post-arrivée). Seule particularité : marqueur rouge.
+  function _activerDirectToPoint(lat, lon) {
+    _activerDirectToExterne({
+      lat,
+      lon,
+      code: 'POINT',
+      name: t('dtPointName'),
+      pattern: false,
+    });
+    _placerMarqueurPointDt(lat, lon);
+  }
+
+  // --- Entrée publique appelée depuis le menu contextuel de la carte ---
+  // Vérifie position avion + distance ≤ 80 NM, demande confirmation, active.
+  async function _demanderDirectToPoint(lat, lon) {
+    if (!_lastAircraftPos) {
+      showToast(t('dtAirportNoPos'), 'error', 3000);
+      return;
+    }
+    const dist = _dtDistanceNM(_lastAircraftPos.lat, _lastAircraftPos.lon, lat, lon);
+    const distStr = dist.toFixed(1);
+    if (dist > DT_AIRPORT_MAX_NM) {
+      showToast(t('dtAirportTooFarFmt')(distStr), 'error', 3500);
+      return;
+    }
+    const ok = await _confirmDirectTo(t('dtPointConfirmTextFmt')(distStr));
+    if (!ok) return;
+    _activerDirectToPoint(lat, lon);
+  }
+  window.demanderDirectToPoint = _demanderDirectToPoint;
 
   // --- Modale 2 : info cap + temps + auto-close 10 s ---
   let _dtInfoTimer = null;

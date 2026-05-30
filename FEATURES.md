@@ -60,8 +60,9 @@ source correspondant(s). Le frontend est découpé en modules `src/js/` (état/h
 ## 9. Direct To
 - Aller directement vers un **waypoint du plan** (MSFS connecté + plan requis) ; modale cap/distance/temps (auto-close ~10 s) ; désactivation auto à l'arrivée.
 - Aller directement vers un **aéroport hors plan** par recherche **ICAO** : limite **VFR ≤ 80 NM** depuis la position avion (refus au-delà) ; modale de confirmation puis question tour de piste/toucher ; même fenêtre info 10 s.
-- En mode Direct To externe : tracking **XTK** avec alerte de déviation + son d'approche/toucher à l'arrivée (rayon 1,5 NM). Après arrivée, le leg actif redevient le **leg qui suit celui quitté**.
-- *Module :* `src/js/features/direct-to.js` (recherche/UI) + `src/js/features/sim.js` (tracking).
+- Aller directement vers un **point désigné sur la carte** (clic droit → menu contextuel « Direct To ») : même limite **≤ 80 NM**, modale de confirmation, **marqueur rouge** posé sur le point cible, fenêtre info 10 s.
+- En mode Direct To externe (aéroport ou point) : tracking **XTK** avec alerte de déviation + son d'approche à l'arrivée (rayon 1,5 NM). Après arrivée, le leg actif redevient le **leg qui suit celui quitté**, et les alertes de déviation sont suspendues à proximité du point d'arrivée (hystérésis).
+- *Modules :* `src/js/features/direct-to.js` (recherche/UI/marqueur) + `src/js/features/map-context-menu.js` (menu carte extensible) + `src/js/features/sim.js` (tracking).
 
 ## 10. Alertes sonores & suivi de leg temps réel (MSFS)
 - Son d'approche waypoint (1,5 NM) + **passage auto au leg suivant** ; son d'arrivée finale.
@@ -123,15 +124,15 @@ sounds.js ....................... lecteur audio partagé
 
 ── Fonctionnalités (src/js/features/) : chacune expose initXxx() ──
 i18n-toggle, openaip, imports, map, sim, flightplan-io, fuel,
-validation, direct-to, timers, reset, leg-modals-init, tank,
-conversions, waypoint-modals
+validation, direct-to, map-context-menu, timers, reset,
+leg-modals-init, tank, conversions, waypoint-modals
 
 ── Orchestrateur ──
 ui.js ........................... DOMContentLoaded → appelle les init*() dans l'ordre  ⟵ EN DERNIER
 ```
 
 **Communication inter-modules** : variables globales (`globals.js`) + **ponts `window.*`** :
-`window.appliquerEtatSim` (sim) · `window._supprimerLigneDirectTo` (direct-to) ·
+`window.appliquerEtatSim` (sim) · `window.demanderDirectToPoint` / `window._supprimerMarqueurPointDt` (direct-to) ·
 `window._refreshAirports` / `_refreshNavaids` / `_refreshLayersDropdown` (map) ·
 `window.ouvrirModaleAltitude` (waypoint-modals) · `window._editLegIndex` / `_deleteLegCallback`.
 

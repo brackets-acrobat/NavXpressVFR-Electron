@@ -36,6 +36,10 @@ let _directToReturnLegIndex = null;   // activeLegIndex au moment de l'activatio
 // Libéré automatiquement par hystérésis (cf. sim.js) quand l'avion s'éloigne.
 let _extDtLastArrival = null;         // { lat, lon, pattern }
 
+// Marqueur Leaflet rouge pour le Direct To vers un POINT carte (clic droit).
+// Réinitialisé par direct-to.js (à l'activation d'un nouveau DT, ou à l'arrivée).
+let _directToPointMarker = null;
+
 // État connexion simulateur (hissé en Phase 2 — Lot C ; lu par sim, Direct To, toggle i18n)
 let _simState = 'disconnected';   // disconnected | connecting | connected
 
