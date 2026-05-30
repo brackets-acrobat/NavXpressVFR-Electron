@@ -251,6 +251,19 @@ const TRANSLATIONS = {
     mapCtxMeasureClear: "Effacer la mesure",
     dtPointName: "Point sur la carte",
     dtPointConfirmTextFmt: (dist) => `Effectuer un Direct To sur ce point (${dist} NM) ?`,
+    // Repères visuels (clic droit → ajouter un repère)
+    mapCtxAddMarker: "Ajouter un repère visuel",
+    repereAddTitle: "Ajouter un repère visuel",
+    repereNameLabel: "Nom du repère",
+    repereNamePlaceholder: "ex: Château d'eau",
+    repereDescLabel: "Description",
+    repereDescPlaceholder: "Description du repère visuel",
+    repereNameRequired: "Veuillez saisir un nom.",
+    btnAdd: "Ajouter",
+    repereInfoKicker: "Repère visuel",
+    repereDeleteBtn: "Supprimer",
+    repereDeleteConfirmTitle: "Supprimer le repère",
+    repereDeleteConfirmText: "Supprimer ce repère visuel ?",
 
     // Chronomètre / Timer
     chronoLabel: "Chronomètre",
@@ -508,6 +521,19 @@ const TRANSLATIONS = {
     mapCtxMeasureClear: "Clear measurement",
     dtPointName: "Map point",
     dtPointConfirmTextFmt: (dist) => `Direct To this point (${dist} NM)?`,
+    // Visual markers (right-click → add a marker)
+    mapCtxAddMarker: "Add a visual marker",
+    repereAddTitle: "Add a visual marker",
+    repereNameLabel: "Marker name",
+    repereNamePlaceholder: "e.g. Water tower",
+    repereDescLabel: "Description",
+    repereDescPlaceholder: "Visual marker description",
+    repereNameRequired: "Please enter a name.",
+    btnAdd: "Add",
+    repereInfoKicker: "Visual marker",
+    repereDeleteBtn: "Delete",
+    repereDeleteConfirmTitle: "Delete marker",
+    repereDeleteConfirmText: "Delete this visual marker?",
 
     // Stopwatch / Timer
     chronoLabel: "Stopwatch",

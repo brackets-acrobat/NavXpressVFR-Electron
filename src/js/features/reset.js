@@ -21,6 +21,7 @@ function initReset() {
     marqueursCarte.forEach(m => map.removeLayer(m));
     marqueursCarte = [];
     supprimerSegmentsCarte();
+    if (typeof window.effacerTousReperesVisuels === 'function') window.effacerTousReperesVisuels();
     actualiserAffichageDeclinaison();
     mettreAJourLogDeNav();
   }

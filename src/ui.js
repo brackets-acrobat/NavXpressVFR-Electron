@@ -46,9 +46,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // (utilisées par les items du menu contextuel).
   initMapMeasure();
 
+  // initMapMarkers expose window.demanderAjoutRepere / chargerReperesVisuels /
+  // effacerTousReperesVisuels (menu contextuel + flightplan-io + reset).
+  initMapMarkers();
+
   // Doit être appelé APRÈS initMap (carte présente), initDirectTo (expose
-  // window.demanderDirectToPoint) et initMapMeasure (expose les fonctions
-  // de mesure) — toutes utilisées par les items du menu.
+  // window.demanderDirectToPoint), initMapMeasure (fonctions de mesure) et
+  // initMapMarkers (window.demanderAjoutRepere) — toutes utilisées par le menu.
   initMapContextMenu();
 
   initWaypointModals();

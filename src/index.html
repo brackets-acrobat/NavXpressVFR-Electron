@@ -1138,6 +1138,66 @@
         </div>
     </div>
 
+    <!-- Modale "Ajouter un repère visuel" — nom + description -->
+    <div id="repere-add-overlay" class="modal-overlay">
+        <div class="modal-popup" style="width:420px;">
+            <h3 data-i18n="repereAddTitle"
+                style="margin:0 0 16px 0; color:#ffeb3b; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Ajouter un repère visuel</h3>
+            <div class="input-group" style="margin-bottom:14px;">
+                <label data-i18n="repereNameLabel">Nom du repère</label>
+                <input type="text" id="repere-add-name" maxlength="60"
+                    data-i18n-placeholder="repereNamePlaceholder" placeholder="ex: Château d'eau"
+                    autocomplete="off" spellcheck="false">
+            </div>
+            <div class="input-group">
+                <label data-i18n="repereDescLabel">Description</label>
+                <textarea id="repere-add-desc" rows="4" maxlength="500"
+                    data-i18n-placeholder="repereDescPlaceholder"
+                    placeholder="Description du repère visuel" spellcheck="false"></textarea>
+            </div>
+            <div id="repere-add-error" class="field-error"></div>
+            <div class="create-flight-actions">
+                <button id="btn-repere-add-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
+                <button id="btn-repere-add-validate" class="btn-primary" data-i18n="btnAdd"
+                    style="background:#fbc02d; border-color:#fbc02d; color:#121212;">Ajouter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale info repère visuel — nom + description + suppression -->
+    <div id="repere-info-overlay" class="modal-overlay">
+        <div class="modal-popup" style="width:420px;">
+            <div data-i18n="repereInfoKicker"
+                style="color:#888; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">
+                Repère visuel</div>
+            <h3 id="repere-info-name" style="margin:0 0 12px 0; color:#ffeb3b; font-size:17px;"></h3>
+            <p id="repere-info-desc"
+                style="color:#e0e0e0; font-size:13px; margin:0 0 16px 0; line-height:1.6; white-space:pre-wrap; word-break:break-word;"></p>
+            <div class="create-flight-actions">
+                <button id="btn-repere-info-delete" class="btn-secondary" data-i18n="repereDeleteBtn"
+                    style="border-color:#e53935; color:#ff8a80;">Supprimer</button>
+                <button id="btn-repere-info-close" class="btn-primary" data-i18n="btnClose">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale confirmation suppression repère visuel -->
+    <div id="repere-delete-confirm-overlay" class="modal-overlay">
+        <div class="modal-popup" style="width:360px;">
+            <h3 data-i18n="repereDeleteConfirmTitle"
+                style="margin:0 0 14px 0; color:#e53935; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Supprimer le repère</h3>
+            <p data-i18n="repereDeleteConfirmText" style="color:#e0e0e0; font-size:13px; margin:0 0 16px 0;">
+                Supprimer ce repère visuel ?</p>
+            <div class="create-flight-actions">
+                <button id="btn-repere-delete-no" class="btn-secondary" data-i18n="btnNo">Non</button>
+                <button id="btn-repere-delete-yes" class="btn-primary" data-i18n="btnYes"
+                    style="background:#e53935; border-color:#e53935;">Oui</button>
+            </div>
+        </div>
+    </div>
+
     <!-- i18n chargé AVANT tous les modules -->
     <script src="i18n.js"></script>
     <!-- Modules extraits de ui.js (Phase 1). L'ORDRE compte (scope global partagé) :
@@ -1169,6 +1229,7 @@
     <script src="js/features/validation.js"></script>
     <script src="js/features/direct-to.js"></script>
     <script src="js/features/map-measure.js"></script>
+    <script src="js/features/map-markers.js"></script>
     <script src="js/features/map-context-menu.js"></script>
     <script src="js/features/timers.js"></script>
     <script src="js/features/reset.js"></script>

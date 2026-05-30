@@ -40,6 +40,13 @@ let _extDtLastArrival = null;         // { lat, lon, pattern }
 // Réinitialisé par direct-to.js (à l'activation d'un nouveau DT, ou à l'arrivée).
 let _directToPointMarker = null;
 
+// --- Repères visuels (clic droit → "Ajouter un repère visuel") ---
+// Cercles jaunes à contour rouge posés librement sur la carte, sauvegardés
+// dans le plan .navxpv. Chaque entrée : { name, description, lat, lon, marker }
+// où marker est le L.circleMarker Leaflet (non sérialisé).
+// Géré par map-markers.js ; lu par flightplan-io.js (save) ; vidé par reset.js.
+let reperesVisuels = [];
+
 // État connexion simulateur (hissé en Phase 2 — Lot C ; lu par sim, Direct To, toggle i18n)
 let _simState = 'disconnected';   // disconnected | connecting | connected
 

@@ -23,6 +23,15 @@ const MAP_CONTEXT_MENU_ITEMS = [
     },
   },
   {
+    id: 'add-marker',
+    labelKey: 'mapCtxAddMarker',
+    action: (latlng) => {
+      if (typeof window.demanderAjoutRepere === 'function') {
+        window.demanderAjoutRepere(latlng);
+      }
+    },
+  },
+  {
     id: 'measure-from',
     labelKey: 'mapCtxMeasureFrom',
     action: (latlng) => {

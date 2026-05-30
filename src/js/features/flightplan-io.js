@@ -117,6 +117,7 @@ function initFlightPlanIO() {
       marqueursCarte.forEach(m => map.removeLayer(m));
       marqueursCarte = [];
       supprimerSegmentsCarte();
+      if (typeof window.effacerTousReperesVisuels === 'function') window.effacerTousReperesVisuels();
 
       // Détecter vol local (départ == arrivée) → triangle équilatéral ~10 nm
       const isVolLocal = (icaoDep === icaoArr) ||
@@ -205,6 +206,7 @@ function initFlightPlanIO() {
         marqueursCarte.forEach(m => map.removeLayer(m));
         marqueursCarte = [];
         supprimerSegmentsCarte();
+        if (typeof window.effacerTousReperesVisuels === 'function') window.effacerTousReperesVisuels();
 
         for (let i = 0; i < waypointsXML.length; i++) {
           const wp = waypointsXML[i];
@@ -279,6 +281,7 @@ function initFlightPlanIO() {
         marqueursCarte.forEach(m => map.removeLayer(m));
         marqueursCarte = [];
         supprimerSegmentsCarte();
+        if (typeof window.effacerTousReperesVisuels === 'function') window.effacerTousReperesVisuels();
 
         // Re-peupler les waypoints
         for (const wp of data.waypoints) {
@@ -337,6 +340,11 @@ function initFlightPlanIO() {
           map.fitBounds(bounds, { padding: [50, 50] });
         }
 
+        // Repères visuels du plan (cercles jaunes)
+        if (typeof window.chargerReperesVisuels === 'function') {
+          window.chargerReperesVisuels(data.markers);
+        }
+
         mettreAJourLogDeNav();
       } catch (err) {
         console.error('Erreur chargement .navxpv:', err);
@@ -373,6 +381,14 @@ function initFlightPlanIO() {
         })),
         // legAltitudes : index 0 inutilisé → null en JSON (undefined non sérialisable)
         legAltitudes: legAltitudes.map(a => (a === undefined ? null : a)),
+        // Repères visuels (cercles jaunes posés à la main) — on ne sérialise pas
+        // l'objet Leaflet, seulement nom / description / coordonnées.
+        markers: (typeof reperesVisuels !== 'undefined' ? reperesVisuels : []).map(r => ({
+          name: r.name || '',
+          description: r.description || '',
+          lat: r.lat,
+          lon: r.lon,
+        })),
       };
 
       const result = await window.api.sauvegarderNavXpv(planData);
