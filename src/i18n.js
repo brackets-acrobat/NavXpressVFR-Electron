@@ -233,6 +233,18 @@ const TRANSLATIONS = {
     dtInfoDistance: "Distance",
     dtInfoTime: "Temps estimé",
     dtInfoTitleFmt: (name) => `Vers ${name}`,
+    // Direct To — recherche aéroport hors plan
+    dtAirportSectionTitle: "Aéroport hors plan (ICAO)",
+    dtAirportPlaceholder: "ex: LFLY",
+    dtBtnSearchAirport: "Rechercher",
+    dtOrSeparator: "— ou —",
+    dtAirportNoIcao: "Saisir un code ICAO",
+    dtAirportNoPos: "Position avion inconnue — MSFS non connecté ?",
+    dtAirportNotFound: "Aéroport non trouvé",
+    dtAirportTooFarFmt: (dist) => `Trop loin pour un vol VFR : ${dist} NM > 80 NM`,
+    dtAirportFoundFmt: (code, name, dist) => `${code} — ${name} — ${dist} NM`,
+    dtAirportConfirmTitle: "Confirmer Direct To",
+    dtAirportConfirmTextFmt: (code, dist) => `Direct To vers ${code} — ${dist} NM. Confirmer ?`,
 
     // Chronomètre / Timer
     chronoLabel: "Chronomètre",
@@ -472,6 +484,18 @@ const TRANSLATIONS = {
     dtInfoDistance: "Distance",
     dtInfoTime: "Estimated time",
     dtInfoTitleFmt: (name) => `To ${name}`,
+    // Direct To — off-plan airport search
+    dtAirportSectionTitle: "Off-plan airport (ICAO)",
+    dtAirportPlaceholder: "e.g. LFLY",
+    dtBtnSearchAirport: "Search",
+    dtOrSeparator: "— or —",
+    dtAirportNoIcao: "Enter an ICAO code",
+    dtAirportNoPos: "Aircraft position unknown — MSFS not connected?",
+    dtAirportNotFound: "Airport not found",
+    dtAirportTooFarFmt: (dist) => `Too far for VFR: ${dist} NM > 80 NM`,
+    dtAirportFoundFmt: (code, name, dist) => `${code} — ${name} — ${dist} NM`,
+    dtAirportConfirmTitle: "Confirm Direct To",
+    dtAirportConfirmTextFmt: (code, dist) => `Direct To ${code} — ${dist} NM. Confirm?`,
 
     // Stopwatch / Timer
     chronoLabel: "Stopwatch",

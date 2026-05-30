@@ -1051,6 +1051,38 @@ h1 {
     cursor: not-allowed;
 }
 
+/* Section recherche aéroport hors plan dans la modale DT */
+.dt-airport-section {
+    background-color: #0e0e0e;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+}
+
+.dt-airport-label {
+    color: #888;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.dt-or-separator {
+    text-align: center;
+    color: #666;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 4px 0 10px 0;
+}
+
+/* Cible airport sélectionnée (affichage dans dt-airport-status) */
+.dt-airport-selected {
+    color: #69f0ae;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
 /* -------------------------------------------------- */
 /* Modale info Direct To                              */
 /* -------------------------------------------------- */

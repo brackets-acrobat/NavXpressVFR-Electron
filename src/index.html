@@ -1058,18 +1058,48 @@
 
     <!-- Modale Direct To — Sélection du waypoint cible -->
     <div id="direct-to-overlay" class="modal-overlay">
-        <div class="modal-popup" style="width:420px;">
+        <div class="modal-popup" style="width:440px;">
             <h3 data-i18n="dtModalTitle"
                 style="margin:0 0 6px 0; color:#e91e63; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
                 Direct To</h3>
             <p data-i18n="dtModalHint" style="color:#888; font-size:12px; margin:0 0 14px 0;">Sélectionnez un waypoint
                 cible :</p>
+
+            <!-- Section recherche aéroport hors plan (ICAO) -->
+            <div class="dt-airport-section">
+                <div class="dt-airport-label" data-i18n="dtAirportSectionTitle">Aéroport hors plan (ICAO)</div>
+                <div class="cf-search-row">
+                    <input type="text" id="dt-airport-icao" maxlength="8" class="input-icao"
+                        data-i18n-placeholder="dtAirportPlaceholder" placeholder="ex: LFLY"
+                        autocomplete="off" spellcheck="false">
+                    <button id="btn-dt-airport-search" class="btn-search" data-i18n="dtBtnSearchAirport">Rechercher</button>
+                </div>
+                <div id="dt-airport-status" class="search-status" style="display:block; margin-top:6px; min-height:16px;"></div>
+            </div>
+
+            <div class="dt-or-separator" data-i18n="dtOrSeparator">— ou —</div>
+
             <div id="dt-wp-list" class="dt-wp-list"></div>
             <div id="dt-error" class="field-error"></div>
             <div class="create-flight-actions">
                 <button id="btn-dt-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
                 <button id="btn-dt-validate" class="btn-primary" data-i18n="btnValidate" disabled
                     style="background:#e91e63; border-color:#e91e63;">Valider</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Direct To — Confirmation aéroport ICAO -->
+    <div id="dt-airport-confirm-overlay" class="modal-overlay">
+        <div class="modal-popup" style="width:380px;">
+            <h3 data-i18n="dtAirportConfirmTitle"
+                style="margin:0 0 14px 0; color:#e91e63; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Confirmer Direct To</h3>
+            <p id="dt-airport-confirm-text" style="color:#e0e0e0; font-size:13px; margin:0 0 16px 0;"></p>
+            <div class="create-flight-actions">
+                <button id="btn-dt-airport-confirm-no" class="btn-secondary" data-i18n="btnNo">Non</button>
+                <button id="btn-dt-airport-confirm-yes" class="btn-primary" data-i18n="btnYes"
+                    style="background:#e91e63; border-color:#e91e63;">Oui</button>
             </div>
         </div>
     </div>

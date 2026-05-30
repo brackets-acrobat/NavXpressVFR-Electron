@@ -58,8 +58,10 @@ source correspondant(s). Le frontend est découpé en modules `src/js/` (état/h
 - *Modules :* `src/js/features/validation.js` · `src/js/windrose.js` · `sim.js` (injection MSFS).
 
 ## 9. Direct To
-- Aller directement vers un waypoint (MSFS connecté + plan requis) ; **ligne magenta** ; modale cap/distance/temps (auto-close ~10 s) ; désactivation auto à l'arrivée.
-- *Module :* `src/js/features/direct-to.js`.
+- Aller directement vers un **waypoint du plan** (MSFS connecté + plan requis) ; modale cap/distance/temps (auto-close ~10 s) ; désactivation auto à l'arrivée.
+- Aller directement vers un **aéroport hors plan** par recherche **ICAO** : limite **VFR ≤ 80 NM** depuis la position avion (refus au-delà) ; modale de confirmation puis question tour de piste/toucher ; même fenêtre info 10 s.
+- En mode Direct To externe : tracking **XTK** avec alerte de déviation + son d'approche/toucher à l'arrivée (rayon 1,5 NM). Après arrivée, le leg actif redevient le **leg qui suit celui quitté**.
+- *Module :* `src/js/features/direct-to.js` (recherche/UI) + `src/js/features/sim.js` (tracking).
 
 ## 10. Alertes sonores & suivi de leg temps réel (MSFS)
 - Son d'approche waypoint (1,5 NM) + **passage auto au leg suivant** ; son d'arrivée finale.

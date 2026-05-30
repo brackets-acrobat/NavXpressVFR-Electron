@@ -22,6 +22,20 @@ let _directToOrigin = null;       // {lat, lon} = position avion au moment de l'
 let _directToTargetIndex = null;  // index dans flightPlan du waypoint cible
 let _lastAircraftPos = null;      // {lat, lon} : dernière position avion reçue de MSFS
 
+// --- État Direct To vers aéroport HORS plan (recherche ICAO) ---
+// Mutuellement exclusif avec _directToActive (un seul Direct To à la fois).
+let _directToExternalActive = false;
+let _directToExternalTarget = null;   // { lat, lon, code, name, pattern }
+let _directToReturnLegIndex = null;   // activeLegIndex au moment de l'activation
+                                      // → après arrivée : activeLegIndex = _directToReturnLegIndex + 1
+
+// Mémoire du DERNIER aéroport d'arrivée Direct To externe (après bascule sur le plan).
+// Sert à suspendre les alertes de déviation tant que l'avion reste à proximité,
+// sinon le nouveau leg du plan calculerait un gros XTD et déclencherait l'alerte
+// alors qu'on vient juste de se poser/tourner autour de l'aéroport visité.
+// Libéré automatiquement par hystérésis (cf. sim.js) quand l'avion s'éloigne.
+let _extDtLastArrival = null;         // { lat, lon, pattern }
+
 // État connexion simulateur (hissé en Phase 2 — Lot C ; lu par sim, Direct To, toggle i18n)
 let _simState = 'disconnected';   // disconnected | connecting | connected
 

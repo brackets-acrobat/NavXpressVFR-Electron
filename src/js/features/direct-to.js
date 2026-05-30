@@ -23,6 +23,20 @@ function initDirectTo() {
   const dtProgressFill = document.getElementById('dt-progress-fill');
   const btnDtInfoClose = document.getElementById('btn-dt-info-close');
 
+  // --- Réfs section recherche aéroport ICAO (hors plan) ---
+  const dtAirportIcao = document.getElementById('dt-airport-icao');
+  const btnDtAirportSearch = document.getElementById('btn-dt-airport-search');
+  const dtAirportStatus = document.getElementById('dt-airport-status');
+  const dtConfirmOverlay = document.getElementById('dt-airport-confirm-overlay');
+  const dtConfirmText = document.getElementById('dt-airport-confirm-text');
+  const btnDtAirportConfirmYes = document.getElementById('btn-dt-airport-confirm-yes');
+  const btnDtAirportConfirmNo = document.getElementById('btn-dt-airport-confirm-no');
+
+  // Cible airport sélectionnée (résultat de la dernière recherche OK et ≤ 80 NM)
+  // { lat, lon, code, name, distance } — null si pas de cible.
+  const DT_AIRPORT_MAX_NM = 80;
+  let _dtAirportCandidate = null;
+
   // Etat d'activation du bouton (MSFS connecté + plan présent)
   function _majBoutonDirectTo() {
     if (!btnDirectTo) return;
@@ -45,6 +59,31 @@ function initDirectTo() {
   };
   _majBoutonDirectTo();
 
+  // --- Helpers ---
+  function _resetAirportSection() {
+    _dtAirportCandidate = null;
+    if (dtAirportIcao) dtAirportIcao.value = '';
+    if (dtAirportStatus) {
+      dtAirportStatus.className = 'search-status';
+      dtAirportStatus.textContent = '';
+    }
+  }
+
+  // Distance grand-cercle NM (formule haversine), copiée localement pour ne pas
+  // dépendre du scope de sim.js. Utilisée seulement pour la limite VFR 80 NM.
+  function _dtDistanceNM(lat1, lon1, lat2, lon2) {
+    const R_NM = 3440.065;
+    const toRad = d => d * Math.PI / 180;
+    const φ1 = toRad(lat1);
+    const φ2 = toRad(lat2);
+    const Δφ = toRad(lat2 - lat1);
+    const Δλ = toRad(lon2 - lon1);
+    const a = Math.sin(Δφ / 2) ** 2
+      + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R_NM * c;
+  }
+
   // --- Ouverture modale 1 : sélection waypoint ---
   if (btnDirectTo) {
     btnDirectTo.addEventListener('click', () => {
@@ -54,6 +93,7 @@ function initDirectTo() {
       dtList.innerHTML = '';
       dtError.textContent = '';
       btnDtValidate.disabled = true;
+      _resetAirportSection();
       flightPlan.forEach((wp, idx) => {
         const item = document.createElement('label');
         item.className = 'dt-wp-item';
@@ -65,7 +105,11 @@ function initDirectTo() {
         dtList.appendChild(item);
       });
       dtList.querySelectorAll('input[type="radio"]').forEach(r => {
-        r.addEventListener('change', () => { btnDtValidate.disabled = false; });
+        r.addEventListener('change', () => {
+          // Sélection d'un waypoint → annule la cible airport si présente
+          if (_dtAirportCandidate) _resetAirportSection();
+          btnDtValidate.disabled = false;
+        });
       });
       dtOverlay.classList.add('visible');
     });
@@ -77,9 +121,137 @@ function initDirectTo() {
     dtOverlay.addEventListener('click', e => { if (e.target === dtOverlay) _fermerDtSelect(); });
   }
 
+  // --- Recherche aéroport ICAO (hors plan) ---
+  async function _lancerRechercheAirport() {
+    if (!dtAirportIcao || !dtAirportStatus) return;
+    const code = (dtAirportIcao.value || '').trim().toUpperCase();
+    _dtAirportCandidate = null;
+
+    // Si une cible airport était validée, on retire le verrou sur Valider
+    // (un waypoint radio peut être encore coché → ne pas le casser).
+    const wpChecked = dtList.querySelector('input[type="radio"]:checked');
+    btnDtValidate.disabled = !wpChecked;
+
+    if (!code) {
+      dtAirportStatus.className = 'search-status error';
+      dtAirportStatus.textContent = t('dtAirportNoIcao');
+      return;
+    }
+    if (!_lastAircraftPos) {
+      dtAirportStatus.className = 'search-status error';
+      dtAirportStatus.textContent = t('dtAirportNoPos');
+      return;
+    }
+
+    dtAirportStatus.className = 'search-status';
+    dtAirportStatus.textContent = t('searchSearching');
+
+    let res;
+    try {
+      res = await window.api.rechercherAeroportOA(code);
+    } catch (err) {
+      dtAirportStatus.className = 'search-status error';
+      dtAirportStatus.textContent = t('searchNetworkError');
+      console.error('Direct To airport search error:', err);
+      return;
+    }
+
+    if (!res || !res.found) {
+      dtAirportStatus.className = 'search-status error';
+      if (res && res.reason === 'no-data') {
+        dtAirportStatus.textContent = t('oaDataMissing');
+      } else {
+        dtAirportStatus.textContent = t('dtAirportNotFound');
+      }
+      return;
+    }
+
+    const { lat, lon, name } = res;
+    const dist = _dtDistanceNM(_lastAircraftPos.lat, _lastAircraftPos.lon, lat, lon);
+    const distStr = dist.toFixed(1);
+
+    if (dist > DT_AIRPORT_MAX_NM) {
+      dtAirportStatus.className = 'search-status error';
+      dtAirportStatus.textContent = t('dtAirportTooFarFmt')(distStr);
+      return;
+    }
+
+    // OK : on mémorise la cible et on active Valider, en décochant un éventuel waypoint
+    _dtAirportCandidate = { lat, lon, code, name: name || code, distance: dist };
+    const checkedWp = dtList.querySelector('input[type="radio"]:checked');
+    if (checkedWp) checkedWp.checked = false;
+    dtAirportStatus.className = 'search-status ok dt-airport-selected';
+    dtAirportStatus.textContent = t('dtAirportFoundFmt')(code, name || code, distStr);
+    btnDtValidate.disabled = false;
+  }
+
+  if (btnDtAirportSearch) btnDtAirportSearch.addEventListener('click', _lancerRechercheAirport);
+  if (dtAirportIcao) {
+    dtAirportIcao.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        _lancerRechercheAirport();
+      }
+    });
+  }
+
+  // --- Modale de confirmation Direct To airport (Promise<boolean>) ---
+  function _confirmDirectToAirport(code, distStr) {
+    return new Promise(resolve => {
+      if (!dtConfirmOverlay || !dtConfirmText) return resolve(false);
+      dtConfirmText.textContent = t('dtAirportConfirmTextFmt')(code, distStr);
+      let done = false;
+      function cleanup() {
+        done = true;
+        dtConfirmOverlay.classList.remove('visible');
+        btnDtAirportConfirmYes.removeEventListener('click', onYes);
+        btnDtAirportConfirmNo.removeEventListener('click', onNo);
+        dtConfirmOverlay.removeEventListener('click', onBg);
+        document.removeEventListener('keydown', onKey);
+      }
+      function onYes() { if (done) return; cleanup(); resolve(true); }
+      function onNo()  { if (done) return; cleanup(); resolve(false); }
+      function onBg(e) { if (e.target === dtConfirmOverlay) onNo(); }
+      function onKey(e) { if (e.key === 'Escape') onNo(); }
+      btnDtAirportConfirmYes.addEventListener('click', onYes);
+      btnDtAirportConfirmNo.addEventListener('click', onNo);
+      dtConfirmOverlay.addEventListener('click', onBg);
+      document.addEventListener('keydown', onKey);
+      dtConfirmOverlay.classList.add('visible');
+    });
+  }
+
   // --- Validation modale 1 → activation Direct To + modale 2 ---
   if (btnDtValidate) {
-    btnDtValidate.addEventListener('click', () => {
+    btnDtValidate.addEventListener('click', async () => {
+      // Cible airport hors plan prioritaire si sélectionnée
+      if (_dtAirportCandidate) {
+        if (!_lastAircraftPos) {
+          dtError.textContent = t('dtAirportNoPos');
+          return;
+        }
+        const cand = _dtAirportCandidate;
+        const distStr = cand.distance.toFixed(1);
+        const ok = await _confirmDirectToAirport(cand.code, distStr);
+        if (!ok) return;
+        // IMPORTANT : fermer la modale Direct To AVANT d'ouvrir askPatternModal.
+        // ask-pattern-overlay est déclaré AVANT direct-to-overlay dans le DOM
+        // (même z-index) ; si direct-to-overlay reste visible, le pattern modal
+        // est caché derrière et l'utilisateur reste bloqué sur Direct To.
+        _fermerDtSelect();
+        // Question "Tour de piste / Toucher prévu ?"
+        const isPattern = await askPatternModal(cand.code);
+        _activerDirectToExterne({
+          lat: cand.lat,
+          lon: cand.lon,
+          code: cand.code,
+          name: cand.name,
+          pattern: !!isPattern,
+        });
+        return;
+      }
+
+      // Sinon : cible waypoint du plan
       const checked = dtList.querySelector('input[type="radio"]:checked');
       if (!checked) {
         dtError.textContent = t('dtNoWaypoint');
@@ -125,6 +297,40 @@ function initDirectTo() {
     // Calcul cap / temps / distance et ouvre la modale info
     const info = calcLegInfo(_directToOrigin.lat, _directToOrigin.lon, target.lat, target.lon);
     _afficherInfoDirectTo(target, info);
+  }
+
+  // --- Activation Direct To externe (aéroport HORS plan) ---
+  // target = { lat, lon, code, name, pattern }
+  function _activerDirectToExterne(target) {
+    if (!target || !_lastAircraftPos) return;
+
+    // Désactive un éventuel Direct To "plan" en cours
+    _directToActive = false;
+    _directToTargetIndex = null;
+
+    // État externe
+    _directToExternalActive = true;
+    _directToExternalTarget = {
+      lat: target.lat,
+      lon: target.lon,
+      code: target.code,
+      name: target.name,
+      pattern: !!target.pattern,
+    };
+    _directToReturnLegIndex = activeLegIndex;
+    _directToOrigin = { lat: _lastAircraftPos.lat, lon: _lastAircraftPos.lon };
+
+    // Note : le reset du tracking (sons d'approche / déviation) est fait dans
+    // sim.js qui détecte la transition de mode (les vars de tracking y sont en closure).
+
+    // Redessine table + segments (l'activeLegIndex est inchangé : le leg "quitté"
+    // reste visuellement actif jusqu'à l'arrivée à l'aéroport hors plan)
+    mettreAJourLogDeNav();
+
+    // Calcul cap / temps / distance depuis _directToOrigin → target
+    const info = calcLegInfo(_directToOrigin.lat, _directToOrigin.lon, target.lat, target.lon);
+    // Format compatible avec _afficherInfoDirectTo (utilise target.name)
+    _afficherInfoDirectTo({ name: target.name || target.code }, info);
   }
 
   // --- Modale 2 : info cap + temps + auto-close 10 s ---

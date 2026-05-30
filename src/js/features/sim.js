@@ -150,11 +150,15 @@ function initSim() {
   _touchSounds.fr.preload = 'auto';
   _touchSounds.en.preload = 'auto';
 
-  let _lastSoundLegIndex = null;     // index du leg pour lequel le son d'arrivée a déjà été joué
+  // Identifiant de "session de tracking". Pour les legs du plan : c'est l'index
+  // du leg (entier ≥ 1). Pour un Direct To vers aéroport hors plan : la valeur
+  // sentinelle 'ext'. Changer d'identifiant reset les sons/déviation pour
+  // démarrer une nouvelle session proprement.
+  let _lastSoundLegIndex = null;     // session pour laquelle le son d'arrivée a déjà été joué
   let _lastSoundSession = false;     // mémoire qu'on était DANS le rayon au précédent tick
 
   // État de l'alerte d'écart latéral
-  let _deviationLegIndex = null;     // index du leg pour lequel on a alerté la dernière fois
+  let _deviationLegIndex = null;     // session pour laquelle on a alerté la dernière fois
   let _deviationOutside = false;     // currently hors du couloir 1.2 NM
   let _deviationLastAlertTime = 0;   // timestamp ms de la dernière alerte (pour rappel toutes les 2 min)
   const DEVIATION_REMIND_MS = 2 * 60 * 1000; // 2 minutes
@@ -222,46 +226,85 @@ function initSim() {
     if (!pos || typeof pos.lat !== 'number' || typeof pos.lon !== 'number') return;
     // Cache la dernière position avion (utilisée par Direct To)
     _lastAircraftPos = { lat: pos.lat, lon: pos.lon };
-    if (!flightPlan || flightPlan.length < 2) return;
-    // Le leg actif doit avoir un point d'arrivée valide
-    if (activeLegIndex < 1 || activeLegIndex >= flightPlan.length) return;
 
-    // Si l'utilisateur a changé de leg actif depuis la dernière fois,
-    // on reset le tracking (le son pourra être rejoué pour le nouveau leg)
-    if (_lastSoundLegIndex !== null && _lastSoundLegIndex !== activeLegIndex) {
+    // --- Choix du mode + dep/arr/sessionId ---
+    // 3 modes :
+    //   'ext'      : Direct To vers aéroport hors plan         → dep = origin gelée, arr = target externe
+    //   'plan-dt'  : Direct To vers waypoint du plan           → dep = origin gelée, arr = flightPlan[activeLegIndex]
+    //   'plan'     : suivi normal du leg actif                 → dep = flightPlan[activeLegIndex-1], arr = flightPlan[activeLegIndex]
+    // sessionId identifie la session de tracking ('ext' pour externe, sinon activeLegIndex).
+    let mode, dep, arr, sessionId;
+    if (_directToExternalActive && _directToExternalTarget && _directToOrigin) {
+      mode = 'ext';
+      dep = _directToOrigin;
+      arr = _directToExternalTarget;
+      sessionId = 'ext';
+    } else {
+      if (!flightPlan || flightPlan.length < 2) return;
+      if (activeLegIndex < 1 || activeLegIndex >= flightPlan.length) return;
+      if (_directToActive && _directToOrigin) {
+        mode = 'plan-dt';
+        dep = _directToOrigin;
+      } else {
+        mode = 'plan';
+        dep = flightPlan[activeLegIndex - 1];
+      }
+      arr = flightPlan[activeLegIndex];
+      sessionId = activeLegIndex;
+    }
+
+    // Changement de session → reset tracking son d'arrivée + déviation
+    if (_lastSoundLegIndex !== null && _lastSoundLegIndex !== sessionId) {
       _lastSoundLegIndex = null;
       _lastSoundSession = false;
     }
-    // Idem pour le tracking d'écart latéral
-    if (_deviationLegIndex !== null && _deviationLegIndex !== activeLegIndex) {
+    if (_deviationLegIndex !== null && _deviationLegIndex !== sessionId) {
       _deviationLegIndex = null;
       _deviationOutside = false;
       _deviationLastAlertTime = 0;
     }
 
-    // En mode Direct To, le DÉPART de la trajectoire est figé à la position
-    // de l'avion au moment de l'activation, pas le précédent waypoint.
-    // L'ARRIVÉE reste flightPlan[activeLegIndex].
-    const dep = _directToActive ? _directToOrigin : flightPlan[activeLegIndex - 1];
-    const arr = flightPlan[activeLegIndex];
     const distance = _distanceNM(pos.lat, pos.lon, arr.lat, arr.lon);
     const insideRadius = distance < WAYPOINT_RADIUS_NM;
 
-    // --- Vérification de l'écart latéral à la trajectoire du leg actif ---
+    // --- Vérification de l'écart latéral à la trajectoire active ---
     if (dep) {
-      // ZONE DE TOUR DE PISTE : si l'avion est à < 2 NM d'un aéroport du leg
-      // actif marqué pour un tour de piste (départ ou arrivée), on suspend
-      // les alertes de déviation. Le pilote tourne autour de l'aéroport, l'écart
-      // à la trajectoire est attendu et ne doit pas déclencher d'alarme.
-      // L'annonce d'arrivée (1.5 NM) reste active.
+      // ZONES DE SUSPENSION DES ALERTES DE DÉVIATION :
+      //  1. Tour de piste : à < 2 NM d'un aéroport (dep ou arr) marqué pour un
+      //     tour de piste — le pilote tourne, l'écart à la trajectoire est attendu.
+      //     En mode 'ext', dep est la position avion gelée (pas un aéroport) → seul
+      //     arr.pattern compte.
+      //  2. Approche d'arrivée : à < 1,5 NM (= WAYPOINT_RADIUS_NM) du point d'arrivée,
+      //     on suspend les alertes pour tous les arrivées (pattern ou non). Pour les
+      //     legs du plan, ça aligne le comportement avec le franchissement du rayon
+      //     d'annonce (le leg bascule à 1,5 NM, donc plus d'alerte de toute façon).
+      //  3. Direct To externe juste arrivé : on vient de basculer en mode 'plan' sur
+      //     le leg N+1, mais l'avion est encore près de l'aéroport visité — pas sur
+      //     le nouveau leg. Tant qu'on reste proche du dernier point d'arrivée
+      //     externe (2 NM si pattern, 1,5 NM sinon), on suspend les alertes.
+      //     Libération par hystérésis quand l'avion s'éloigne (> 2× le rayon).
       const distToDep = _distanceNM(pos.lat, pos.lon, dep.lat, dep.lon);
+
+      let nearExtArrived = false;
+      if (_extDtLastArrival) {
+        const dExt = _distanceNM(
+          pos.lat, pos.lon, _extDtLastArrival.lat, _extDtLastArrival.lon
+        );
+        const rExt = _extDtLastArrival.pattern ? PATTERN_RADIUS_NM : WAYPOINT_RADIUS_NM;
+        if (dExt > rExt * 2) {
+          _extDtLastArrival = null;   // hystérésis — libère la mémoire
+        } else if (dExt < rExt) {
+          nearExtArrived = true;
+        }
+      }
+
       const inPatternZone =
         (dep.pattern && distToDep < PATTERN_RADIUS_NM) ||
-        (arr.pattern && distance < PATTERN_RADIUS_NM);
+        (arr.pattern && distance < PATTERN_RADIUS_NM) ||
+        (distance < WAYPOINT_RADIUS_NM) ||
+        nearExtArrived;
 
       if (inPatternZone) {
-        // Reset le tracking : à la sortie du rayon, une déviation effective
-        // sera détectée fraîchement et alertée normalement.
         if (_deviationOutside) {
           _deviationOutside = false;
           _deviationLastAlertTime = 0;
@@ -272,54 +315,74 @@ function initSim() {
         if (horsCouloir) {
           const now = Date.now();
           if (!_deviationOutside) {
-            // 1ère alerte (transition dans → hors couloir)
             _jouerSonDeviation();
             _deviationOutside = true;
-            _deviationLegIndex = activeLegIndex;
+            _deviationLegIndex = sessionId;
             _deviationLastAlertTime = now;
           } else if (now - _deviationLastAlertTime >= DEVIATION_REMIND_MS) {
-            // Rappel : toujours hors couloir et 2 minutes se sont écoulées
             _jouerSonDeviation();
             _deviationLastAlertTime = now;
           }
         } else if (_deviationOutside) {
-          // Retour dans le couloir → reset complet, la prochaine déviation rejouera
           _deviationOutside = false;
           _deviationLastAlertTime = 0;
         }
       }
     }
 
-    // Détection de FRANCHISSEMENT du seuil (transition extérieur → intérieur)
-    // pour ne jouer le son qu'une fois par entrée dans le rayon.
-    if (insideRadius && _lastSoundLegIndex !== activeLegIndex) {
-      // Si un toucher est prévu à l'arrivée → on joue le son "touch" et on
-      // remplace les sons waypoint/cuckoo habituels.
-      // Sinon : dernier leg → cuckoo, leg intermédiaire → waypoint.
-      const estDernierLeg = (activeLegIndex === flightPlan.length - 1);
-      if (arr.pattern) {
-        _jouerSonTouch();
-      } else if (estDernierLeg) {
-        _jouerSonArrivee();
+    // --- Détection de FRANCHISSEMENT du rayon d'arrivée ---
+    if (insideRadius && _lastSoundLegIndex !== sessionId) {
+      // Son d'arrivée selon le mode
+      if (mode === 'ext') {
+        // Direct To externe : son "touch" si pattern, sinon son waypoint
+        // (jamais le cuckoo : il est réservé à la dernière étape du plan)
+        if (arr.pattern) {
+          _jouerSonTouch();
+        } else {
+          _jouerSonWaypoint();
+        }
       } else {
-        _jouerSonWaypoint();
+        // Modes plan / plan-dt : logique inchangée
+        const estDernierLeg = (activeLegIndex === flightPlan.length - 1);
+        if (arr.pattern) {
+          _jouerSonTouch();
+        } else if (estDernierLeg) {
+          _jouerSonArrivee();
+        } else {
+          _jouerSonWaypoint();
+        }
       }
-      _lastSoundLegIndex = activeLegIndex;
+      _lastSoundLegIndex = sessionId;
       _lastSoundSession = true;
-      // Auto-validation : on marque le leg comme fait → activeLegIndex++
-      // (identique au comportement de la checkbox "Fait" cochée manuellement)
-      activeLegIndex = activeLegIndex + 1;
-      // Si on était en mode Direct To, on le quitte → le plan reprend son
-      // cours normal à partir du leg suivant
-      if (_directToActive) {
-        _directToActive = false;
+
+      if (mode === 'ext') {
+        // Arrivée à l'aéroport hors plan : on sort du mode externe.
+        // Le leg actif devient le leg qui SUIT celui qu'on a quitté à l'activation.
+        // C'est ensuite à l'utilisateur de décider quoi faire.
+        //
+        // On mémorise le point d'arrivée pour suspendre les alertes de déviation
+        // tant que l'avion reste à proximité (sinon le nouveau leg du plan
+        // calculerait un gros XTD et alerterait alors qu'on vient juste d'arriver).
+        _extDtLastArrival = { lat: arr.lat, lon: arr.lon, pattern: !!arr.pattern };
+        const next = (_directToReturnLegIndex || 0) + 1;
+        activeLegIndex = next;
+        _directToExternalActive = false;
+        _directToExternalTarget = null;
+        _directToReturnLegIndex = null;
         _directToOrigin = null;
-        _directToTargetIndex = null;
+      } else {
+        // Comportement existant : auto-validation du leg
+        activeLegIndex = activeLegIndex + 1;
+        if (_directToActive) {
+          _directToActive = false;
+          _directToOrigin = null;
+          _directToTargetIndex = null;
+        }
       }
       if (typeof mettreAJourLogDeNav === 'function') mettreAJourLogDeNav();
     } else if (!insideRadius && _lastSoundSession) {
-      // L'avion sort du rayon. On garde _lastSoundLegIndex mémorisé pour ne pas
-      // rejouer s'il revient dans le rayon sur le MÊME leg (pas d'oscillation).
+      // L'avion sort du rayon. On garde _lastSoundLegIndex mémorisé pour éviter
+      // l'oscillation si l'avion fait des allers-retours sur la même session.
       _lastSoundSession = false;
     }
   });
