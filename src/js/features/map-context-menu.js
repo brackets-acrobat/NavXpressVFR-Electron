@@ -10,6 +10,8 @@
 // Registre des items du menu. Ordre = ordre d'affichage.
 // labelKey  : clé i18n pour le libellé (cf. src/i18n.js).
 // action    : fonction (latlng) appelée quand l'utilisateur clique sur l'item.
+// visible   : (optionnel) prédicat () => bool. Si défini et retourne false,
+//             l'item n'est pas rendu à l'ouverture du menu.
 const MAP_CONTEXT_MENU_ITEMS = [
   {
     id: 'direct-to',
@@ -17,6 +19,25 @@ const MAP_CONTEXT_MENU_ITEMS = [
     action: (latlng) => {
       if (typeof window.demanderDirectToPoint === 'function') {
         window.demanderDirectToPoint(latlng.lat, latlng.lng);
+      }
+    },
+  },
+  {
+    id: 'measure-from',
+    labelKey: 'mapCtxMeasureFrom',
+    action: (latlng) => {
+      if (typeof window.demarrerMesure === 'function') {
+        window.demarrerMesure(latlng);
+      }
+    },
+  },
+  {
+    id: 'measure-clear',
+    labelKey: 'mapCtxMeasureClear',
+    visible: () => (typeof window.aUneMesure === 'function') && window.aUneMesure(),
+    action: () => {
+      if (typeof window.effacerMesure === 'function') {
+        window.effacerMesure();
       }
     },
   },
@@ -29,18 +50,23 @@ function initMapContextMenu() {
   if (!menuEl) return;
 
   // (Re)construit le DOM interne du menu à partir du registre.
-  // Appelé à l'init ET à chaque ouverture pour rafraîchir les labels i18n.
+  // Appelé à chaque ouverture pour rafraîchir les labels i18n et la
+  // visibilité dynamique des items (champ visible() optionnel).
   function _construireMenu() {
     menuEl.innerHTML = '';
     const ul = document.createElement('ul');
+    let count = 0;
     MAP_CONTEXT_MENU_ITEMS.forEach(item => {
+      if (typeof item.visible === 'function' && !item.visible()) return;
       const li = document.createElement('li');
       li.className = 'map-ctx-menu-item';
       li.dataset.itemId = item.id;
       li.textContent = t(item.labelKey);
       ul.appendChild(li);
+      count++;
     });
     menuEl.appendChild(ul);
+    return count;
   }
   _construireMenu();
 
@@ -93,12 +119,15 @@ function initMapContextMenu() {
     _ouvrir(e.latlng, ox, oy);
   });
 
-  // Fermeture : clic gauche ailleurs, scroll, Esc, déplacement de la carte.
+  // Fermeture par clic ailleurs : CAPTURE-phase + stopImmediatePropagation,
+  // pour intercepter le clic AVANT que la carte (et notamment l'outil de
+  // mesure en cours de traçage) ne le voie comme un clic valide.
   document.addEventListener('click', (e) => {
     if (menuEl.style.display === 'none') return;
     if (e.target.closest('#map-context-menu')) return;
+    e.stopImmediatePropagation();
     _fermer();
-  });
+  }, true);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') _fermer();
   });

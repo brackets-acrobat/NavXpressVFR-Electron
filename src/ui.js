@@ -42,8 +42,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initDirectTo();
 
-  // Doit être appelé APRÈS initMap (carte présente) et initDirectTo
-  // (expose window.demanderDirectToPoint, utilisé par le menu).
+  // initMapMeasure expose window.demarrerMesure / effacerMesure / aUneMesure
+  // (utilisées par les items du menu contextuel).
+  initMapMeasure();
+
+  // Doit être appelé APRÈS initMap (carte présente), initDirectTo (expose
+  // window.demanderDirectToPoint) et initMapMeasure (expose les fonctions
+  // de mesure) — toutes utilisées par les items du menu.
   initMapContextMenu();
 
   initWaypointModals();

@@ -247,6 +247,8 @@ const TRANSLATIONS = {
     dtAirportConfirmTextFmt: (code, dist) => `Direct To vers ${code} — ${dist} NM. Confirmer ?`,
     // Menu contextuel carte + Direct To vers point carte
     mapCtxDirectTo: "Direct To",
+    mapCtxMeasureFrom: "Distance à partir de ce point",
+    mapCtxMeasureClear: "Effacer la mesure",
     dtPointName: "Point sur la carte",
     dtPointConfirmTextFmt: (dist) => `Effectuer un Direct To sur ce point (${dist} NM) ?`,
 
@@ -502,6 +504,8 @@ const TRANSLATIONS = {
     dtAirportConfirmTextFmt: (code, dist) => `Direct To ${code} — ${dist} NM. Confirm?`,
     // Map context menu + Direct To to map point
     mapCtxDirectTo: "Direct To",
+    mapCtxMeasureFrom: "Distance from this point",
+    mapCtxMeasureClear: "Clear measurement",
     dtPointName: "Map point",
     dtPointConfirmTextFmt: (dist) => `Direct To this point (${dist} NM)?`,
 

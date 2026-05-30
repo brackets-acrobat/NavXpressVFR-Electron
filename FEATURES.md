@@ -22,7 +22,9 @@ source correspondant(s). Le frontend est découpé en modules `src/js/` (état/h
 - Tracé du plan de vol : un segment par leg, **coloré selon l'état** (fait / actif / à faire).
 - Marqueurs de waypoints + **étiquettes** (placement perpendiculaire, gestion du zoom).
 - **Drag pour scinder un leg** (insérer un point tournant en glissant sur la carte).
-- *Modules :* `src/js/features/map.js` · `src/js/carte-segments.js` · `src/js/waypoint-labels.js`.
+- **Menu contextuel** (clic droit) extensible : Direct To, outil de mesure, etc.
+- **Outil de mesure** : 1er point sur clic droit → « Distance à partir de ce point », tracé bleu en temps réel jusqu'au curseur, finalisé au 2e clic gauche. Affiche **route vraie / magnétique / distance NM** au milieu du tracé. Échap pour annuler ; « Effacer la mesure » dans le menu contextuel.
+- *Modules :* `src/js/features/map.js` · `src/js/features/map-context-menu.js` · `src/js/features/map-measure.js` · `src/js/carte-segments.js` · `src/js/waypoint-labels.js`.
 
 ## 3. Création & édition du plan de vol
 - **Créer un plan** (modale Départ/Arrivée avec recherche d'aéroport).
@@ -124,8 +126,8 @@ sounds.js ....................... lecteur audio partagé
 
 ── Fonctionnalités (src/js/features/) : chacune expose initXxx() ──
 i18n-toggle, openaip, imports, map, sim, flightplan-io, fuel,
-validation, direct-to, map-context-menu, timers, reset,
-leg-modals-init, tank, conversions, waypoint-modals
+validation, direct-to, map-measure, map-context-menu, timers,
+reset, leg-modals-init, tank, conversions, waypoint-modals
 
 ── Orchestrateur ──
 ui.js ........................... DOMContentLoaded → appelle les init*() dans l'ordre  ⟵ EN DERNIER
@@ -133,6 +135,7 @@ ui.js ........................... DOMContentLoaded → appelle les init*() dans 
 
 **Communication inter-modules** : variables globales (`globals.js`) + **ponts `window.*`** :
 `window.appliquerEtatSim` (sim) · `window.demanderDirectToPoint` / `window._supprimerMarqueurPointDt` (direct-to) ·
+`window.demarrerMesure` / `effacerMesure` / `aUneMesure` (map-measure) ·
 `window._refreshAirports` / `_refreshNavaids` / `_refreshLayersDropdown` (map) ·
 `window.ouvrirModaleAltitude` (waypoint-modals) · `window._editLegIndex` / `_deleteLegCallback`.
 
