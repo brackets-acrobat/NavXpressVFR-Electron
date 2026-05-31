@@ -16,6 +16,9 @@ const {
 // Moteur d'extraction des aéroports MSFS 2024 (module partagé avec le CLI).
 const { runExtraction: runMsfsExtraction } = require('./extract-airports-msfs');
 
+// Carnet de vol automatisé (machine à états + analyseur d'atterrissage)
+const { createLogbook } = require('./logbook');
+
 // --- CHEMINS DE STOCKAGE ---
 function getNavXpressDirs() {
   const docs = app.getPath('documents');
@@ -24,7 +27,8 @@ function getNavXpressDirs() {
   const fpDir        = path.join(root, 'Flight plans');
   const ourAirportsDir = path.join(root, 'ourairports data');
   const elevationDir = path.join(root, 'elevation');
-  return { root, apiDir, fpDir, ourAirportsDir, elevationDir };
+  const logbookDir   = path.join(root, 'logbook');
+  return { root, apiDir, fpDir, ourAirportsDir, elevationDir, logbookDir };
 }
 
 function getApiKeyPath() {
@@ -38,8 +42,8 @@ function getOptionsPath() {
 }
 
 function ensureNavXpressDirs() {
-  const { root, apiDir, fpDir, ourAirportsDir, elevationDir } = getNavXpressDirs();
-  [root, apiDir, fpDir, ourAirportsDir, elevationDir].forEach(dir => {
+  const { root, apiDir, fpDir, ourAirportsDir, elevationDir, logbookDir } = getNavXpressDirs();
+  [root, apiDir, fpDir, ourAirportsDir, elevationDir, logbookDir].forEach(dir => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   });
 }
@@ -588,6 +592,27 @@ function invalidateOurAirportsIndex() {
   _oaNavaidsList = null;
   _oaNavaidsByIdent = null;
   _msfsActive = false;
+}
+
+// Résout un aéroport par code/ident exact (départ/arrivée du carnet de vol).
+// Utilise l'index aéroports déjà chargé (base MSFS prioritaire via
+// loadOurAirportsIndex → ensureAirportsLoaded, sinon OurAirports).
+// Renvoie { icao, name, lat, lon } ou null si introuvable.
+function resolveAirportByCode(code) {
+  if (!code) return null;
+  const up = String(code).trim().toUpperCase();
+  if (!up) return null;
+  if (_oaAirportsIndex === null) loadOurAirportsIndex();
+  const a = _oaAirportsIndex ? _oaAirportsIndex.get(up) : null;
+  if (!a) return null;
+  const lat = parseFloat(a.latitude_deg);
+  const lon = parseFloat(a.longitude_deg);
+  return {
+    icao: (a.icao_code && String(a.icao_code).trim()) || a.ident || up,
+    name: a.name || up,
+    lat: Number.isFinite(lat) ? lat : null,
+    lon: Number.isFinite(lon) ? lon : null,
+  };
 }
 
 // --- INDEX NAVAIDS : liste plate filtrée + map par (ident+id) pour détails ---
@@ -1214,15 +1239,122 @@ ipcMain.handle('details-navaid', async (event, id) => {
 });
 
 // ============================================================
+// LOGBOOK — instance unique du moteur carnet de vol
+// ------------------------------------------------------------
+// Créée tardivement (dans whenReady) parce qu'elle a besoin du
+// dossier Documents/NavXpressVFR/logbook/ (créé par ensureNavXpressDirs).
+// Le flag _logbookEnabled est piloté par le toggle Options : le renderer
+// le pousse via 'logbook-set-enabled' à chaque changement et au démarrage
+// (juste après chargerOptions()). Par défaut true → comportement actif
+// tant que le renderer ne s'est pas exprimé.
+// ============================================================
+let _logbookEngine = null;
+let _logbookEnabled = true;
+
+// Identité de l'appareil courant — lue UNE fois à la connexion SimConnect
+// (SimVars CATEGORY / ATC TYPE / ATC MODEL / TITLE en période ONCE). Le moteur
+// logbook l'estampille dans le vol au démarrage. null tant que rien n'a été lu.
+let _aircraftInfo = null;
+
+function broadcastLogbookState(payload) {
+  BrowserWindow.getAllWindows().forEach(w => {
+    try { w.webContents.send('logbook-state', payload); } catch (_) {}
+  });
+}
+function broadcastLandingResult(payload) {
+  BrowserWindow.getAllWindows().forEach(w => {
+    try { w.webContents.send('landing-result', payload); } catch (_) {}
+  });
+}
+function broadcastFlightSaved(payload) {
+  BrowserWindow.getAllWindows().forEach(w => {
+    try { w.webContents.send('logbook-flight-saved', payload); } catch (_) {}
+  });
+}
+
+// Lit Documents/NavXpressVFR/logbook/flights.jsonl en mémoire (utilisé
+// par une future modale Historique). Renvoie [] si le fichier est absent.
+ipcMain.handle('logbook-historique', async () => {
+  try {
+    ensureNavXpressDirs();
+    const { logbookDir } = getNavXpressDirs();
+    const filePath = path.join(logbookDir, 'flights.jsonl');
+    if (!fs.existsSync(filePath)) return { ok: true, flights: [] };
+    const text = fs.readFileSync(filePath, 'utf-8');
+    const flights = [];
+    for (const line of text.split('\n')) {
+      if (!line) continue;
+      try { flights.push(JSON.parse(line)); } catch (_) { /* ligne corrompue ignorée */ }
+    }
+    return { ok: true, flights };
+  } catch (err) {
+    console.error('[Logbook] Lecture historique KO :', err);
+    return { ok: false, error: err.message, flights: [] };
+  }
+});
+
+// Toggle Options « Logbook automatique » poussé par le renderer.
+ipcMain.handle('logbook-set-enabled', async (event, enabled) => {
+  _logbookEnabled = !!enabled;
+  return { ok: true };
+});
+
+// Plan de vol poussé par le renderer (à chaque modification : load, reset, edit).
+// Le moteur le garde en mémoire et le fige dans le vol au décollage.
+ipcMain.handle('logbook-set-flightplan', async (event, plan) => {
+  if (_logbookEngine) _logbookEngine.setFlightPlan(Array.isArray(plan) ? plan : []);
+  return { ok: true };
+});
+
+// Direct To effectué par l'utilisateur (poussé depuis direct-to.js).
+ipcMain.handle('logbook-direct-to', async (event, dt) => {
+  if (_logbookEngine) _logbookEngine.recordDirectTo(dt);
+  return { ok: true };
+});
+
+// ============================================================
 // SIMCONNECT (MSFS) — connexion + lecture du vent
 // ============================================================
 let _scHandle = null;        // handle SimConnect courant
 let _scConnecting = false;   // évite les connexions concurrentes
 
-const SC_WIND_DEF_ID = 1;
-const SC_WIND_REQ_ID = 1;
-const SC_POS_DEF_ID  = 2;
-const SC_POS_REQ_ID  = 2;
+const SC_WIND_DEF_ID    = 1;
+const SC_WIND_REQ_ID    = 1;
+const SC_POS_DEF_ID     = 2;
+const SC_POS_REQ_ID     = 2;
+// Groupes dédiés au carnet de vol (tracking lent + landing rapide).
+// Indépendants de SC_POS_* pour ne pas modifier la cadence de l'AGL warning.
+const SC_TRACK_DEF_ID   = 3;
+const SC_TRACK_REQ_ID   = 3;
+const SC_LANDING_DEF_ID = 4;
+const SC_LANDING_REQ_ID = 4;
+// Identification appareil (chaînes constantes, lues en ONCE).
+const SC_AIRCRAFT_DEF_ID = 5;
+const SC_AIRCRAFT_REQ_ID = 5;
+
+// État courant du sampling rapide côté SimConnect : permet d'éviter de
+// renvoyer la même commande NEVER/SIM_FRAME plusieurs fois de suite.
+let _scLandingSamplingOn = false;
+
+// Bascule le groupe SIM_FRAME (VS + G) ON/OFF côté SimConnect. Appelé
+// depuis le handler tracking après chaque feedTracking() du moteur, en
+// fonction de shouldSampleLanding() (hystérésis 500/700 ft).
+function _setLandingSamplingSC(handle, active) {
+  if (!handle) return;
+  if (active === _scLandingSamplingOn) return;
+  try {
+    handle.requestDataOnSimObject(
+      SC_LANDING_REQ_ID,
+      SC_LANDING_DEF_ID,
+      SCConst.OBJECT_ID_USER,
+      active ? SCPeriod.SIM_FRAME : SCPeriod.NEVER,
+      0, 0, 0
+    );
+    _scLandingSamplingOn = active;
+  } catch (err) {
+    console.warn('[SimConnect] Bascule landing sampling KO :', err && err.message);
+  }
+}
 
 function broadcastSimStatus(payload) {
   // Émet un statut sur toutes les fenêtres ouvertes
@@ -1248,6 +1380,10 @@ async function simConnectFermer() {
     try { _scHandle.close(); } catch (_) {}
     _scHandle = null;
   }
+  // La prochaine connexion recrée les définitions à zéro — on remet le
+  // flag dans le même état pour que _setLandingSamplingSC() refasse bien
+  // l'appel initial sans court-circuit.
+  _scLandingSamplingOn = false;
 }
 
 ipcMain.handle('simconnect-connecter', async () => {
@@ -1327,6 +1463,56 @@ ipcMain.handle('simconnect-connecter', async () => {
       4    // interval : 4 secondes sautées → 1 update toutes les 5 s
     );
 
+    // --- Groupe TRACKING (carnet de vol) — toutes les 2 s ---
+    // Ordre des champs critique : la lecture du buffer dans simObjectData
+    // doit suivre exactement cet ordre (readInt32 / readFloat64).
+    handle.addToDataDefinition(SC_TRACK_DEF_ID, 'SIM ON GROUND',           'Bool',           SCDataType.INT32);
+    handle.addToDataDefinition(SC_TRACK_DEF_ID, 'GENERAL ENG COMBUSTION:1','Bool',           SCDataType.INT32);
+    handle.addToDataDefinition(SC_TRACK_DEF_ID, 'GENERAL ENG COMBUSTION:2','Bool',           SCDataType.INT32);
+    handle.addToDataDefinition(SC_TRACK_DEF_ID, 'PLANE LATITUDE',          'degrees',        SCDataType.FLOAT64);
+    handle.addToDataDefinition(SC_TRACK_DEF_ID, 'PLANE LONGITUDE',         'degrees',        SCDataType.FLOAT64);
+    handle.addToDataDefinition(SC_TRACK_DEF_ID, 'GROUND VELOCITY',         'knots',          SCDataType.FLOAT64);
+    handle.addToDataDefinition(SC_TRACK_DEF_ID, 'PLANE ALT ABOVE GROUND',  'feet',           SCDataType.FLOAT64);
+    handle.requestDataOnSimObject(
+      SC_TRACK_REQ_ID,
+      SC_TRACK_DEF_ID,
+      SCConst.OBJECT_ID_USER,
+      SCPeriod.SECOND,
+      0, 0,
+      1    // 1 seconde sautée → 1 update toutes les 2 s
+    );
+
+    // --- Groupe LANDING (analyse touchdown) — SIM_FRAME, démarré en NEVER ---
+    // La souscription est créée mais reste muette tant que le moteur logbook
+    // ne demande pas le passage en SIM_FRAME via _setLandingSamplingSC().
+    handle.addToDataDefinition(SC_LANDING_DEF_ID, 'VERTICAL SPEED', 'feet per minute', SCDataType.FLOAT64);
+    handle.addToDataDefinition(SC_LANDING_DEF_ID, 'G FORCE',        'GForce',          SCDataType.FLOAT64);
+    handle.requestDataOnSimObject(
+      SC_LANDING_REQ_ID,
+      SC_LANDING_DEF_ID,
+      SCConst.OBJECT_ID_USER,
+      SCPeriod.NEVER,
+      0, 0, 0
+    );
+    _scLandingSamplingOn = false;
+
+    // --- Groupe AIRCRAFT (identification appareil) — lu UNE fois (ONCE) ---
+    // Champs CONSTANTS pour l'appareil chargé. ORDRE IMPÉRATIF (définition =
+    // lecture) : CATEGORY, ATC TYPE, ATC MODEL, TITLE. Unité = null pour les
+    // SimVars chaîne. La requête ONCE est ré-émise à chaque (re)connexion,
+    // donc un changement d'appareil après reconnexion est bien capté.
+    handle.addToDataDefinition(SC_AIRCRAFT_DEF_ID, 'CATEGORY',  null, SCDataType.STRING32);
+    handle.addToDataDefinition(SC_AIRCRAFT_DEF_ID, 'ATC TYPE',  null, SCDataType.STRING64);
+    handle.addToDataDefinition(SC_AIRCRAFT_DEF_ID, 'ATC MODEL', null, SCDataType.STRING64);
+    handle.addToDataDefinition(SC_AIRCRAFT_DEF_ID, 'TITLE',     null, SCDataType.STRING256);
+    handle.requestDataOnSimObject(
+      SC_AIRCRAFT_REQ_ID,
+      SC_AIRCRAFT_DEF_ID,
+      SCConst.OBJECT_ID_USER,
+      SCPeriod.ONCE,
+      0, 0, 0
+    );
+
     handle.on('simObjectData', (data) => {
       try {
         if (data.requestID === SC_WIND_REQ_ID) {
@@ -1338,6 +1524,37 @@ ipcMain.handle('simconnect-connecter', async () => {
           const lon = data.data.readFloat64();
           const altAgl = data.data.readFloat64();
           broadcastPosition({ lat, lon, altAgl });
+        } else if (data.requestID === SC_TRACK_REQ_ID) {
+          // Lecture exactement dans l'ordre de la définition ci-dessus
+          const onGround = data.data.readInt32() !== 0;
+          const eng1     = data.data.readInt32() !== 0;
+          const eng2     = data.data.readInt32() !== 0;
+          const lat      = data.data.readFloat64();
+          const lon      = data.data.readFloat64();
+          const gs       = data.data.readFloat64();
+          const altAgl   = data.data.readFloat64();
+          if (_logbookEngine) {
+            _logbookEngine.feedTracking({
+              onGround, eng1, eng2, lat, lon,
+              groundSpeedKt: gs, altAglFt: altAgl,
+            });
+            // Synchronise le sampling SimConnect avec la décision du moteur.
+            _setLandingSamplingSC(handle, _logbookEngine.shouldSampleLanding());
+          }
+        } else if (data.requestID === SC_LANDING_REQ_ID) {
+          const vsFpm  = data.data.readFloat64();
+          const gForce = data.data.readFloat64();
+          if (_logbookEngine) _logbookEngine.feedLandingFrame(vsFpm, gForce);
+        } else if (data.requestID === SC_AIRCRAFT_REQ_ID) {
+          // Lecture dans l'ordre EXACT de la définition (tailles de chaîne
+          // correspondantes) : CATEGORY, ATC TYPE, ATC MODEL, TITLE.
+          const category = data.data.readString32();
+          const type     = data.data.readString64();
+          const model    = data.data.readString64();
+          const title    = data.data.readString256();
+          _aircraftInfo = { category, type, model, title };
+          console.log('[Logbook] Appareil détecté :', title || '(inconnu)',
+            '— model', model || '?', '/ type', type || '?', '/ cat', category || '?');
         }
       } catch (err) {
         console.warn('[SimConnect] Lecture données KO:', err);
@@ -1488,6 +1705,23 @@ app.whenReady().then(() => {
   } catch (err) {
     console.error('[NavXpress] Impossible de créer les dossiers :', err);
   }
+
+  // Instanciation du moteur carnet de vol. Closure isEnabled : le toggle
+  // est piloté par le renderer (Options) qui pousse l'état via IPC ;
+  // on lit le flag _logbookEnabled à chaque appel pour rester synchro.
+  _logbookEngine = createLogbook({
+    logbookDir: getNavXpressDirs().logbookDir,
+    isEnabled: () => _logbookEnabled,
+    getAircraftInfo: () => _aircraftInfo,
+    // Résolution départ/arrivée par ICAO du plan (1er / dernier waypoint).
+    resolveAirport: resolveAirportByCode,
+    emit: (channel, payload) => {
+      if (channel === 'logbook-state')        broadcastLogbookState(payload);
+      else if (channel === 'landing-result')  broadcastLandingResult(payload);
+      else if (channel === 'logbook-flight-saved') broadcastFlightSaved(payload);
+      // 'logbook-sampling' (debug du on/off du buffer) : non rebroadcasté pour l'instant
+    },
+  });
 
   // Intercepte les requêtes vers les tuiles OpenAIP pour injecter la clé API
   session.defaultSession.webRequest.onBeforeSendHeaders(

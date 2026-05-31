@@ -439,6 +439,37 @@ h1 {
 }
 
 /* -------------------------------------------------- */
+/* Rangée Chronomètre + bouton Carnet de vol          */
+/* -------------------------------------------------- */
+/* La boîte chrono garde sa largeur fixe (400px). Le bouton Carnet de vol se
+   place à sa droite, calé en haut (pas d'étirement), au MÊME gabarit qu'un
+   bouton de la rangée d'import #btn-api : même hauteur (hérite de
+   .btn-secondary) et même largeur via calc (4 boutons + 3 gaps de 8px dans
+   un conteneur de même largeur que cette rangée). */
+#chrono-logbook-row {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+#chrono-logbook-row .btn-logbook {
+    flex: 0 0 auto;
+    width: calc((100% - 24px) / 4);
+    text-align: center;
+    white-space: normal;
+    line-height: 1.2;
+    border-color: #00bcd4;
+    color: #00bcd4;
+}
+
+#chrono-logbook-row .btn-logbook:hover {
+    background-color: #00bcd4;
+    color: #121212;
+    border-color: #00bcd4;
+}
+
+/* -------------------------------------------------- */
 /* Boîte Chronomètre + Timer                          */
 /* -------------------------------------------------- */
 #chrono-timer-box {
@@ -2357,6 +2388,133 @@ tr:hover {
     padding: 28px 32px;
     width: 440px;
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
+}
+
+/* -------------------------------------------------- */
+/* Modale Carnet de vol (liste + détails)             */
+/* -------------------------------------------------- */
+#logbook-popup,
+#logbook-detail-popup {
+    position: relative;
+    /* nécessaire pour positionner le bouton .airport-info-close */
+    width: 840px;
+    max-width: 94vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.logbook-h3 {
+    margin: 0 0 14px 0;
+    color: #00bcd4;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+/* Zone scrollable de la liste */
+#logbook-table-wrap {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#logbook-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+#logbook-table thead th {
+    position: sticky;
+    top: 0;
+    background-color: #141414;
+    color: #00bcd4;
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid #2a2a2a;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+#logbook-table tbody td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #232323;
+    color: #e0e0e0;
+    vertical-align: middle;
+}
+
+#logbook-table tbody tr:hover {
+    background-color: #202020;
+}
+
+#logbook-table .lb-aircraft {
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#logbook-table .lb-icao {
+    font-family: 'Consolas', 'Monaco', monospace;
+    letter-spacing: 0.5px;
+}
+
+.lb-details-btn {
+    background-color: #262626;
+    color: #00bcd4;
+    border: 1px solid #00bcd4;
+    border-radius: 4px;
+    padding: 4px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.lb-details-btn:hover {
+    background-color: #00bcd4;
+    color: #121212;
+}
+
+.logbook-empty {
+    padding: 28px 8px;
+    text-align: center;
+    color: #888;
+    font-size: 13px;
+}
+
+/* Corps scrollable de la modale détails */
+#logbook-detail-body {
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.lb-detail-section {
+    margin-bottom: 16px;
+}
+
+.lb-detail-section>h4 {
+    margin: 0 0 6px 0;
+    color: #00bcd4;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border-bottom: 1px solid #2a2a2a;
+    padding-bottom: 4px;
+}
+
+.lb-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #e0e0e0;
+}
+
+.lb-muted {
+    color: #888;
 }
 
 

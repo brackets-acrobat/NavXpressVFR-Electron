@@ -51,6 +51,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Bouton ⚙️ Options du header + modale (vide pour l'instant).
   initOptions();
 
+  // Bouton 📖 Carnet de vol (à droite de la boîte chronomètre).
+  initLogbook();
+
   initDirectTo();
 
   // initMapMeasure expose window.demarrerMesure / effacerMesure / aUneMesure
@@ -71,5 +74,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   initMapContextMenu();
 
   initWaypointModals();
+
+  // Pont carnet de vol : décore mettreAJourLogDeNav (doit donc être appelé
+  // APRÈS initDirectTo qui pose lui aussi un décorateur — chaîne préservée),
+  // écoute les events 'logbook-direct-to', pousse logbookEnabled à main.
+  // Lit window.appOptions (chargerOptions() awaité plus haut) au démarrage.
+  initLogbookBridge();
 
 });

@@ -1,0 +1,618 @@
+// ============================================================
+// NavXpressVFR — logbook.js
+// Carnet de vol automatisé (machine à états) + analyseur d'atterrissage.
+//
+// Conçu pour tourner dans le main process Electron. Le module est
+// totalement découplé de la couche IPC : il reçoit ses entrées via
+// feedTracking() / feedLandingFrame() et émet ses sorties via un
+// callback unique fourni à la création (emit). C'est main.js qui se
+// charge de :
+//   - alimenter feedTracking() depuis les events SimConnect (~2 s)
+//   - alimenter feedLandingFrame() depuis SIM_FRAME (uniquement quand
+//     le moteur le demande, cf. shouldSampleLanding())
+//   - écouter les emit() pour les retransmettre au renderer
+//
+// Cycle d'états :
+//   OFF_TRACK  ─[combustion=true]→ OFF_BLOCK
+//   OFF_BLOCK  ─[onGround=false]→  IN_FLIGHT          (snapshot du plan)
+//   IN_FLIGHT  ─[onGround=true]→   touchdown          (analyse buffer)
+//                                  └─ <15 s en l'air  → touch-and-go++, reste IN_FLIGHT
+//                                  └─ ≥15 s au sol    → ON_BLOCK
+//   ON_BLOCK   ─[combustion=false]→ SHUTDOWN          (écriture JSONL)
+//   SHUTDOWN   ─→                   OFF_TRACK
+//
+// Buffer tournant : 5 dernières frames {ts, vsFpm, gForce} échantillonnées
+// à fréquence SIM_FRAME quand l'avion est en IN_FLIGHT sous 500 ft AGL.
+// À l'instant exact du touchdown, on fige une copie pour en extraire
+// min(vsFpm) et max(gForce) — MSFS écrasant la VS à 0 dès le contact.
+//
+// Hystérésis 500/700 ft : main.js demande au moteur shouldSampleLanding()
+// à chaque tick de tracking, qui répond true entre 0 et 500 ft (entrée) et
+// reste true tant qu'on n'est pas repassé au-dessus de 700 ft (sortie).
+// Évite le flapping ON/OFF quand on vole pile autour de 500 ft.
+// ============================================================
+
+const fs = require('fs');
+const path = require('path');
+
+// --- États possibles de la machine ---
+const STATES = Object.freeze({
+  OFF_TRACK: 'OFF_TRACK',  // Moteur éteint, parking — état initial / repos
+  OFF_BLOCK: 'OFF_BLOCK',  // Moteur tourne, encore au sol (roulage / prêt)
+  IN_FLIGHT: 'IN_FLIGHT',  // En vol (peut alterner touchdown/redécollage pour les T&G)
+  ON_BLOCK:  'ON_BLOCK',   // Atterri, stabilisé au sol depuis ≥15 s
+  SHUTDOWN:  'SHUTDOWN',   // État transitoire d'écriture, redevient OFF_TRACK
+});
+
+// Durée de stabilisation au sol pour passer IN_FLIGHT → ON_BLOCK.
+// Un redécollage avant cette échéance compte comme touch-and-go.
+const TOUCH_AND_GO_WINDOW_MS = 15_000;
+
+// Fenêtre de regroupement des rebonds. Un nouveau contact survenant moins de
+// BOUNCE_WINDOW_MS après le contact précédent = rebond du MÊME atterrissage :
+// on conserve le 1er toucher (sa VS/G) et on ignore les suivants. Au-delà de
+// cette fenêtre, un retour en l'air = remise de gaz confirmée (touch-and-go),
+// et un nouveau contact = nouvel atterrissage. Valeur choisie > écart
+// inter-rebonds observé (~6 s) et très inférieure à la durée d'un circuit
+// (plusieurs minutes). Ajustable.
+const BOUNCE_WINDOW_MS = 10_000;
+
+// Seuils AGL pour l'activation conditionnelle du buffer landing (hystérésis).
+const LANDING_SAMPLE_ENTER_FT = 500;
+const LANDING_SAMPLE_EXIT_FT  = 700;
+
+// Taille du rolling buffer (frames SIM_FRAME stockées avant figeage au touchdown).
+const ROLLING_BUFFER_SIZE = 5;
+
+// --- Buffer tournant ----------------------------------------------------
+// Implémentation FIFO simple : on garde au max N éléments, push() évince
+// le plus ancien. snapshot() renvoie une copie indépendante (le buffer
+// peut continuer à se remplir pendant que l'appelant exploite la copie).
+class RollingBuffer {
+  constructor(maxSize = ROLLING_BUFFER_SIZE) {
+    this._max = maxSize;
+    this._items = [];
+  }
+  push(item) {
+    this._items.push(item);
+    if (this._items.length > this._max) this._items.shift();
+  }
+  snapshot() {
+    return this._items.slice();
+  }
+  clear() {
+    this._items = [];
+  }
+  get size() {
+    return this._items.length;
+  }
+}
+
+// --- Stub : aéroport le plus proche -------------------------------------
+// TODO (futur) : brancher sur l'index aéroports déjà chargé en mémoire
+// dans main.js (variable _oaAirportsList — base MSFS ou OurAirports selon
+// présence du fichier airports-msfs.jsonl). En attendant, on renvoie un
+// placeholder pour que la chaîne complète (capture du départ, capture de
+// l'arrivée, écriture JSONL) puisse être testée end-to-end.
+function getClosestAirport(lat, lon) {
+  return {
+    icao: 'UNKN',
+    name: 'Inconnu',
+    lat: Number.isFinite(lat) ? lat : null,
+    lon: Number.isFinite(lon) ? lon : null,
+    distanceNm: null,
+  };
+}
+
+// ------------------------------------------------------------------------
+// LogbookEngine — instance unique tenue par main.js
+// ------------------------------------------------------------------------
+class LogbookEngine {
+  // opts :
+  //   logbookDir   : dossier où écrire flights.jsonl (créé par main.js)
+  //   emit         : fn(channel, payload) — relais IPC
+  //   isEnabled    : fn() → bool — lecture dynamique du toggle Options
+  //                  (renderer pousse via IPC ; main.js mémorise un flag
+  //                  et expose la lecture via cette closure)
+  //   closestAirport : fn(lat, lon) → {icao, name, lat, lon} — override
+  //                    optionnel du stub (conservé pour repli/futur ; non
+  //                    utilisé en stratégie « plan strict »)
+  //   resolveAirport : fn(codeOrIdent) → {icao, name, lat, lon} | null —
+  //                    résout départ/arrivée depuis l'ICAO du plan de vol
+  //                    (1er / dernier waypoint) dans la base aéroports.
+  //   getAircraftInfo : fn() → {category, type, model, title} | null —
+  //                    identité de l'appareil courant (cache main.js alimenté
+  //                    par les SimVars CATEGORY/ATC TYPE/ATC MODEL/TITLE).
+  constructor(opts) {
+    this._logbookDir = opts.logbookDir;
+    this._emit = typeof opts.emit === 'function' ? opts.emit : () => {};
+    this._isEnabled = typeof opts.isEnabled === 'function' ? opts.isEnabled : () => true;
+    this._closestAirport = typeof opts.closestAirport === 'function'
+      ? opts.closestAirport
+      : getClosestAirport;
+    this._resolveAirport = typeof opts.resolveAirport === 'function'
+      ? opts.resolveAirport
+      : () => null;
+    this._getAircraftInfo = typeof opts.getAircraftInfo === 'function'
+      ? opts.getAircraftInfo
+      : () => null;
+
+    // État machine + buffer landing
+    this._state = STATES.OFF_TRACK;
+    this._stateSince = Date.now();
+    this._buffer = new RollingBuffer(ROLLING_BUFFER_SIZE);
+
+    // Hystérésis AGL pour l'activation du sampling rapide
+    this._landingSamplingActive = false;
+
+    // Plan de vol courant (poussé par renderer, snapshot pris au décollage).
+    // Forme : Array<{name, ident, lat, lon, pattern?}>
+    this._currentPlan = [];
+
+    // Vol en cours d'enregistrement (rempli au fil des transitions).
+    // null quand aucun vol n'est actif (OFF_TRACK ou SHUTDOWN terminé).
+    this._currentFlight = null;
+
+    // Suivi des contacts au sol pour le filtrage des rebonds + la
+    // classification touch-and-go / atterrissage final :
+    //   _lastContactTs   : date (ms) du DERNIER contact physique. Sert à
+    //                      détecter un rebond (contact < BOUNCE_WINDOW_MS après
+    //                      le précédent) et à mesurer l'immobilisation (≥15 s).
+    //   _landingFirstTs  : date (ms) du PREMIER contact de l'événement courant
+    //                      = heure d'atterrissage retenue.
+    //   _pendingTouchdown: VS/G mesurés au PREMIER contact ; les rebonds qui
+    //                      suivent sont ignorés (on garde la 1re valeur).
+    // L'événement se conclut soit en touch-and-go (reparti en l'air au-delà de
+    // BOUNCE_WINDOW_MS), soit en atterrissage final (immobilisé ≥15 s).
+    this._lastContactTs = 0;
+    this._landingFirstTs = 0;
+    this._pendingTouchdown = null;
+
+    // Dernier état des entrées (utile pour détecter les fronts montants)
+    this._lastOnGround = true;
+    this._lastEng1 = false;
+    this._lastEng2 = false;
+  }
+
+  // ----------------------------------------------------------------------
+  // API publique appelée par main.js
+  // ----------------------------------------------------------------------
+
+  // True si le moteur souhaite recevoir des frames SIM_FRAME (VS + G).
+  // main.js bascule en conséquence le groupe SimConnect entre SIM_FRAME
+  // et NEVER. Lecture pure — pas d'effet de bord.
+  shouldSampleLanding() {
+    return this._landingSamplingActive;
+  }
+
+  // Pousse le plan de vol courant (event renderer → main). Le moteur
+  // garde ce plan en mémoire en permanence ; il sera figé dans le vol
+  // au moment exact du décollage (transition OFF_BLOCK → IN_FLIGHT).
+  setFlightPlan(plan) {
+    if (!Array.isArray(plan)) { this._currentPlan = []; return; }
+    // Normalisation : on ne garde que les champs utiles + on coerce les types
+    this._currentPlan = plan.map((wp, idx) => ({
+      index: idx,
+      name: wp && wp.name ? String(wp.name) : '',
+      ident: wp && wp.ident ? String(wp.ident) : '',
+      lat: Number(wp && wp.lat),
+      lon: Number(wp && wp.lon),
+      pattern: !!(wp && wp.pattern),
+    }));
+  }
+
+  // Enregistre un Direct To effectué en cours de vol. event = {kind, ...} :
+  //   kind: 'plan'    → { targetIndex, name }
+  //   kind: 'airport' → { code, name, lat, lon, pattern }
+  //   kind: 'point'   → { lat, lon }
+  // Ignoré silencieusement si on n'est pas en vol (rien à enregistrer hors
+  // d'un vol actif — évite que des DT déclenchés au sol polluent l'histo).
+  recordDirectTo(event) {
+    if (!this._currentFlight) return;
+    if (!event || !event.kind) return;
+    const entry = { ts: new Date().toISOString(), kind: event.kind };
+    if (event.kind === 'plan') {
+      entry.targetIndex = Number.isFinite(event.targetIndex) ? event.targetIndex : null;
+      entry.name = event.name ? String(event.name) : '';
+    } else if (event.kind === 'airport') {
+      entry.code = event.code ? String(event.code) : '';
+      entry.name = event.name ? String(event.name) : '';
+      entry.lat = Number(event.lat);
+      entry.lon = Number(event.lon);
+      entry.pattern = !!event.pattern;
+    } else if (event.kind === 'point') {
+      entry.lat = Number(event.lat);
+      entry.lon = Number(event.lon);
+    } else {
+      return; // kind inconnu → ignoré
+    }
+    this._currentFlight.directTo.push(entry);
+  }
+
+  // Tick lent (toutes les 2 s) — variables d'état de l'avion.
+  // frame = { onGround, eng1, eng2, lat, lon, groundSpeedKt, altAglFt }
+  // Tous les champs numériques sont attendus en unités lisibles (kts, ft, deg).
+  feedTracking(frame) {
+    if (!this._isEnabled()) {
+      // Toggle OFF : on relâche un éventuel sampling rapide et on
+      // ne fait rien d'autre. La FSM est conservée en mémoire au cas
+      // où l'utilisateur réactive en cours de session — mais aucune
+      // transition n'est traitée tant qu'OFF.
+      this._setLandingSampling(false);
+      return;
+    }
+    if (!frame) return;
+
+    const now = Date.now();
+    const onGround = !!frame.onGround;
+    const eng1 = !!frame.eng1;
+    const eng2 = !!frame.eng2;
+    const combustion = eng1 || eng2;           // mono OU bimoteur
+    const lat = Number.isFinite(frame.lat) ? frame.lat : null;
+    const lon = Number.isFinite(frame.lon) ? frame.lon : null;
+    const altAgl = Number.isFinite(frame.altAglFt) ? frame.altAglFt : null;
+
+    // 1) Hystérésis du sampling rapide : ON sous 500, OFF au-dessus de 700.
+    //    Désactivé d'office hors IN_FLIGHT (au sol, on ne mesure pas un impact).
+    if (this._state === STATES.IN_FLIGHT && altAgl !== null) {
+      if (!this._landingSamplingActive && altAgl < LANDING_SAMPLE_ENTER_FT) {
+        this._setLandingSampling(true);
+      } else if (this._landingSamplingActive && altAgl > LANDING_SAMPLE_EXIT_FT) {
+        this._setLandingSampling(false);
+      }
+    } else if (this._landingSamplingActive) {
+      this._setLandingSampling(false);
+    }
+
+    // 2) Transitions de la machine à états
+    switch (this._state) {
+
+      case STATES.OFF_TRACK: {
+        // Démarrage moteur → OFF_BLOCK + capture du départ block.
+        // Départ = 1er waypoint du plan courant (stratégie « plan strict »).
+        if (combustion) {
+          const depWp = this._currentPlan.length ? this._currentPlan[0] : null;
+          const dep = this._airportFromWp(depWp);
+          const ac = this._getAircraftInfo() || {};
+          this._currentFlight = {
+            id: new Date().toISOString(),  // identifiant unique = ISO de départ block
+            // Identification appareil. Ordre demandé : CATEGORY, ATC TYPE,
+            // ATC MODEL, TITLE (les clés JS conservent cet ordre à la sérialisation).
+            aircraft: {
+              category: ac.category || '',
+              type: ac.type || '',
+              model: ac.model || '',
+              title: ac.title || '',
+            },
+            departure: {
+              icao: dep.icao,
+              name: dep.name,
+              lat: dep.lat,
+              lon: dep.lon,
+              offBlockUtc: new Date().toISOString(),
+              takeoffUtc: null,
+            },
+            arrival: null,
+            totals: null,
+            touchAndGoCount: 0,
+            // Atterrissage final (full-stop) — VS/G figés au passage ON_BLOCK
+            landing: null,
+            // Tous les touchés intermédiaires suivis d'un redécollage, dans
+            // l'ordre chronologique. Chaque entrée = même forme que landing
+            // ({ts, verticalSpeedFpm, gForceMax, bufferSize}).
+            touchAndGoLandings: [],
+            route: [],
+            directTo: [],
+          };
+          this._transition(STATES.OFF_BLOCK);
+        }
+        break;
+      }
+
+      case STATES.OFF_BLOCK: {
+        // Décollage (front descendant de onGround) → IN_FLIGHT + snapshot du plan
+        if (!onGround && this._lastOnGround) {
+          if (this._currentFlight) {
+            this._currentFlight.departure.takeoffUtc = new Date().toISOString();
+            // Snapshot figé du plan : on copie le tableau actuel — toute modif
+            // ultérieure du plan côté renderer n'affectera plus ce vol.
+            this._currentFlight.route = this._currentPlan.map(wp => ({ ...wp }));
+          }
+          this._transition(STATES.IN_FLIGHT);
+        }
+        // Cas limite : moteur coupé avant même de décoller → retour OFF_TRACK
+        // sans rien enregistrer (le vol n'a pas eu lieu).
+        else if (!combustion) {
+          this._currentFlight = null;
+          this._buffer.clear();
+          this._pendingTouchdown = null;
+          this._lastContactTs = 0;
+          this._landingFirstTs = 0;
+          this._transition(STATES.OFF_TRACK);
+        }
+        break;
+      }
+
+      case STATES.IN_FLIGHT: {
+        // (a) Contact au sol (front montant de onGround)
+        if (onGround && !this._lastOnGround) {
+          if (this._pendingTouchdown && (now - this._lastContactTs) <= BOUNCE_WINDOW_MS) {
+            // REBOND du même atterrissage : on garde le 1er toucher et on
+            // ignore la mesure de ce contact. On purge le buffer (frames du
+            // rebond) et on réarme la fenêtre d'immobilisation depuis ce contact.
+            this._buffer.clear();
+            this._lastContactTs = now;
+          } else {
+            // Nouveau toucher = 1er contact d'un nouvel événement d'atterrissage.
+            this._handleTouchdown(now);
+          }
+        }
+
+        // (b) Classification de l'événement d'atterrissage en cours
+        if (this._pendingTouchdown) {
+          if (!onGround && (now - this._lastContactTs) > BOUNCE_WINDOW_MS) {
+            // Reparti en l'air au-delà de la fenêtre rebond → remise de gaz
+            // confirmée : c'était un touch-and-go. On archive le 1er toucher.
+            if (this._currentFlight) {
+              this._currentFlight.touchAndGoCount++;
+              this._currentFlight.touchAndGoLandings.push(this._pendingTouchdown);
+            }
+            this._pendingTouchdown = null;
+            this._lastContactTs = 0;
+            this._landingFirstTs = 0;
+          } else if (onGround && (now - this._lastContactTs) >= TOUCH_AND_GO_WINDOW_MS) {
+            // Immobilisé ≥15 s après le dernier contact → atterrissage final.
+            this._handleOnBlock();
+          }
+        }
+        break;
+      }
+
+      case STATES.ON_BLOCK: {
+        // Moteur coupé → SHUTDOWN + écriture du vol
+        if (!combustion) {
+          this._handleShutdown();
+        }
+        break;
+      }
+
+      case STATES.SHUTDOWN: {
+        // État transitoire — _handleShutdown() rebascule vers OFF_TRACK.
+        // Si on est encore ici, c'est qu'une écriture a échoué : on retombe
+        // proprement pour ne pas rester bloqué.
+        this._transition(STATES.OFF_TRACK);
+        break;
+      }
+    }
+
+    // 3) Mémorisation des entrées pour la détection de fronts au prochain tick
+    this._lastOnGround = onGround;
+    this._lastEng1 = eng1;
+    this._lastEng2 = eng2;
+  }
+
+  // Tick rapide (SIM_FRAME, ≥20 Hz) — uniquement quand shouldSampleLanding()
+  // est vrai. main.js gère le on/off de la souscription SimConnect.
+  // vsFpm   : VERTICAL SPEED en feet per minute (négatif = descente)
+  // gForce  : G FORCE en G
+  feedLandingFrame(vsFpm, gForce) {
+    if (!this._isEnabled()) return;
+    if (!this._landingSamplingActive) return; // safety belt si tick orphelin
+    if (!Number.isFinite(vsFpm) || !Number.isFinite(gForce)) return;
+    this._buffer.push({ ts: Date.now(), vsFpm, gForce });
+  }
+
+  // Renvoie un instantané de l'état (debug / future UI).
+  getState() {
+    return {
+      state: this._state,
+      since: this._stateSince,
+      hasFlight: !!this._currentFlight,
+      touchAndGoCount: this._currentFlight ? this._currentFlight.touchAndGoCount : 0,
+      bufferSize: this._buffer.size,
+      landingSampling: this._landingSamplingActive,
+    };
+  }
+
+  // ----------------------------------------------------------------------
+  // Internes
+  // ----------------------------------------------------------------------
+
+  _transition(newState) {
+    if (this._state === newState) return;
+    this._state = newState;
+    this._stateSince = Date.now();
+    this._emit('logbook-state', {
+      state: newState,
+      since: this._stateSince,
+      touchAndGoCount: this._currentFlight ? this._currentFlight.touchAndGoCount : 0,
+    });
+  }
+
+  _setLandingSampling(active) {
+    if (this._landingSamplingActive === active) return;
+    this._landingSamplingActive = active;
+    // Sur désactivation, on NE vide PAS le buffer : si l'avion repasse
+    // <500 ft tout en restant en vol, les anciennes frames sont périmées
+    // mais elles seront évincées naturellement par le FIFO dès que les
+    // nouvelles arrivent. On vide en revanche à la transition de phase
+    // (post-touchdown traité, ou sortie de IN_FLIGHT).
+    if (!active) this._buffer.clear();
+    this._emit('logbook-sampling', { active });
+  }
+
+  // Construit l'entrée aéroport (départ ou arrivée) depuis un waypoint du plan.
+  // Stratégie « plan strict » : ident du WP = ICAO, nom (+ coords) résolus dans
+  // la base via _resolveAirport. Pas de repli géographique : si le WP n'a pas
+  // d'ident ou est introuvable en base, on conserve ce que le plan fournit.
+  _airportFromWp(wp) {
+    if (!wp || !wp.ident) {
+      return { icao: 'UNKN', name: 'Inconnu', lat: null, lon: null };
+    }
+    const r = this._resolveAirport(wp.ident);
+    if (r) {
+      return {
+        icao: r.icao || wp.ident,
+        name: r.name || wp.ident,
+        lat: r.lat,
+        lon: r.lon,
+      };
+    }
+    return {
+      icao: wp.ident,
+      name: wp.name || wp.ident,
+      lat: Number.isFinite(wp.lat) ? wp.lat : null,
+      lon: Number.isFinite(wp.lon) ? wp.lon : null,
+    };
+  }
+
+  _handleTouchdown(now) {
+    // Figeage IMMÉDIAT du buffer — MSFS écrasera la VS à 0 dans la frame
+    // qui suit le contact sol, donc tout ce qui n'a pas été poussé avant
+    // ce point est définitivement perdu.
+    const snapshot = this._buffer.snapshot();
+    let vsMin = 0;            // VS la plus négative trouvée (= impact max)
+    let gMax = 0;             // G max
+    if (snapshot.length > 0) {
+      vsMin = snapshot[0].vsFpm;
+      gMax = snapshot[0].gForce;
+      for (let i = 1; i < snapshot.length; i++) {
+        if (snapshot[i].vsFpm < vsMin) vsMin = snapshot[i].vsFpm;
+        if (snapshot[i].gForce > gMax) gMax = snapshot[i].gForce;
+      }
+    }
+
+    // Buffer consommé → on le vide (frames de cette descente). Chaque toucher
+    // ne mesure ainsi que sa propre approche.
+    this._buffer.clear();
+
+    const result = {
+      ts: new Date(now).toISOString(),
+      verticalSpeedFpm: Math.round(vsMin),
+      gForceMax: Math.round(gMax * 100) / 100,
+      bufferSize: snapshot.length,
+    };
+
+    // 1er contact de l'événement : on retient sa mesure (les rebonds suivants
+    // seront ignorés) et l'heure du toucher.
+    this._pendingTouchdown = result;
+    this._landingFirstTs = now;
+    this._lastContactTs = now;
+
+    // Émission immédiate vers le renderer (popup landing-rate).
+    this._emit('landing-result', result);
+  }
+
+  _handleOnBlock() {
+    if (!this._currentFlight) {
+      // Cas anormal — on retombe proprement
+      this._lastContactTs = 0;
+      this._landingFirstTs = 0;
+      this._pendingTouchdown = null;
+      this._transition(STATES.ON_BLOCK);
+      return;
+    }
+    // Aéroport d'arrivée = dernier waypoint du plan figé (stratégie « plan
+    // strict »). Le plan a été snapshotté dans route au décollage.
+    const route = Array.isArray(this._currentFlight.route) ? this._currentFlight.route : [];
+    const arrWp = route.length ? route[route.length - 1] : null;
+    const arr = this._airportFromWp(arrWp);
+
+    this._currentFlight.arrival = {
+      icao: arr.icao,
+      name: arr.name,
+      lat: arr.lat,
+      lon: arr.lon,
+      // landingUtc = 1er contact de l'atterrissage final (rebonds exclus).
+      landingUtc: new Date(this._landingFirstTs).toISOString(),
+      onBlockUtc: new Date().toISOString(),
+    };
+
+    // L'avion s'est immobilisé : le 1er contact en attente était l'atterrissage
+    // final. On le fige dans landing (et PAS dans touchAndGoLandings).
+    if (this._pendingTouchdown) {
+      this._currentFlight.landing = this._pendingTouchdown;
+    }
+
+    this._lastContactTs = 0;
+    this._landingFirstTs = 0;
+    this._pendingTouchdown = null;
+    this._transition(STATES.ON_BLOCK);
+  }
+
+  _handleShutdown() {
+    if (!this._currentFlight) {
+      this._transition(STATES.OFF_TRACK);
+      return;
+    }
+    // Calcul des totaux : block = off→on block ; flight = takeoff→landing.
+    // Conversion en minutes entières (arrondi standard) pour l'affichage carnet.
+    const f = this._currentFlight;
+    const blockStart = Date.parse(f.departure.offBlockUtc);
+    const blockEnd = Date.now();
+    const takeoff = f.departure.takeoffUtc ? Date.parse(f.departure.takeoffUtc) : null;
+    const landing = f.arrival && f.arrival.landingUtc ? Date.parse(f.arrival.landingUtc) : null;
+
+    f.totals = {
+      blockMinutes: Math.max(0, Math.round((blockEnd - blockStart) / 60_000)),
+      flightMinutes: (takeoff && landing)
+        ? Math.max(0, Math.round((landing - takeoff) / 60_000))
+        : 0,
+    };
+
+    this._transition(STATES.SHUTDOWN);
+
+    // Écriture JSONL append-only — ne bloque pas la FSM si elle échoue
+    this._writeFlight(f).then((ok) => {
+      if (ok) this._emit('logbook-flight-saved', f);
+    }).catch((err) => {
+      console.error('[Logbook] Écriture échouée :', err);
+    });
+
+    // Reset pour le prochain vol
+    this._currentFlight = null;
+    this._buffer.clear();
+    this._pendingTouchdown = null;
+    this._lastContactTs = 0;
+    this._landingFirstTs = 0;
+    this._transition(STATES.OFF_TRACK);
+  }
+
+  // Append au fichier flights.jsonl (un vol = une ligne). Création du
+  // dossier si absent. Erreurs loggées + remontées (rejet de la promesse).
+  async _writeFlight(flight) {
+    try {
+      if (!fs.existsSync(this._logbookDir)) {
+        fs.mkdirSync(this._logbookDir, { recursive: true });
+      }
+      const filePath = path.join(this._logbookDir, 'flights.jsonl');
+      const line = JSON.stringify(flight) + '\n';
+      await fs.promises.appendFile(filePath, line, 'utf-8');
+      console.log('[Logbook] Vol enregistré :', flight.id,
+        flight.departure.icao, '→', flight.arrival ? flight.arrival.icao : '?',
+        '(' + flight.totals.flightMinutes + ' min vol)');
+      return true;
+    } catch (err) {
+      console.error('[Logbook] Erreur écriture flights.jsonl :', err);
+      throw err;
+    }
+  }
+}
+
+// Factory : main.js fait `const lb = createLogbook({...})` une seule fois.
+function createLogbook(opts) {
+  return new LogbookEngine(opts);
+}
+
+module.exports = {
+  createLogbook,
+  getClosestAirport,
+  STATES,
+  // Exportés pour testabilité / introspection éventuelle
+  RollingBuffer,
+  ROLLING_BUFFER_SIZE,
+  TOUCH_AND_GO_WINDOW_MS,
+  BOUNCE_WINDOW_MS,
+  LANDING_SAMPLE_ENTER_FT,
+  LANDING_SAMPLE_EXIT_FT,
+};

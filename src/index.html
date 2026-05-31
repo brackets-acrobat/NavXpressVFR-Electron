@@ -110,7 +110,8 @@
                                 data-i18n="btnImportOurAirports">🌐 Importer données OurAirports</button>
                         </div>
 
-                        <!-- Boîte Chronomètre + Timer -->
+                        <!-- Boîte Chronomètre + Timer + bouton Carnet de vol à droite -->
+                        <div id="chrono-logbook-row">
                         <div id="chrono-timer-box">
                             <!-- Chronomètre MM:SS -->
                             <div class="chrono-item">
@@ -138,6 +139,10 @@
                                         data-i18n-title="chronoReset" title="Remise à zéro">↺</button>
                                 </div>
                             </div>
+                        </div>
+                            <!-- Bouton Carnet de vol (style boutons d'import) -->
+                            <button id="btn-logbook" class="btn-secondary btn-logbook"
+                                data-i18n="btnLogbook">📖 Carnet de vol</button>
                         </div>
 
                         <!-- Boutons Carburant + Changement réservoir + Conversions + Direct To sur la même ligne -->
@@ -1071,11 +1076,49 @@
                     <span data-i18n="optFinalArrival">Son d'arrivée finale (cuckoo)</span>
                     <input type="checkbox" class="toggle-switch" id="opt-final-arrival">
                 </label>
+                <label class="layer-toggle-row" for="opt-logbook-enabled">
+                    <span data-i18n="optLogbook">Logbook automatique</span>
+                    <input type="checkbox" class="toggle-switch" id="opt-logbook-enabled">
+                </label>
             </div>
 
             <div class="create-flight-actions" style="margin-top:16px;">
                 <button id="btn-options-close" class="btn-primary" data-i18n="btnClose">Fermer</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modale Carnet de vol — liste des vols (du plus récent au plus ancien) -->
+    <div id="logbook-overlay" class="modal-overlay">
+        <div id="logbook-popup" class="modal-popup">
+            <button id="btn-logbook-close" class="airport-info-close" aria-label="Fermer">×</button>
+            <h3 class="logbook-h3" data-i18n="logbookTitle">📖 Carnet de vol</h3>
+            <div id="logbook-table-wrap">
+                <table id="logbook-table">
+                    <thead>
+                        <tr>
+                            <th data-i18n="lbColDate">Date</th>
+                            <th data-i18n="lbColTime">Durée du vol</th>
+                            <th data-i18n="lbColAircraft">Avion</th>
+                            <th data-i18n="lbColDep">ICAO départ</th>
+                            <th data-i18n="lbColArr">ICAO arrivée</th>
+                            <th data-i18n="lbColDetails">Détails</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logbook-tbody"></tbody>
+                </table>
+                <div id="logbook-empty" class="logbook-empty" data-i18n="lbEmpty" style="display:none;">Aucun
+                    vol enregistré pour l'instant.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Détails d'un vol (tous les champs de flights.jsonl) -->
+    <div id="logbook-detail-overlay" class="modal-overlay">
+        <div id="logbook-detail-popup" class="modal-popup">
+            <button id="btn-logbook-detail-close" class="airport-info-close" aria-label="Fermer">×</button>
+            <h3 class="logbook-h3" data-i18n="lbDetailTitle">Détails du vol</h3>
+            <div id="logbook-detail-body"></div>
         </div>
     </div>
 
@@ -1304,6 +1347,8 @@
     <script src="js/features/conversions.js"></script>
     <script src="js/features/options.js"></script>
     <script src="js/features/waypoint-modals.js"></script>
+    <script src="js/features/logbook.js"></script>
+    <script src="js/features/logbook-bridge.js"></script>
     <!-- Orchestrateur : DOMContentLoaded qui appelle les init* dans l'ordre — chargé en dernier -->
     <script src="ui.js"></script>
 </body>

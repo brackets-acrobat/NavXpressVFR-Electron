@@ -24,6 +24,7 @@ const DEFAULT_OPTIONS = {
   waypointAnnounceEnabled: true,
   touchAnnounceEnabled: true,
   finalArrivalEnabled: true,
+  logbookEnabled: true,
 };
 
 // État global mutable (lecture par d'autres features, écriture via setAppOption).
@@ -114,6 +115,15 @@ function initOptions() {
     });
   }
 
+  // Toggle "Logbook automatique"
+  const cbLogbook = document.getElementById('opt-logbook-enabled');
+  if (cbLogbook) {
+    cbLogbook.checked = !!window.appOptions.logbookEnabled;
+    cbLogbook.addEventListener('change', () => {
+      setAppOption('logbookEnabled', cbLogbook.checked);
+    });
+  }
+
   function _ouvrirOptions() {
     if (!optionsOverlay) return;
     // Resynchronise les checkboxes au cas où l'état aurait changé ailleurs.
@@ -122,6 +132,7 @@ function initOptions() {
     if (cbWaypointAnnounce) cbWaypointAnnounce.checked = !!window.appOptions.waypointAnnounceEnabled;
     if (cbTouchAnnounce) cbTouchAnnounce.checked = !!window.appOptions.touchAnnounceEnabled;
     if (cbFinalArrival) cbFinalArrival.checked = !!window.appOptions.finalArrivalEnabled;
+    if (cbLogbook) cbLogbook.checked = !!window.appOptions.logbookEnabled;
     optionsOverlay.classList.add('visible');
   }
 

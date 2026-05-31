@@ -70,5 +70,28 @@ contextBridge.exposeInMainWorld('api', {
 
     // NAVAIDS dans la bbox + détails par id
     navaidsDansBbox: (bbox) => ipcRenderer.invoke('navaids-bbox', bbox),
-    detailsNavaid: (id) => ipcRenderer.invoke('details-navaid', id)
+    detailsNavaid: (id) => ipcRenderer.invoke('details-navaid', id),
+
+    // LOGBOOK (carnet de vol automatisé + analyseur d'atterrissage)
+    // Renderer → main : poussent l'état nécessaire au moteur côté main process.
+    logbookSetEnabled: (enabled) => ipcRenderer.invoke('logbook-set-enabled', !!enabled),
+    logbookSetFlightPlan: (plan) => ipcRenderer.invoke('logbook-set-flightplan', plan),
+    logbookRecordDirectTo: (dt) => ipcRenderer.invoke('logbook-direct-to', dt),
+    logbookHistorique: () => ipcRenderer.invoke('logbook-historique'),
+    // Main → renderer : événements de la machine à états et résultats de calcul.
+    onLogbookState: (callback) => {
+        const listener = (_event, data) => callback(data);
+        ipcRenderer.on('logbook-state', listener);
+        return () => ipcRenderer.removeListener('logbook-state', listener);
+    },
+    onLandingResult: (callback) => {
+        const listener = (_event, data) => callback(data);
+        ipcRenderer.on('landing-result', listener);
+        return () => ipcRenderer.removeListener('landing-result', listener);
+    },
+    onLogbookFlightSaved: (callback) => {
+        const listener = (_event, data) => callback(data);
+        ipcRenderer.on('logbook-flight-saved', listener);
+        return () => ipcRenderer.removeListener('logbook-flight-saved', listener);
+    },
 });

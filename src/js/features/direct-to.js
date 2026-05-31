@@ -301,6 +301,15 @@ function initDirectTo() {
     // Calcul cap / temps / distance et ouvre la modale info
     const info = calcLegInfo(_directToOrigin.lat, _directToOrigin.lon, target.lat, target.lon);
     _afficherInfoDirectTo(target, info);
+
+    // Notification pour le carnet de vol (logbook-bridge.js écoute)
+    document.dispatchEvent(new CustomEvent('logbook-direct-to', {
+      detail: {
+        kind: 'plan',
+        targetIndex: targetIdx,
+        name: target.name || target.ident || '',
+      },
+    }));
   }
 
   // --- Activation Direct To externe (aéroport HORS plan OU point carte) ---
@@ -340,6 +349,25 @@ function initDirectTo() {
     const info = calcLegInfo(_directToOrigin.lat, _directToOrigin.lon, target.lat, target.lon);
     // Format compatible avec _afficherInfoDirectTo (utilise target.name)
     _afficherInfoDirectTo({ name: target.name || target.code }, info);
+
+    // Notification pour le carnet de vol. Le DT externe couvre deux cas :
+    //   - aéroport hors plan (code = ICAO réel, ex. 'LFRG')
+    //   - point carte (code = 'POINT' — convention posée par _activerDirectToPoint)
+    // On distingue côté event pour que le logbook range bien dans la bonne
+    // catégorie (kind: 'airport' avec ICAO vs 'point' avec coords seules).
+    const isMapPoint = target.code === 'POINT';
+    document.dispatchEvent(new CustomEvent('logbook-direct-to', {
+      detail: isMapPoint
+        ? { kind: 'point', lat: target.lat, lon: target.lon }
+        : {
+            kind: 'airport',
+            code: target.code,
+            name: target.name || target.code,
+            lat: target.lat,
+            lon: target.lon,
+            pattern: !!target.pattern,
+          },
+    }));
   }
 
   // --- Marqueur rouge du point cible d'un Direct To "point carte" ---

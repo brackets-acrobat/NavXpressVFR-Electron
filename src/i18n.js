@@ -129,8 +129,8 @@ const TRANSLATIONS = {
     searchNetworkError: "Erreur réseau",
 
     // Import Aéroports MSFS 2024
-    btnImportMsfs: "🛫 Importer Aéroports MSFS 2024",
-    btnImportElevation: "⛰️ Importer données d'élévation",
+    btnImportMsfs: "🛫 Import Aéroports MSFS2024",
+    btnImportElevation: "⛰️ Import données relief",
     elevConfirmTitle: "Re-télécharger les données ?",
     elevConfirmMsg: "Les données d'élévation semblent déjà installées (~1,8 Go). Re-télécharger l'archive (~307 Mo) et remplacer les fichiers existants ?",
     elevConfirmBtn: "Re-télécharger",
@@ -160,7 +160,21 @@ const TRANSLATIONS = {
     msfsExtractError: (msg) => `❌ Extraction échouée : ${msg}`,
 
     // Import données OurAirports
-    btnImportOurAirports: "🌐 Importer données OurAirports",
+    btnImportOurAirports: "🌐 Import OurAirports",
+    // Carnet de vol (bouton à droite de la boîte chronomètre)
+    btnLogbook: "📖 Carnet de vol",
+    // Carnet de vol — modale liste + modale détails
+    logbookTitle: "📖 Carnet de vol",
+    lbColDate: "Date",
+    lbColTime: "Durée du vol",
+    lbColAircraft: "Avion",
+    lbColDep: "ICAO départ",
+    lbColArr: "ICAO arrivée",
+    lbColDetails: "Détails",
+    lbBtnDetails: "Détails",
+    lbEmpty: "Aucun vol enregistré pour l'instant.",
+    lbReadError: "Erreur de lecture du carnet de vol.",
+    lbDetailTitle: "Détails du vol",
     btnClose: "Fermer",
     oaConfirmOverwriteTitle: "Remplacer les données ?",
     oaConfirmOverwriteMsg: "Des données OurAirports sont déjà présentes. Voulez-vous les remplacer par la dernière version disponible ?",
@@ -231,6 +245,7 @@ const TRANSLATIONS = {
     optWaypointAnnounce: "Annonce d'arrivée au point tournant",
     optTouchAnnounce: "Annonce d'arrivée pour tour de piste / touché",
     optFinalArrival: "Son d'arrivée finale (cuckoo)",
+    optLogbook: "Logbook automatique",
 
     // Direct To
     dtBtnLabel: "Direct to",
@@ -447,6 +462,20 @@ const TRANSLATIONS = {
 
     // OurAirports data import
     btnImportOurAirports: "🌐 Import OurAirports data",
+    // Logbook (button to the right of the stopwatch box)
+    btnLogbook: "📖 Logbook",
+    // Logbook — list modal + details modal
+    logbookTitle: "📖 Logbook",
+    lbColDate: "Date",
+    lbColTime: "Flight time",
+    lbColAircraft: "Aircraft",
+    lbColDep: "Dep. ICAO",
+    lbColArr: "Arr. ICAO",
+    lbColDetails: "Details",
+    lbBtnDetails: "Details",
+    lbEmpty: "No flights recorded yet.",
+    lbReadError: "Failed to read logbook.",
+    lbDetailTitle: "Flight details",
     btnClose: "Close",
     oaConfirmOverwriteTitle: "Replace data?",
     oaConfirmOverwriteMsg: "OurAirports data is already present. Do you want to replace it with the latest available version?",
@@ -517,6 +546,7 @@ const TRANSLATIONS = {
     optWaypointAnnounce: "Waypoint arrival announcement",
     optTouchAnnounce: "Pattern / touch-and-go arrival announcement",
     optFinalArrival: "Final arrival sound (cuckoo)",
+    optLogbook: "Automatic logbook",
 
     // Direct To
     dtBtnLabel: "Direct to",
