@@ -34,6 +34,10 @@ contextBridge.exposeInMainWorld('api', {
     lireCleOpenAIP: () => ipcRenderer.invoke('lire-cle-openaip'),
     sauvegarderCleOpenAIP: (key) => ipcRenderer.invoke('sauvegarder-cle-openaip', key),
 
+    // OPTIONS UTILISATEUR (toggles persistants)
+    lireOptions: () => ipcRenderer.invoke('lire-options'),
+    sauvegarderOptions: (options) => ipcRenderer.invoke('sauvegarder-options', options),
+
     // EXTRACTION AÉROPORTS MSFS 2024
     msfsVerifierLancement: () => ipcRenderer.invoke('msfs-verifier-lancement'),
     msfsExtraireAeroports: (options) => ipcRenderer.invoke('extraire-aeroports-msfs', options),

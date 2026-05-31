@@ -31,6 +31,12 @@ function getApiKeyPath() {
   return path.join(getNavXpressDirs().apiDir, 'openaip.json');
 }
 
+// Fichier d'options utilisateur (toggles persistants). Stocké à la racine
+// Documents/NavXpressVFR/ pour être facile à inspecter manuellement.
+function getOptionsPath() {
+  return path.join(getNavXpressDirs().root, 'options.json');
+}
+
 function ensureNavXpressDirs() {
   const { root, apiDir, fpDir, ourAirportsDir, elevationDir } = getNavXpressDirs();
   [root, apiDir, fpDir, ourAirportsDir, elevationDir].forEach(dir => {
@@ -501,6 +507,37 @@ ipcMain.handle('sauvegarder-cle-openaip', async (event, apiKey) => {
     return { ok: true };
   } catch (err) {
     console.error("Erreur sauvegarde clé OpenAIP:", err);
+    return { ok: false, error: err.message };
+  }
+});
+
+// 6. Lire les options utilisateur (toggles persistants).
+// Retourne toujours un objet : {} si fichier absent / illisible / JSON invalide.
+// Le renderer applique ses propres defaults par-dessus.
+ipcMain.handle('lire-options', async () => {
+  try {
+    ensureNavXpressDirs();
+    const filePath = getOptionsPath();
+    if (!fs.existsSync(filePath)) return {};
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const data = JSON.parse(raw);
+    return (data && typeof data === 'object') ? data : {};
+  } catch (err) {
+    console.error("Erreur lecture options:", err);
+    return {};
+  }
+});
+
+// 7. Sauvegarder les options utilisateur (écrasement complet du fichier).
+ipcMain.handle('sauvegarder-options', async (event, options) => {
+  try {
+    ensureNavXpressDirs();
+    const filePath = getOptionsPath();
+    const safe = (options && typeof options === 'object') ? options : {};
+    fs.writeFileSync(filePath, JSON.stringify(safe, null, 2), 'utf-8');
+    return { ok: true };
+  } catch (err) {
+    console.error("Erreur sauvegarde options:", err);
     return { ok: false, error: err.message };
   }
 });

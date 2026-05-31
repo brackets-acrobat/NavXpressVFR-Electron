@@ -92,6 +92,16 @@ function initAglWarning() {
   }
 
   window.api.onDonneesPosition(async (pos) => {
+    // Toggle utilisateur (modale Options). Désactivé → on coupe court avant
+    // tout traitement. On reset aussi l'état interne : si l'utilisateur
+    // réactive l'option en zone basse, le prochain tick déclenchera l'alerte
+    // au lieu d'attendre une « rentrée » de zone qui n'arrivera pas.
+    if (window.appOptions && window.appOptions.aglWarningEnabled === false) {
+      _belowZone = false;
+      _lastPlayedMs = 0;
+      return;
+    }
+
     if (!pos || typeof pos.altAgl !== 'number' || !isFinite(pos.altAgl)) return;
     if (typeof pos.lat !== 'number' || typeof pos.lon !== 'number') return;
 

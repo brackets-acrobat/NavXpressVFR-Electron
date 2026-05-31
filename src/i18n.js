@@ -222,6 +222,13 @@ const TRANSLATIONS = {
     convWeight: "Poids",
     convVolume: "Volume",
 
+    // Options (bouton header + modale)
+    btnOptions: "⚙️ Options",
+    btnOptionsTooltip: "Options",
+    optionsTitle: "Options",
+    optAglWarning: "Alerte audio « moins de 500 ft AGL »",
+    optRouteDeviation: "Alerte de déviation de la route",
+
     // Direct To
     dtBtnLabel: "Direct to",
     dtBtnTooltipDisabled: "Direct To — MSFS doit être connecté et un plan chargé",
@@ -497,6 +504,13 @@ const TRANSLATIONS = {
     convPressure: "Pressure",
     convWeight: "Weight",
     convVolume: "Volume",
+
+    // Options (header button + modal)
+    btnOptions: "⚙️ Options",
+    btnOptionsTooltip: "Options",
+    optionsTitle: "Options",
+    optAglWarning: "Audio alert \"below 500 ft AGL\"",
+    optRouteDeviation: "Route deviation alert",
 
     // Direct To
     dtBtnLabel: "Direct to",

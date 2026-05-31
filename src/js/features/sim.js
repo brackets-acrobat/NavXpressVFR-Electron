@@ -268,7 +268,17 @@ function initSim() {
     const insideRadius = distance < WAYPOINT_RADIUS_NM;
 
     // --- Vérification de l'écart latéral à la trajectoire active ---
-    if (dep) {
+    // Toggle utilisateur (modale Options) : alerte de déviation désactivée
+    // → reset état + skip tout le bloc. Si l'utilisateur réactive l'option
+    // alors qu'on est en déviation, la transition false → _deviationOutside
+    // au tick suivant déclenchera une alerte fraîche (pas d'attente du
+    // rappel 2 min), même comportement que l'AGL.
+    if (dep && window.appOptions && window.appOptions.routeDeviationEnabled === false) {
+      if (_deviationOutside) {
+        _deviationOutside = false;
+        _deviationLastAlertTime = 0;
+      }
+    } else if (dep) {
       // ZONES DE SUSPENSION DES ALERTES DE DÉVIATION :
       //  1. Tour de piste : à < 2 NM d'un aéroport (dep ou arr) marqué pour un
       //     tour de piste — le pilote tourne, l'écart à la trajectoire est attendu.

@@ -21,6 +21,8 @@
                     <span id="app-decl" class="app-decl"></span>
                 </h1>
                 <div class="header-right">
+                    <button type="button" class="btn-options" id="btn-options"
+                        data-i18n="btnOptions" data-i18n-title="btnOptionsTooltip" title="Options">⚙️ Options</button>
                     <button type="button" class="status-badge" id="sim-status" title="" data-i18n="simDisconnected">MSFS
                         Déconnecté</button>
                     <!-- Bouton toggle bilingue FR / EN -->
@@ -1041,6 +1043,30 @@
         </div>
     </div>
 
+    <!-- Modale Options -->
+    <div id="options-overlay" class="modal-overlay">
+        <div id="options-popup" class="modal-popup" style="width:480px;">
+            <h3 data-i18n="optionsTitle"
+                style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Options</h3>
+
+            <div id="options-body" style="font-size:13px; line-height:1.6;">
+                <label class="layer-toggle-row" for="opt-agl-warning">
+                    <span data-i18n="optAglWarning">Alerte audio « moins de 500 ft AGL »</span>
+                    <input type="checkbox" class="toggle-switch" id="opt-agl-warning">
+                </label>
+                <label class="layer-toggle-row" for="opt-route-deviation">
+                    <span data-i18n="optRouteDeviation">Alerte de déviation de la route</span>
+                    <input type="checkbox" class="toggle-switch" id="opt-route-deviation">
+                </label>
+            </div>
+
+            <div class="create-flight-actions" style="margin-top:16px;">
+                <button id="btn-options-close" class="btn-primary" data-i18n="btnClose">Fermer</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modale "Tour de piste / Toucher prévu ?" -->
     <div id="ask-pattern-overlay" class="modal-overlay">
         <div class="modal-popup" style="width:380px;">
@@ -1264,6 +1290,7 @@
     <script src="js/features/leg-modals-init.js"></script>
     <script src="js/features/tank.js"></script>
     <script src="js/features/conversions.js"></script>
+    <script src="js/features/options.js"></script>
     <script src="js/features/waypoint-modals.js"></script>
     <!-- Orchestrateur : DOMContentLoaded qui appelle les init* dans l'ordre — chargé en dernier -->
     <script src="ui.js"></script>

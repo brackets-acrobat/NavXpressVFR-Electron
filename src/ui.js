@@ -12,6 +12,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await chargerCleOpenAIP();
 
+  // Charge window.appOptions depuis disque (defaults appliqués par options.js).
+  // DOIT être awaité avant initAglWarning() — celui-ci lit aglWarningEnabled.
+  await chargerOptions();
+
   initOpenAIP();
 
   initImports();
@@ -43,6 +47,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTank();
 
   initConversions();
+
+  // Bouton ⚙️ Options du header + modale (vide pour l'instant).
+  initOptions();
 
   initDirectTo();
 

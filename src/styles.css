@@ -300,6 +300,31 @@ h1 {
     background-color: #262626;
 }
 
+/* -------------------------------------------------- */
+/* Bouton Options (header, à gauche du badge MSFS)    */
+/* -------------------------------------------------- */
+.btn-options {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: #1e1e1e;
+    border: 1px solid #3d3d3d;
+    border-radius: 4px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    color: #e0e0e0;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.btn-options:hover {
+    border-color: #00bcd4;
+    background-color: #262626;
+}
+
 .lang-separator {
     color: #444;
 }
