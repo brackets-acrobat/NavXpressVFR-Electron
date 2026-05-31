@@ -223,11 +223,14 @@ const TRANSLATIONS = {
     convVolume: "Volume",
 
     // Options (bouton header + modale)
-    btnOptions: "⚙️ Options",
+    btnOptions: "⚙️",
     btnOptionsTooltip: "Options",
     optionsTitle: "Options",
-    optAglWarning: "Alerte audio « moins de 500 ft AGL »",
+    optAglWarning: "Alerte Moins de 500 ft AGL",
     optRouteDeviation: "Alerte de déviation de la route",
+    optWaypointAnnounce: "Annonce d'arrivée au point tournant",
+    optTouchAnnounce: "Annonce d'arrivée pour tour de piste / touché",
+    optFinalArrival: "Son d'arrivée finale (cuckoo)",
 
     // Direct To
     dtBtnLabel: "Direct to",
@@ -506,11 +509,14 @@ const TRANSLATIONS = {
     convVolume: "Volume",
 
     // Options (header button + modal)
-    btnOptions: "⚙️ Options",
+    btnOptions: "⚙️",
     btnOptionsTooltip: "Options",
     optionsTitle: "Options",
-    optAglWarning: "Audio alert \"below 500 ft AGL\"",
+    optAglWarning: "below 500 ft AGL alert",
     optRouteDeviation: "Route deviation alert",
+    optWaypointAnnounce: "Waypoint arrival announcement",
+    optTouchAnnounce: "Pattern / touch-and-go arrival announcement",
+    optFinalArrival: "Final arrival sound (cuckoo)",
 
     // Direct To
     dtBtnLabel: "Direct to",

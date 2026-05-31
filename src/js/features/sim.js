@@ -207,16 +207,20 @@ function initSim() {
   }
 
   // _jouerSon(audioEl) → déplacé vers js/sounds.js (partagé sim/tank)
+  // Chaque fonction respecte son toggle Options : désactivé → silence.
   function _jouerSonWaypoint() {
+    if (window.appOptions && window.appOptions.waypointAnnounceEnabled === false) return;
     _jouerSon(_wpSounds[currentLang] || _wpSounds.fr);
   }
   function _jouerSonArrivee() {
+    if (window.appOptions && window.appOptions.finalArrivalEnabled === false) return;
     _jouerSon(_arrivalSound);
   }
   function _jouerSonDeviation() {
     _jouerSon(_devSounds[currentLang] || _devSounds.fr);
   }
   function _jouerSonTouch() {
+    if (window.appOptions && window.appOptions.touchAnnounceEnabled === false) return;
     _jouerSon(_touchSounds[currentLang] || _touchSounds.fr);
   }
 
@@ -342,7 +346,10 @@ function initSim() {
 
     // --- Détection de FRANCHISSEMENT du rayon d'arrivée ---
     if (insideRadius && _lastSoundLegIndex !== sessionId) {
-      // Son d'arrivée selon le mode
+      // Son d'arrivée selon le mode. Chaque _jouerSon* respecte son toggle
+      // Options (silence si désactivé) ; la machine à états avance dans tous
+      // les cas. Le replay à la réactivation d'un toggle est géré séparément
+      // par le listener 'app-option-changed' plus bas.
       if (mode === 'ext') {
         // Direct To externe : son "touch" si pattern, sinon son waypoint
         // (jamais le cuckoo : il est réservé à la dernière étape du plan)
@@ -403,4 +410,65 @@ function initSim() {
 
   // Pont pour le toggle i18n (réappliquer le badge dans la nouvelle langue)
   window.appliquerEtatSim = appliquerEtatSim;
+
+  // Réactivation d'un toggle son d'arrivée pendant qu'on stationne près du
+  // point qu'on vient de franchir → on rejoue l'annonce immédiatement.
+  //
+  // On ne rejoue que si le TYPE du point correspond au toggle réactivé :
+  //   - point pattern        → son touch   (touchAnnounceEnabled)
+  //   - dernier point du plan → son cuckoo (finalArrivalEnabled)
+  //   - point intermédiaire   → son waypoint (waypointAnnounceEnabled)
+  //
+  // Rayon de replay = WAYPOINT_RADIUS_NM (1.5 NM), identique au rayon qui
+  // déclenche l'annonce d'arrivée d'origine (insideRadius).
+  document.addEventListener('app-option-changed', (e) => {
+    if (!e.detail || e.detail.value !== true) return;
+    const key = e.detail.key;
+    if (key !== 'waypointAnnounceEnabled' && key !== 'finalArrivalEnabled' && key !== 'touchAnnounceEnabled') return;
+    if (!_lastAircraftPos) return;
+
+    // --- Cas 1 : Direct To externe (aéroport hors plan OU point carte) ---
+    // _extDtLastArrival mémorise le dernier point externe atteint tant qu'on
+    // reste à proximité (hystérésis dans le bloc déviation). Sons possibles :
+    // touch (pattern) ou waypoint — jamais cuckoo (réservé au plan).
+    // On traite ce cas en priorité : si l'avion est dans le rayon de ce point,
+    // sa position est « expliquée » par cette arrivée → on ne teste pas le plan.
+    if (_extDtLastArrival
+        && _distanceNM(_lastAircraftPos.lat, _lastAircraftPos.lon,
+                       _extDtLastArrival.lat, _extDtLastArrival.lon) < WAYPOINT_RADIUS_NM) {
+      if (_extDtLastArrival.pattern) {
+        if (key === 'touchAnnounceEnabled') _jouerSonTouch();
+      } else {
+        if (key === 'waypointAnnounceEnabled') _jouerSonWaypoint();
+      }
+      return;
+    }
+
+    // --- Cas 2 : arrivée sur un point du plan (y compris Direct To vers un
+    // point DU plan, qui s'auto-valide comme une arrivée normale) ---
+    // Le point franchi = ARRIVÉE DU LEG PRÉCÉDENT = flightPlan[activeLegIndex-1].
+    // (À l'arrivée, le leg s'auto-valide via activeLegIndex++ ; l'avion est donc
+    // encore proche du point d'arrivée précédent, pas du nouveau point visé.
+    // Pour le point final, activeLegIndex vaut flightPlan.length → l'index
+    // activeLegIndex-1 désigne bien le dernier point.)
+    if (!flightPlan || flightPlan.length < 2) return;
+    const j = activeLegIndex - 1;              // index du point d'arrivée juste franchi
+    if (j < 1 || j > flightPlan.length - 1) return; // j=0 = départ (rien franchi)
+    const wp = flightPlan[j];
+    if (!wp || typeof wp.lat !== 'number' || typeof wp.lon !== 'number') return;
+
+    // L'avion est-il encore dans le rayon d'annonce de ce point ?
+    if (_distanceNM(_lastAircraftPos.lat, _lastAircraftPos.lon, wp.lat, wp.lon) >= WAYPOINT_RADIUS_NM) return;
+
+    // Type de son de ce point → ne jouer que s'il correspond au toggle réactivé.
+    let matchKey, jouer;
+    if (wp.pattern) {
+      matchKey = 'touchAnnounceEnabled'; jouer = _jouerSonTouch;
+    } else if (j === flightPlan.length - 1) {
+      matchKey = 'finalArrivalEnabled'; jouer = _jouerSonArrivee;
+    } else {
+      matchKey = 'waypointAnnounceEnabled'; jouer = _jouerSonWaypoint;
+    }
+    if (key === matchKey) jouer();
+  });
 }

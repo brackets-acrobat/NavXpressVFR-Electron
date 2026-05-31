@@ -21,6 +21,9 @@
 const DEFAULT_OPTIONS = {
   aglWarningEnabled: true,
   routeDeviationEnabled: true,
+  waypointAnnounceEnabled: true,
+  touchAnnounceEnabled: true,
+  finalArrivalEnabled: true,
 };
 
 // État global mutable (lecture par d'autres features, écriture via setAppOption).
@@ -45,8 +48,14 @@ async function chargerOptions() {
 // Set + persistance asynchrone. La valeur en mémoire est mise à jour
 // synchrone (lecture immédiate possible par les features) ; l'écriture
 // fichier part en parallèle, les erreurs sont loggées sans bloquer l'UI.
+//
+// On dispatche aussi un event 'app-option-changed' pour permettre aux
+// features de réagir à un changement (ex : sim.js reset _lastSoundLegIndex
+// quand on réactive un toggle son, pour rejouer l'annonce si l'avion est
+// encore dans le rayon).
 function setAppOption(key, value) {
   window.appOptions[key] = value;
+  document.dispatchEvent(new CustomEvent('app-option-changed', { detail: { key, value } }));
   if (!window.api || typeof window.api.sauvegarderOptions !== 'function') return;
   // On envoie l'objet complet — handler main.js écrase le fichier.
   window.api.sauvegarderOptions({ ...window.appOptions }).catch(err => {
@@ -78,11 +87,41 @@ function initOptions() {
     });
   }
 
+  // Toggle "Annonce d'arrivée au point tournant (waypoint)"
+  const cbWaypointAnnounce = document.getElementById('opt-waypoint-announce');
+  if (cbWaypointAnnounce) {
+    cbWaypointAnnounce.checked = !!window.appOptions.waypointAnnounceEnabled;
+    cbWaypointAnnounce.addEventListener('change', () => {
+      setAppOption('waypointAnnounceEnabled', cbWaypointAnnounce.checked);
+    });
+  }
+
+  // Toggle "Annonce d'arrivée pour tour de piste / touché"
+  const cbTouchAnnounce = document.getElementById('opt-touch-announce');
+  if (cbTouchAnnounce) {
+    cbTouchAnnounce.checked = !!window.appOptions.touchAnnounceEnabled;
+    cbTouchAnnounce.addEventListener('change', () => {
+      setAppOption('touchAnnounceEnabled', cbTouchAnnounce.checked);
+    });
+  }
+
+  // Toggle "Son d'arrivée finale (cuckoo)"
+  const cbFinalArrival = document.getElementById('opt-final-arrival');
+  if (cbFinalArrival) {
+    cbFinalArrival.checked = !!window.appOptions.finalArrivalEnabled;
+    cbFinalArrival.addEventListener('change', () => {
+      setAppOption('finalArrivalEnabled', cbFinalArrival.checked);
+    });
+  }
+
   function _ouvrirOptions() {
     if (!optionsOverlay) return;
     // Resynchronise les checkboxes au cas où l'état aurait changé ailleurs.
     if (cbAglWarning) cbAglWarning.checked = !!window.appOptions.aglWarningEnabled;
     if (cbRouteDeviation) cbRouteDeviation.checked = !!window.appOptions.routeDeviationEnabled;
+    if (cbWaypointAnnounce) cbWaypointAnnounce.checked = !!window.appOptions.waypointAnnounceEnabled;
+    if (cbTouchAnnounce) cbTouchAnnounce.checked = !!window.appOptions.touchAnnounceEnabled;
+    if (cbFinalArrival) cbFinalArrival.checked = !!window.appOptions.finalArrivalEnabled;
     optionsOverlay.classList.add('visible');
   }
 
