@@ -34,6 +34,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   initValidation();
   initSim();
 
+  // Avertissement audio « < 500 ft AGL » : s'abonne à onDonneesPosition.
+  // Indépendant des autres features (pas d'UI, pas de carte).
+  initAglWarning();
+
   initFuel();
 
   initTank();

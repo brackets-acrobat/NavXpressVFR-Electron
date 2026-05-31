@@ -71,7 +71,8 @@ source correspondant(s). Le frontend est découpé en modules `src/js/` (état/h
 ## 10. Alertes sonores & suivi de leg temps réel (MSFS)
 - Son d'approche waypoint (1,5 NM) + **passage auto au leg suivant** ; son d'arrivée finale.
 - **Alerte de déviation latérale** (> 1,2 NM), rappel toutes les 2 min ; **zone tour de piste** (alertes suspendues près d'un aéroport « pattern ») ; son de toucher. Sons **bilingues FR/EN**.
-- *Modules :* `src/js/features/sim.js` · `src/js/sounds.js`.
+- **Avertissement « < 500 ft AGL »** : surveillance continue de l'altitude sol via la simvar **`PLANE ALT ABOVE GROUND`** (MSFS), vérifiée à chaque update SimConnect (~5 s). Quand l'avion descend sous **500 ft AGL**, joue un son d'avertissement bilingue (`500agl_fr.wav` / `500agl_en.wav`). Tant qu'on reste sous 500 ft, **rappel toutes les 2 min**. **Silence** dans un rayon de **2 NM autour de tout aéroport** (`large/medium/small_airport`, hélistations exclues). Le cooldown se **réinitialise dès que l'avion repasse au-dessus de 500 ft** (chaque nouvelle rentrée en zone basse déclenche un avertissement immédiat).
+- *Modules :* `src/js/features/sim.js` · `src/js/features/agl-warning.js` · `src/js/sounds.js` · `main.js` (`PLANE ALT ABOVE GROUND` dans `donnees-position`).
 
 ## 11. Emport carburant (Fuel Planner)
 - Total = roulage (taxi 10 min) + trip + réserve réglementaire (30 min jour / **45 min VFR nuit**) + dégagement + réserve de route (10 %) + réserve discrétionnaire. Recalcul continu lié au plan.

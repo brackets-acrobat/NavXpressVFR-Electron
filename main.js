@@ -1269,6 +1269,15 @@ ipcMain.handle('simconnect-connecter', async () => {
       'degrees',
       SCDataType.FLOAT64
     );
+    // Altitude AGL (pieds) — utilisée par l'avertissement audio « < 500 ft AGL ».
+    // PLANE ALT ABOVE GROUND donne directement l'AGL natif MSFS (relief inclus),
+    // plus précis que MSL - elevation GTOPO pour cet usage.
+    handle.addToDataDefinition(
+      SC_POS_DEF_ID,
+      'PLANE ALT ABOVE GROUND',
+      'feet',
+      SCDataType.FLOAT64
+    );
 
     // Souscription : 1 update toutes les 5 secondes pour la position
     handle.requestDataOnSimObject(
@@ -1290,7 +1299,8 @@ ipcMain.handle('simconnect-connecter', async () => {
         } else if (data.requestID === SC_POS_REQ_ID) {
           const lat = data.data.readFloat64();
           const lon = data.data.readFloat64();
-          broadcastPosition({ lat, lon });
+          const altAgl = data.data.readFloat64();
+          broadcastPosition({ lat, lon, altAgl });
         }
       } catch (err) {
         console.warn('[SimConnect] Lecture données KO:', err);
