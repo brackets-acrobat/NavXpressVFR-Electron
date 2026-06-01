@@ -117,14 +117,12 @@ function resetGlobeFds() {
 }
 
 // --- OURAIRPORTS : liste des fichiers à récupérer ---
+// La base aéroports vient EXCLUSIVEMENT de MSFS 2024 (airports-msfs.jsonl) →
+// on ne télécharge plus airports/airport-frequencies/airport-comments/runways
+// depuis OurAirports. Seuls les navaids sont encore tirés d'OurAirports.
+// (countries/regions n'étaient lus nulle part, retirés aussi.)
 const OURAIRPORTS_FILES = [
-  { name: 'airports',            url: 'https://davidmegginson.github.io/ourairports-data/airports.csv' },
-  { name: 'airport-frequencies', url: 'https://davidmegginson.github.io/ourairports-data/airport-frequencies.csv' },
-  { name: 'airport-comments',    url: 'https://davidmegginson.github.io/ourairports-data/airport-comments.csv' },
-  { name: 'runways',             url: 'https://davidmegginson.github.io/ourairports-data/runways.csv' },
-  { name: 'navaids',             url: 'https://davidmegginson.github.io/ourairports-data/navaids.csv' },
-  { name: 'countries',           url: 'https://davidmegginson.github.io/ourairports-data/countries.csv' },
-  { name: 'regions',             url: 'https://davidmegginson.github.io/ourairports-data/regions.csv' },
+  { name: 'navaids', url: 'https://davidmegginson.github.io/ourairports-data/navaids.csv' },
 ];
 
 // Télécharge une URL HTTPS en suivant jusqu'à 5 redirections.
@@ -549,38 +547,21 @@ ipcMain.handle('sauvegarder-options', async (event, options) => {
 // --- INDEX EN MÉMOIRE des aéroports OurAirports (chargé à la 1re recherche) ---
 let _oaAirportsIndex = null; // Map<UPPER_CODE, airportObj>
 
-// Quand la base MSFS (airports-msfs.jsonl) est présente, elle REMPLACE
-// totalement les aéroports OurAirports : tous les index aéroports sont
-// construits depuis ce fichier (les navaids restent sur OurAirports).
+// La base aéroports vient EXCLUSIVEMENT de MSFS 2024 (airports-msfs.jsonl,
+// produit par extract-airports-msfs.js). Pas de fallback OurAirports : si la
+// base MSFS n'est pas présente, AUCUN aéroport n'est exposé (volonté produit
+// — éviter l'incohérence entre la carte/recherche et le sim). Les navaids,
+// eux, continuent d'utiliser OurAirports.
 const MSFS_AIRPORTS_FILE = 'airports-msfs.jsonl';
 let _msfsActive = false;
 
+// Les 5 loaders aéroports ci-dessous se réduisent à `ensureAirportsLoaded()` :
+// quand la base MSFS est présente, `buildFromMsfs()` construit tous les index
+// en une passe ; sinon, on renvoie false et les handlers IPC répondent
+// `no-data` (gestion déjà en place côté renderer).
+
 function loadOurAirportsIndex() {
-  if (ensureAirportsLoaded()) return true;
-  const { ourAirportsDir } = getNavXpressDirs();
-  const jsonlPath = path.join(ourAirportsDir, 'airports.jsonl');
-  if (!fs.existsSync(jsonlPath)) {
-    _oaAirportsIndex = null;
-    return false;
-  }
-  const text = fs.readFileSync(jsonlPath, 'utf-8');
-  const lines = text.split('\n');
-  const idx = new Map();
-  for (const line of lines) {
-    if (!line) continue;
-    let obj;
-    try { obj = JSON.parse(line); } catch (_) { continue; }
-    // Indexer sur tous les codes possibles (en majuscules)
-    const keys = [obj.ident, obj.icao_code, obj.gps_code, obj.iata_code, obj.local_code];
-    for (const k of keys) {
-      if (!k) continue;
-      const up = String(k).toUpperCase();
-      // Premier arrivé, premier servi : évite qu'un petit aérodrome écrase un grand
-      if (!idx.has(up)) idx.set(up, obj);
-    }
-  }
-  _oaAirportsIndex = idx;
-  return true;
+  return ensureAirportsLoaded();
 }
 
 function invalidateOurAirportsIndex() {
@@ -666,31 +647,7 @@ function loadOurAirportsNavaidsList() {
 let _oaFrequenciesByAirport = null;
 
 function loadOurAirportsFrequenciesIndex() {
-  if (ensureAirportsLoaded()) return true;
-  const { ourAirportsDir } = getNavXpressDirs();
-  const jsonlPath = path.join(ourAirportsDir, 'airport-frequencies.jsonl');
-  if (!fs.existsSync(jsonlPath)) {
-    _oaFrequenciesByAirport = null;
-    return false;
-  }
-  const text = fs.readFileSync(jsonlPath, 'utf-8');
-  const lines = text.split('\n');
-  const idx = new Map();
-  for (const line of lines) {
-    if (!line) continue;
-    let obj;
-    try { obj = JSON.parse(line); } catch (_) { continue; }
-    const ident = (obj.airport_ident || '').toUpperCase();
-    if (!ident) continue;
-    if (!idx.has(ident)) idx.set(ident, []);
-    idx.get(ident).push({
-      type: obj.type || '',
-      description: obj.description || '',
-      frequency_mhz: obj.frequency_mhz || '',
-    });
-  }
-  _oaFrequenciesByAirport = idx;
-  return true;
+  return ensureAirportsLoaded();
 }
 
 // --- INDEX COMMENTAIRES : airport_ident → tableau de commentaires ---
@@ -699,79 +656,14 @@ function loadOurAirportsFrequenciesIndex() {
 let _oaCommentsByAirport = null;
 
 function loadOurAirportsCommentsIndex() {
-  if (ensureAirportsLoaded()) return true;
-  const { ourAirportsDir } = getNavXpressDirs();
-  const jsonlPath = path.join(ourAirportsDir, 'airport-comments.jsonl');
-  if (!fs.existsSync(jsonlPath)) {
-    _oaCommentsByAirport = null;
-    return false;
-  }
-  const text = fs.readFileSync(jsonlPath, 'utf-8');
-  const lines = text.split('\n');
-  const idx = new Map();
-  for (const line of lines) {
-    if (!line) continue;
-    let raw;
-    try { raw = JSON.parse(line); } catch (_) { continue; }
-    // Nettoyer les clés (espaces parasites du CSV source)
-    const obj = {};
-    for (const k of Object.keys(raw)) obj[k.trim()] = raw[k];
-    const ident = (obj.airportIdent || '').toUpperCase();
-    if (!ident) continue;
-    if (!idx.has(ident)) idx.set(ident, []);
-    idx.get(ident).push({
-      date: obj.date || '',
-      author: obj.memberNickname || '',
-      subject: obj.subject || '',
-      body: obj.body || '',
-    });
-  }
-  _oaCommentsByAirport = idx;
-  return true;
+  return ensureAirportsLoaded();
 }
 
 // --- INDEX RUNWAYS : airport_ident → tableau de toutes les pistes ---
 let _oaRunwaysByAirport = null; // Map<UPPER_IDENT, Array<runway>>
 
 function loadOurAirportsRunwaysIndex() {
-  if (ensureAirportsLoaded()) return true;
-  const { ourAirportsDir } = getNavXpressDirs();
-  const jsonlPath = path.join(ourAirportsDir, 'runways.jsonl');
-  if (!fs.existsSync(jsonlPath)) {
-    _oaRunwaysByAirport = null;
-    return false;
-  }
-  const text = fs.readFileSync(jsonlPath, 'utf-8');
-  const lines = text.split('\n');
-  const idx = new Map();
-  for (const line of lines) {
-    if (!line) continue;
-    let rw;
-    try { rw = JSON.parse(line); } catch (_) { continue; }
-    const ident = (rw.airport_ident || '').toUpperCase();
-    if (!ident) continue;
-
-    const closed = rw.closed === '1' || rw.closed === 1;
-    const length = parseFloat(rw.length_ft) || 0;
-    const width = parseFloat(rw.width_ft) || 0;
-    const heading = parseFloat(rw.le_heading_degT);
-
-    const r = {
-      le_ident: rw.le_ident || '',
-      he_ident: rw.he_ident || '',
-      headingDegT: Number.isFinite(heading) ? heading : null,
-      length_ft: length,
-      width_ft: width,
-      surface: rw.surface || '',
-      lighted: rw.lighted === '1' || rw.lighted === 1,
-      closed,
-    };
-
-    if (!idx.has(ident)) idx.set(ident, []);
-    idx.get(ident).push(r);
-  }
-  _oaRunwaysByAirport = idx;
-  return true;
+  return ensureAirportsLoaded();
 }
 
 // Retourne la piste principale (la plus longue, non fermée, avec heading valide)
@@ -791,79 +683,18 @@ let _oaAirportsList = null;       // [{ident, name, lat, lon, type, runway?}]
 let _oaAirportsRawByIdent = null; // Map<UPPER_IDENT, full airport object>
 
 function loadOurAirportsListForMap() {
-  if (ensureAirportsLoaded()) return true;
-  if (_oaAirportsList) return true;
-  const { ourAirportsDir } = getNavXpressDirs();
-  const jsonlPath = path.join(ourAirportsDir, 'airports.jsonl');
-  if (!fs.existsSync(jsonlPath)) {
-    _oaAirportsList = null;
-    return false;
-  }
-  if (!_oaRunwaysByAirport) loadOurAirportsRunwaysIndex();
-
-  const TYPES_OK = new Set(['large_airport', 'medium_airport', 'small_airport', 'heliport']);
-  const text = fs.readFileSync(jsonlPath, 'utf-8');
-  const lines = text.split('\n');
-  const list = [];
-  const rawIdx = new Map();
-  for (const line of lines) {
-    if (!line) continue;
-    let a;
-    try { a = JSON.parse(line); } catch (_) { continue; }
-    // On indexe TOUS les types par ident pour la modale (heliports / seaplane / closed inclus)
-    if (a.ident) rawIdx.set(String(a.ident).toUpperCase(), a);
-    if (!TYPES_OK.has(a.type)) continue;
-    const lat = parseFloat(a.latitude_deg);
-    const lon = parseFloat(a.longitude_deg);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-
-    const identUp = (a.ident || '').toUpperCase();
-    const runways = _oaRunwaysByAirport ? _oaRunwaysByAirport.get(identUp) : null;
-    const runway = _oaMainRunway(runways);
-
-    // Code affichable, par ordre de priorité :
-    //   icao_code (LFPG, KJFK…)
-    //   gps_code  (codes GPS, parfois utilisés)
-    //   local_code (codes FAA US, codes ULM FR type LFXXXX)
-    //   ident     (dernier recours : FR-XXXX, US-XXXX…)
-    const displayCode =
-      (a.icao_code  && a.icao_code.trim())  ||
-      (a.gps_code   && a.gps_code.trim())   ||
-      (a.local_code && a.local_code.trim()) ||
-      a.ident || '';
-
-    list.push({
-      ident: a.ident,
-      icao: a.icao_code || '',
-      iata: a.iata_code || '',
-      gps: a.gps_code || '',
-      local: a.local_code || '',
-      code: displayCode,
-      name: a.name || a.ident,
-      country: a.iso_country || '',
-      lat, lon,
-      type: a.type,
-      runway: runway ? {
-        name: runway.le_ident + (runway.he_ident ? '/' + runway.he_ident : ''),
-        headingDegT: runway.headingDegT,
-        length_ft: runway.length_ft,
-      } : null,
-    });
-  }
-  _oaAirportsList = list;
-  _oaAirportsRawByIdent = rawIdx;
-  console.log('[OurAirports] Liste chargée pour la carte :', list.length, 'aéroports');
-  return true;
+  return ensureAirportsLoaded();
 }
 
 // ============================================================
-// BASE AÉROPORTS MSFS (airports-msfs.jsonl)
+// BASE AÉROPORTS MSFS (airports-msfs.jsonl) — SEULE SOURCE
 // ------------------------------------------------------------
-// Si ce fichier est présent, il REMPLACE entièrement les aéroports
-// OurAirports. On construit en UNE seule passe TOUS les index aéroports
-// (recherche, carte, runways, fréquences) depuis les enregistrements
-// imbriqués (runways[], frequencies[]). Les commentaires n'existent pas
-// dans cette base (Map vide). Les navaids restent gérés par OurAirports.
+// La base aéroports est exclusivement issue de MSFS 2024 (extraction via
+// extract-airports-msfs.js). On construit en UNE seule passe TOUS les index
+// aéroports (recherche, carte, runways, fréquences) depuis les enregistrements
+// imbriqués (runways[], frequencies[]). Les commentaires n'existent pas dans
+// cette base (Map vide). Les navaids, eux, continuent d'être chargés depuis
+// OurAirports (loadOurAirportsNavaidsList ↔ navaids.jsonl).
 // ============================================================
 function msfsAirportsAvailable() {
   const { ourAirportsDir } = getNavXpressDirs();
