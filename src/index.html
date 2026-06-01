@@ -1122,6 +1122,21 @@
         </div>
     </div>
 
+    <!-- Modale Confirmation de fin de vol (≥2 conditions : vitesse 0 / moteur
+         éteint / frein de parking). Oui → écriture dans flights.jsonl. -->
+    <div id="logbook-end-overlay" class="modal-overlay">
+        <div id="logbook-end-popup" class="modal-popup" style="width:440px;">
+            <h3 class="logbook-h3" data-i18n="lbEndTitle">Vol terminé ?</h3>
+            <p id="logbook-end-question" data-i18n="lbEndQuestion">L'avion semble être au parking. Le
+                vol est-il terminé ?</p>
+            <div id="logbook-end-summary"></div>
+            <div class="create-flight-actions" style="margin-top:18px; display:flex; gap:10px; justify-content:flex-end;">
+                <button id="btn-logbook-end-no" class="btn-secondary" data-i18n="lbEndNo">Non, continuer</button>
+                <button id="btn-logbook-end-yes" class="btn-primary" data-i18n="lbEndYes">Oui, enregistrer</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modale "Tour de piste / Toucher prévu ?" -->
     <div id="ask-pattern-overlay" class="modal-overlay">
         <div class="modal-popup" style="width:380px;">

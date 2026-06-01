@@ -25,11 +25,11 @@ const LB_LABELS = {
   fr: {
     secAircraft: 'Appareil', secDep: 'Départ', secArr: 'Arrivée', secTimes: 'Temps',
     secLanding: 'Atterrissage final', secTng: 'Touch-and-go', secRoute: 'Route', secDt: 'Direct To',
-    category: 'Catégorie', type: 'Type', model: 'Modèle', title: 'Titre (SimVar)',
-    icao: 'ICAO', name: 'Nom', offBlock: 'Heure block départ', takeoff: 'Décollage',
-    landing: 'Atterrissage', onBlock: 'Heure block arrivée',
+    category: 'Catégorie', type: 'Type', model: 'Modèle', title: 'Détail appareil',
+    icao: 'ICAO', name: 'Nom', offBlock: 'Off-block', takeoff: 'Décollage',
+    landing: 'Atterrissage', onBlock: 'On-block',
     blockTime: 'Temps block', flightTime: 'Temps de vol',
-    vs: 'Vitesse verticale', gForce: 'Facteur de charge max', tngCount: 'Nombre de touch-and-go',
+    vs: 'Vitesse vert.', gForce: 'Facteur charge', tngCount: 'Touch-and-go',
     noArrival: 'Vol non terminé (pas d\'arrivée enregistrée).',
     wpPattern: 'tour de piste',
     dtPlan: 'Vers waypoint du plan', dtAirport: 'Vers aéroport', dtPoint: 'Vers point carte',
@@ -37,11 +37,11 @@ const LB_LABELS = {
   en: {
     secAircraft: 'Aircraft', secDep: 'Departure', secArr: 'Arrival', secTimes: 'Times',
     secLanding: 'Final landing', secTng: 'Touch-and-go', secRoute: 'Route', secDt: 'Direct To',
-    category: 'Category', type: 'Type', model: 'Model', title: 'Title (SimVar)',
-    icao: 'ICAO', name: 'Name', offBlock: 'Off-block time', takeoff: 'Takeoff',
-    landing: 'Landing', onBlock: 'On-block time',
+    category: 'Category', type: 'Type', model: 'Model', title: 'Aircraft detail',
+    icao: 'ICAO', name: 'Name', offBlock: 'Off-block', takeoff: 'Takeoff',
+    landing: 'Landing', onBlock: 'On-block',
     blockTime: 'Block time', flightTime: 'Flight time',
-    vs: 'Vertical speed', gForce: 'Max load factor', tngCount: 'Touch-and-go count',
+    vs: 'Vertical speed', gForce: 'Load factor', tngCount: 'Touch-and-go',
     noArrival: 'Flight not completed (no arrival recorded).',
     wpPattern: 'pattern',
     dtPlan: 'To plan waypoint', dtAirport: 'To airport', dtPoint: 'To map point',
@@ -229,15 +229,16 @@ function initLogbook() {
       html += _section(_lbl('secTng'), `<ul class="lb-list">${items}</ul>`);
     }
 
-    // Route (waypoints figés au décollage)
+    // Route (waypoints figés au décollage) — tous les legs sur une seule ligne,
+    // séparés par des flèches : LFMA → LFNR (tour de piste) → … → LFNZ
     const route = Array.isArray(f.route) ? f.route : [];
     if (route.length) {
       const items = route.map((wp) => {
         const label = esc(wp.ident || wp.name || '?');
         const pat = wp.pattern ? ` <span class="lb-muted">(${esc(_lbl('wpPattern'))})</span>` : '';
-        return `<li>${label}${pat}</li>`;
-      }).join('');
-      html += _section(_lbl('secRoute'), `<ol class="lb-list">${items}</ol>`);
+        return label + pat;
+      }).join(' <span class="lb-route-arrow">→</span> ');
+      html += _section(_lbl('secRoute'), `<div class="lb-route">${items}</div>`);
     }
 
     // Direct To effectués pendant le vol
@@ -287,9 +288,49 @@ function initLogbook() {
   if (detailOverlay) detailOverlay.addEventListener('click', (e) => { if (e.target === detailOverlay) _closeDetail(); });
 
   // Escape : ferme d'abord la modale détails (au-dessus), sinon la liste.
+  // (La modale de fin de vol n'est PAS fermable par Escape : elle exige un
+  // choix explicite Oui/Non pour ne pas perdre l'enregistrement par accident.)
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (detailOverlay && detailOverlay.classList.contains('visible')) _closeDetail();
     else if (overlay && overlay.classList.contains('visible')) _closeList();
   });
+
+  // --- Modale « Le vol est-il terminé ? » (déclenchée par le moteur main) ---
+  const endOverlay = document.getElementById('logbook-end-overlay');
+  const endSummary = document.getElementById('logbook-end-summary');
+  const btnEndYes = document.getElementById('btn-logbook-end-yes');
+  const btnEndNo = document.getElementById('btn-logbook-end-no');
+
+  function _closeEnd() { if (endOverlay) endOverlay.classList.remove('visible'); }
+  function _respondEnd(confirmed) {
+    _closeEnd();
+    if (window.api && typeof window.api.logbookEndResponse === 'function') {
+      window.api.logbookEndResponse(confirmed).catch((err) => {
+        console.warn('[Carnet de vol] Réponse fin de vol KO :', err);
+      });
+    }
+  }
+  if (btnEndYes) btnEndYes.addEventListener('click', () => _respondEnd(true));
+  if (btnEndNo) btnEndNo.addEventListener('click', () => _respondEnd(false));
+
+  if (window.api && typeof window.api.onLogbookConfirmEnd === 'function') {
+    window.api.onLogbookConfirmEnd((summary) => {
+      if (endSummary) {
+        const dep = (summary && summary.departureIcao) || '—';
+        const arr = (summary && summary.arrivalIcao) || '—';
+        const ac = (summary && summary.aircraft) || '';
+        const tng = (summary && summary.touchAndGoCount) || 0;
+        let html = `<div class="lb-end-route"><span class="lb-icao">${esc(dep)}</span>`
+          + ` → <span class="lb-icao">${esc(arr)}</span></div>`;
+        if (ac) html += `<div class="lb-end-aircraft">${esc(ac)}</div>`;
+        if (tng) html += `<div class="lb-muted">${esc(String(tng))} touch-and-go</div>`;
+        endSummary.innerHTML = html;
+      }
+      if (endOverlay) endOverlay.classList.add('visible');
+    });
+  }
+  if (window.api && typeof window.api.onLogbookConfirmCancel === 'function') {
+    window.api.onLogbookConfirmCancel(() => _closeEnd());
+  }
 }

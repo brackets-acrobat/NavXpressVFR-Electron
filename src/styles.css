@@ -2405,6 +2405,11 @@ tr:hover {
     overflow: hidden;
 }
 
+/* La modale détails est nettement plus étroite (données clé/valeur). */
+#logbook-detail-popup {
+    width: 520px;
+}
+
 .logbook-h3 {
     margin: 0 0 14px 0;
     color: #00bcd4;
@@ -2505,6 +2510,30 @@ tr:hover {
     padding-bottom: 4px;
 }
 
+/* Sections clé/valeur (Appareil, Départ, Arrivée, Temps, Atterrissage final) :
+   libellé à gauche, valeur alignée complètement à droite de la modale.
+   Les rubriques Route et Touch-and-go ne sont pas des tables → non concernées. */
+.lb-detail-section .ap-info-table th {
+    white-space: nowrap;
+    vertical-align: top;
+}
+
+.lb-detail-section .ap-info-table td {
+    text-align: right;
+}
+
+/* Rubrique Route : tous les legs sur une seule ligne, séparés par des flèches. */
+.lb-route {
+    font-size: 13px;
+    line-height: 1.9;
+    color: #e0e0e0;
+}
+
+.lb-route-arrow {
+    color: #00bcd4;
+    margin: 0 4px;
+}
+
 .lb-list {
     margin: 0;
     padding-left: 20px;
@@ -2515,6 +2544,25 @@ tr:hover {
 
 .lb-muted {
     color: #888;
+}
+
+/* Modale « Le vol est-il terminé ? » */
+#logbook-end-question {
+    font-size: 13px;
+    color: #e0e0e0;
+    line-height: 1.5;
+    margin: 0 0 10px 0;
+}
+
+#logbook-end-summary .lb-end-route {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+#logbook-end-summary .lb-end-aircraft {
+    color: #bbb;
+    font-size: 13px;
 }
 
 

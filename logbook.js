@@ -57,6 +57,10 @@ const TOUCH_AND_GO_WINDOW_MS = 15_000;
 // (plusieurs minutes). Ajustable.
 const BOUNCE_WINDOW_MS = 10_000;
 
+// Seuil « vitesse à zéro » (kt) pour la détection de fin de vol. GROUND
+// VELOCITY n'est jamais pile 0 (micro-dérive physique) → on tolère < 1 kt.
+const GROUND_STOP_KT = 1;
+
 // Seuils AGL pour l'activation conditionnelle du buffer landing (hystérésis).
 const LANDING_SAMPLE_ENTER_FT = 500;
 const LANDING_SAMPLE_EXIT_FT  = 700;
@@ -163,10 +167,20 @@ class LogbookEngine {
     //   _pendingTouchdown: VS/G mesurés au PREMIER contact ; les rebonds qui
     //                      suivent sont ignorés (on garde la 1re valeur).
     // L'événement se conclut soit en touch-and-go (reparti en l'air au-delà de
-    // BOUNCE_WINDOW_MS), soit en atterrissage final (immobilisé ≥15 s).
+    // BOUNCE_WINDOW_MS), soit en atterrissage final (confirmé par le pilote).
     this._lastContactTs = 0;
     this._landingFirstTs = 0;
     this._pendingTouchdown = null;
+
+    // Confirmation de fin de vol (≥2 conditions parmi vitesse≈0 / moteur
+    // éteint / frein de parking) :
+    //   _endConfirmActive   : une demande est en cours (modale ouverte côté
+    //                         renderer, en attente de réponse). Pas de relance.
+    //   _endConfirmDeclined : l'utilisateur a répondu « Non » ; pas de relance
+    //                         tant que les conditions ne sont pas retombées
+    //                         sous le seuil de 2 (puis ré-réunies).
+    this._endConfirmActive = false;
+    this._endConfirmDeclined = false;
 
     // Dernier état des entrées (utile pour détecter les fronts montants)
     this._lastOnGround = true;
@@ -251,6 +265,8 @@ class LogbookEngine {
     const lat = Number.isFinite(frame.lat) ? frame.lat : null;
     const lon = Number.isFinite(frame.lon) ? frame.lon : null;
     const altAgl = Number.isFinite(frame.altAglFt) ? frame.altAglFt : null;
+    const gsKt = Number.isFinite(frame.groundSpeedKt) ? frame.groundSpeedKt : null;
+    const parkingBrake = !!frame.parkingBrake;
 
     // 1) Hystérésis du sampling rapide : ON sous 500, OFF au-dessus de 700.
     //    Désactivé d'office hors IN_FLIGHT (au sol, on ne mesure pas un impact).
@@ -328,6 +344,8 @@ class LogbookEngine {
           this._pendingTouchdown = null;
           this._lastContactTs = 0;
           this._landingFirstTs = 0;
+          this._endConfirmActive = false;
+          this._endConfirmDeclined = false;
           this._transition(STATES.OFF_TRACK);
         }
         break;
@@ -348,31 +366,48 @@ class LogbookEngine {
           }
         }
 
-        // (b) Classification de l'événement d'atterrissage en cours
-        if (this._pendingTouchdown) {
-          if (!onGround && (now - this._lastContactTs) > BOUNCE_WINDOW_MS) {
-            // Reparti en l'air au-delà de la fenêtre rebond → remise de gaz
-            // confirmée : c'était un touch-and-go. On archive le 1er toucher.
-            if (this._currentFlight) {
-              this._currentFlight.touchAndGoCount++;
-              this._currentFlight.touchAndGoLandings.push(this._pendingTouchdown);
+        // (b) Classification : remise de gaz (touch-and-go) confirmée
+        if (this._pendingTouchdown
+            && !onGround && (now - this._lastContactTs) > BOUNCE_WINDOW_MS) {
+          // Reparti en l'air au-delà de la fenêtre rebond → c'était un
+          // touch-and-go. On archive le 1er toucher et on annule une
+          // éventuelle demande de fin de vol restée ouverte.
+          if (this._currentFlight) {
+            this._currentFlight.touchAndGoCount++;
+            this._currentFlight.touchAndGoLandings.push(this._pendingTouchdown);
+          }
+          this._pendingTouchdown = null;
+          this._lastContactTs = 0;
+          this._landingFirstTs = 0;
+          this._cancelEndConfirm();
+        }
+
+        // (c) Détection de fin de vol : on a atterri (pending présent) et on
+        // est au sol. Si ≥2 des 3 conditions {vitesse≈0, moteur éteint, frein
+        // de parking} sont réunies → on demande confirmation au pilote.
+        if (this._pendingTouchdown && onGround) {
+          const cStop   = (gsKt !== null && gsKt < GROUND_STOP_KT) ? 1 : 0;
+          const cEngOff = combustion ? 0 : 1;
+          const cBrake  = parkingBrake ? 1 : 0;
+          const met = cStop + cEngOff + cBrake;
+          if (met >= 2) {
+            if (!this._endConfirmActive && !this._endConfirmDeclined) {
+              this._endConfirmActive = true;
+              this._emit('logbook-confirm-end', this._endSummary());
             }
-            this._pendingTouchdown = null;
-            this._lastContactTs = 0;
-            this._landingFirstTs = 0;
-          } else if (onGround && (now - this._lastContactTs) >= TOUCH_AND_GO_WINDOW_MS) {
-            // Immobilisé ≥15 s après le dernier contact → atterrissage final.
-            this._handleOnBlock();
+          } else {
+            // Conditions retombées → ré-arme pour une future stabilisation.
+            this._endConfirmDeclined = false;
           }
         }
         break;
       }
 
       case STATES.ON_BLOCK: {
-        // Moteur coupé → SHUTDOWN + écriture du vol
-        if (!combustion) {
-          this._handleShutdown();
-        }
+        // État transitoire : atteint uniquement via confirmEndOfFlight(true),
+        // qui enchaîne immédiatement _handleOnBlock() puis _handleShutdown().
+        // On ne déclenche donc plus rien sur la coupure moteur ici (la fin de
+        // vol est pilotée par la modale de confirmation).
         break;
       }
 
@@ -499,8 +534,55 @@ class LogbookEngine {
     this._landingFirstTs = now;
     this._lastContactTs = now;
 
+    // Nouvel événement d'atterrissage → ré-arme la confirmation de fin de vol
+    // (un refus précédent ne doit pas bloquer ce nouvel atterrissage).
+    this._endConfirmDeclined = false;
+
     // Émission immédiate vers le renderer (popup landing-rate).
     this._emit('landing-result', result);
+  }
+
+  // Réponse de la modale « Le vol est-il terminé ? » (relayée par main.js).
+  //   confirmed = true  → on fige l'arrivée + l'atterrissage et on écrit le vol.
+  //   confirmed = false → le vol continue ; on ne relance pas la demande tant
+  //                       que les conditions ne sont pas retombées puis ré-réunies.
+  // Ignorée s'il n'y a pas de demande active (réponse tardive / obsolète).
+  confirmEndOfFlight(confirmed) {
+    if (!this._endConfirmActive) return;
+    this._endConfirmActive = false;
+    if (!this._currentFlight) return;
+    if (confirmed) {
+      this._handleOnBlock();   // arrivée + atterrissage final → ON_BLOCK
+      this._handleShutdown();  // totaux + écriture JSONL → OFF_TRACK
+    } else {
+      this._endConfirmDeclined = true;
+    }
+  }
+
+  // Annule une demande de confirmation en cours (ex. l'avion a redécollé) et
+  // demande au renderer de fermer la modale si elle est ouverte.
+  _cancelEndConfirm() {
+    if (this._endConfirmActive) {
+      this._endConfirmActive = false;
+      this._emit('logbook-confirm-cancel', {});
+    }
+    this._endConfirmDeclined = false;
+  }
+
+  // Résumé succinct pour la modale de confirmation (départ/arrivée/appareil).
+  // L'arrivée est calculée à titre indicatif (dernier waypoint du plan) ; elle
+  // sera figée pour de bon dans _handleOnBlock() si l'utilisateur confirme.
+  _endSummary() {
+    const f = this._currentFlight;
+    const route = (f && Array.isArray(f.route)) ? f.route : [];
+    const arrWp = route.length ? route[route.length - 1] : null;
+    const arr = this._airportFromWp(arrWp);
+    return {
+      departureIcao: (f && f.departure) ? f.departure.icao : '',
+      arrivalIcao: arr.icao,
+      aircraft: (f && f.aircraft) ? f.aircraft.title : '',
+      touchAndGoCount: f ? f.touchAndGoCount : 0,
+    };
   }
 
   _handleOnBlock() {
@@ -575,6 +657,8 @@ class LogbookEngine {
     this._pendingTouchdown = null;
     this._lastContactTs = 0;
     this._landingFirstTs = 0;
+    this._endConfirmActive = false;
+    this._endConfirmDeclined = false;
     this._transition(STATES.OFF_TRACK);
   }
 
@@ -613,6 +697,7 @@ module.exports = {
   ROLLING_BUFFER_SIZE,
   TOUCH_AND_GO_WINDOW_MS,
   BOUNCE_WINDOW_MS,
+  GROUND_STOP_KT,
   LANDING_SAMPLE_ENTER_FT,
   LANDING_SAMPLE_EXIT_FT,
 };

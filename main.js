@@ -1271,6 +1271,19 @@ function broadcastFlightSaved(payload) {
     try { w.webContents.send('logbook-flight-saved', payload); } catch (_) {}
   });
 }
+// Demande de confirmation « le vol est-il terminé ? » (≥2 conditions parmi
+// vitesse≈0 / moteur éteint / frein de parking). Le renderer affiche une modale.
+function broadcastLogbookConfirmEnd(payload) {
+  BrowserWindow.getAllWindows().forEach(w => {
+    try { w.webContents.send('logbook-confirm-end', payload); } catch (_) {}
+  });
+}
+// Annulation de la demande (l'avion a redécollé avant la réponse) → fermer la modale.
+function broadcastLogbookConfirmCancel(payload) {
+  BrowserWindow.getAllWindows().forEach(w => {
+    try { w.webContents.send('logbook-confirm-cancel', payload); } catch (_) {}
+  });
+}
 
 // Lit Documents/NavXpressVFR/logbook/flights.jsonl en mémoire (utilisé
 // par une future modale Historique). Renvoie [] si le fichier est absent.
@@ -1309,6 +1322,12 @@ ipcMain.handle('logbook-set-flightplan', async (event, plan) => {
 // Direct To effectué par l'utilisateur (poussé depuis direct-to.js).
 ipcMain.handle('logbook-direct-to', async (event, dt) => {
   if (_logbookEngine) _logbookEngine.recordDirectTo(dt);
+  return { ok: true };
+});
+
+// Réponse de la modale « Le vol est-il terminé ? » (Oui = true → écriture).
+ipcMain.handle('logbook-end-response', async (event, confirmed) => {
+  if (_logbookEngine) _logbookEngine.confirmEndOfFlight(!!confirmed);
   return { ok: true };
 });
 
@@ -1473,6 +1492,7 @@ ipcMain.handle('simconnect-connecter', async () => {
     handle.addToDataDefinition(SC_TRACK_DEF_ID, 'PLANE LONGITUDE',         'degrees',        SCDataType.FLOAT64);
     handle.addToDataDefinition(SC_TRACK_DEF_ID, 'GROUND VELOCITY',         'knots',          SCDataType.FLOAT64);
     handle.addToDataDefinition(SC_TRACK_DEF_ID, 'PLANE ALT ABOVE GROUND',  'feet',           SCDataType.FLOAT64);
+    handle.addToDataDefinition(SC_TRACK_DEF_ID, 'BRAKE PARKING POSITION',  'Bool',           SCDataType.INT32);
     handle.requestDataOnSimObject(
       SC_TRACK_REQ_ID,
       SC_TRACK_DEF_ID,
@@ -1533,10 +1553,11 @@ ipcMain.handle('simconnect-connecter', async () => {
           const lon      = data.data.readFloat64();
           const gs       = data.data.readFloat64();
           const altAgl   = data.data.readFloat64();
+          const parkBrake = data.data.readInt32() !== 0;
           if (_logbookEngine) {
             _logbookEngine.feedTracking({
               onGround, eng1, eng2, lat, lon,
-              groundSpeedKt: gs, altAglFt: altAgl,
+              groundSpeedKt: gs, altAglFt: altAgl, parkingBrake: parkBrake,
             });
             // Synchronise le sampling SimConnect avec la décision du moteur.
             _setLandingSamplingSC(handle, _logbookEngine.shouldSampleLanding());
@@ -1719,6 +1740,8 @@ app.whenReady().then(() => {
       if (channel === 'logbook-state')        broadcastLogbookState(payload);
       else if (channel === 'landing-result')  broadcastLandingResult(payload);
       else if (channel === 'logbook-flight-saved') broadcastFlightSaved(payload);
+      else if (channel === 'logbook-confirm-end')    broadcastLogbookConfirmEnd(payload);
+      else if (channel === 'logbook-confirm-cancel') broadcastLogbookConfirmCancel(payload);
       // 'logbook-sampling' (debug du on/off du buffer) : non rebroadcasté pour l'instant
     },
   });

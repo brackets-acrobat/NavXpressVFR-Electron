@@ -78,6 +78,8 @@ contextBridge.exposeInMainWorld('api', {
     logbookSetFlightPlan: (plan) => ipcRenderer.invoke('logbook-set-flightplan', plan),
     logbookRecordDirectTo: (dt) => ipcRenderer.invoke('logbook-direct-to', dt),
     logbookHistorique: () => ipcRenderer.invoke('logbook-historique'),
+    // Réponse à la modale « Le vol est-il terminé ? » (true = Oui → écriture).
+    logbookEndResponse: (confirmed) => ipcRenderer.invoke('logbook-end-response', !!confirmed),
     // Main → renderer : événements de la machine à états et résultats de calcul.
     onLogbookState: (callback) => {
         const listener = (_event, data) => callback(data);
@@ -93,5 +95,17 @@ contextBridge.exposeInMainWorld('api', {
         const listener = (_event, data) => callback(data);
         ipcRenderer.on('logbook-flight-saved', listener);
         return () => ipcRenderer.removeListener('logbook-flight-saved', listener);
+    },
+    // Demande de confirmation de fin de vol (≥2 conditions réunies).
+    onLogbookConfirmEnd: (callback) => {
+        const listener = (_event, data) => callback(data);
+        ipcRenderer.on('logbook-confirm-end', listener);
+        return () => ipcRenderer.removeListener('logbook-confirm-end', listener);
+    },
+    // Annulation de la demande (avion reparti) → fermer la modale.
+    onLogbookConfirmCancel: (callback) => {
+        const listener = (_event, data) => callback(data);
+        ipcRenderer.on('logbook-confirm-cancel', listener);
+        return () => ipcRenderer.removeListener('logbook-confirm-cancel', listener);
     },
 });
