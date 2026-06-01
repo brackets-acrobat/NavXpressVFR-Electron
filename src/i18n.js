@@ -250,6 +250,10 @@ const TRANSLATIONS = {
     optTouchAnnounce: "Annonce d'arrivée pour tour de piste / touché",
     optFinalArrival: "Son d'arrivée finale (cuckoo)",
     optLogbook: "Logbook automatique",
+    optPrecision: "Évaluation de précision du vol",
+
+    // Évaluation de précision — modale résultat
+    precResultTitle: "Précision du vol",
 
     // Direct To
     dtBtnLabel: "Direct to",
@@ -555,6 +559,10 @@ const TRANSLATIONS = {
     optTouchAnnounce: "Pattern / touch-and-go arrival announcement",
     optFinalArrival: "Final arrival sound (cuckoo)",
     optLogbook: "Automatic logbook",
+    optPrecision: "Flight precision evaluation",
+
+    // Flight precision — result modal
+    precResultTitle: "Flight precision",
 
     // Direct To
     dtBtnLabel: "Direct to",

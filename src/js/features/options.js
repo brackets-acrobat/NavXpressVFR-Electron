@@ -25,6 +25,7 @@ const DEFAULT_OPTIONS = {
   touchAnnounceEnabled: true,
   finalArrivalEnabled: true,
   logbookEnabled: true,
+  precisionEnabled: true,
 };
 
 // État global mutable (lecture par d'autres features, écriture via setAppOption).
@@ -124,6 +125,17 @@ function initOptions() {
     });
   }
 
+  // Toggle "Évaluation de précision du vol".
+  // NB : la checkbox est verrouillée (disabled) en vol par precision.js
+  // (impossible d'activer/désactiver une fois l'avion en l'air).
+  const cbPrecision = document.getElementById('opt-precision-enabled');
+  if (cbPrecision) {
+    cbPrecision.checked = !!window.appOptions.precisionEnabled;
+    cbPrecision.addEventListener('change', () => {
+      setAppOption('precisionEnabled', cbPrecision.checked);
+    });
+  }
+
   function _ouvrirOptions() {
     if (!optionsOverlay) return;
     // Resynchronise les checkboxes au cas où l'état aurait changé ailleurs.
@@ -133,6 +145,7 @@ function initOptions() {
     if (cbTouchAnnounce) cbTouchAnnounce.checked = !!window.appOptions.touchAnnounceEnabled;
     if (cbFinalArrival) cbFinalArrival.checked = !!window.appOptions.finalArrivalEnabled;
     if (cbLogbook) cbLogbook.checked = !!window.appOptions.logbookEnabled;
+    if (cbPrecision) cbPrecision.checked = !!window.appOptions.precisionEnabled;
     optionsOverlay.classList.add('visible');
   }
 

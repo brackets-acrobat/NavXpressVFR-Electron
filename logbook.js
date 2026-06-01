@@ -547,11 +547,17 @@ class LogbookEngine {
   //   confirmed = false → le vol continue ; on ne relance pas la demande tant
   //                       que les conditions ne sont pas retombées puis ré-réunies.
   // Ignorée s'il n'y a pas de demande active (réponse tardive / obsolète).
-  confirmEndOfFlight(confirmed) {
+  //   precisionScore (optionnel) = score d'évaluation de précision (0..100)
+  //                       calculé côté renderer ; figé sur la fiche du vol avant
+  //                       écriture JSONL. Absent / non-fini → champ omis.
+  confirmEndOfFlight(confirmed, precisionScore) {
     if (!this._endConfirmActive) return;
     this._endConfirmActive = false;
     if (!this._currentFlight) return;
     if (confirmed) {
+      if (Number.isFinite(precisionScore)) {
+        this._currentFlight.precision = precisionScore;
+      }
       this._handleOnBlock();   // arrivée + atterrissage final → ON_BLOCK
       this._handleShutdown();  // totaux + écriture JSONL → OFF_TRACK
     } else {

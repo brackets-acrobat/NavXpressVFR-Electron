@@ -2565,6 +2565,17 @@ tr:hover {
     font-size: 13px;
 }
 
+/* -------------------------------------------------- */
+/* Modale résultat — évaluation de précision          */
+/* -------------------------------------------------- */
+#precision-result-body .prec-score {
+    font-size: 44px;
+    font-weight: 700;
+    color: #00bcd4;
+    text-align: center;
+    margin: 10px 0 6px 0;
+}
+
 
 /* -------------------------------------------------- */
 /* Modale détails d'un aéroport                       */

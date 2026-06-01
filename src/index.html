@@ -1080,6 +1080,10 @@
                     <span data-i18n="optLogbook">Logbook automatique</span>
                     <input type="checkbox" class="toggle-switch" id="opt-logbook-enabled">
                 </label>
+                <label class="layer-toggle-row" for="opt-precision-enabled">
+                    <span data-i18n="optPrecision">Évaluation de précision du vol</span>
+                    <input type="checkbox" class="toggle-switch" id="opt-precision-enabled">
+                </label>
             </div>
 
             <div class="create-flight-actions" style="margin-top:16px;">
@@ -1133,6 +1137,18 @@
             <div class="create-flight-actions" style="margin-top:18px; display:flex; gap:10px; justify-content:flex-end;">
                 <button id="btn-logbook-end-no" class="btn-secondary" data-i18n="lbEndNo">Non, continuer</button>
                 <button id="btn-logbook-end-yes" class="btn-primary" data-i18n="lbEndYes">Oui, enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Résultat de l'évaluation de précision (après confirmation de fin
+         de vol, si l'évaluation était active). Score + détail des contributions. -->
+    <div id="precision-result-overlay" class="modal-overlay">
+        <div id="precision-result-popup" class="modal-popup" style="width:420px;">
+            <h3 class="logbook-h3" data-i18n="precResultTitle">Précision du vol</h3>
+            <div id="precision-result-body"></div>
+            <div class="create-flight-actions" style="margin-top:18px; display:flex; justify-content:flex-end;">
+                <button id="btn-precision-result-close" class="btn-primary" data-i18n="btnClose">Fermer</button>
             </div>
         </div>
     </div>
@@ -1364,6 +1380,7 @@
     <script src="js/features/waypoint-modals.js"></script>
     <script src="js/features/logbook.js"></script>
     <script src="js/features/logbook-bridge.js"></script>
+    <script src="js/features/precision.js"></script>
     <!-- Orchestrateur : DOMContentLoaded qui appelle les init* dans l'ordre — chargé en dernier -->
     <script src="ui.js"></script>
 </body>

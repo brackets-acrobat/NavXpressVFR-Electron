@@ -30,6 +30,7 @@ const LB_LABELS = {
     landing: 'Atterrissage', onBlock: 'On-block',
     blockTime: 'Temps block', flightTime: 'Temps de vol',
     vs: 'Vitesse vert.', gForce: 'Facteur charge', tngCount: 'Touch-and-go',
+    precision: 'Précision du vol',
     noArrival: 'Vol non terminé (pas d\'arrivée enregistrée).',
     wpPattern: 'tour de piste',
     dtPlan: 'Vers waypoint du plan', dtAirport: 'Vers aéroport', dtPoint: 'Vers point carte',
@@ -42,6 +43,7 @@ const LB_LABELS = {
     landing: 'Landing', onBlock: 'On-block',
     blockTime: 'Block time', flightTime: 'Flight time',
     vs: 'Vertical speed', gForce: 'Load factor', tngCount: 'Touch-and-go',
+    precision: 'Flight precision',
     noArrival: 'Flight not completed (no arrival recorded).',
     wpPattern: 'pattern',
     dtPlan: 'To plan waypoint', dtAirport: 'To airport', dtPoint: 'To map point',
@@ -218,6 +220,10 @@ function initLogbook() {
       landRows.push([_lbl('vs'), '—']);
     }
     landRows.push([_lbl('tngCount'), esc(String(f.touchAndGoCount || 0))]);
+    // Score de précision (présent seulement si l'évaluation était active à ce vol).
+    if (Number.isFinite(f.precision)) {
+      landRows.push([_lbl('precision'), `${esc(String(f.precision))} %`]);
+    }
     html += _section(_lbl('secLanding'), buildKVTable(landRows));
 
     // Liste des touch-and-go (chacun avec sa VS/G)
@@ -305,8 +311,17 @@ function initLogbook() {
   function _closeEnd() { if (endOverlay) endOverlay.classList.remove('visible'); }
   function _respondEnd(confirmed) {
     _closeEnd();
+    // Si l'utilisateur confirme la fin du vol, on finalise l'évaluation de
+    // précision AVANT l'IPC : finalize() applique la contribution des touchers,
+    // affiche la modale résultat, et renvoie le score à stocker dans la fiche
+    // du vol. Sur « Non », le vol continue → on ne touche pas à la précision.
+    let precision = null;
+    if (confirmed && window.precision && typeof window.precision.finalize === 'function') {
+      try { precision = window.precision.finalize(); }
+      catch (err) { console.warn('[Précision] finalize KO :', err); }
+    }
     if (window.api && typeof window.api.logbookEndResponse === 'function') {
-      window.api.logbookEndResponse(confirmed).catch((err) => {
+      window.api.logbookEndResponse(confirmed, precision).catch((err) => {
         console.warn('[Carnet de vol] Réponse fin de vol KO :', err);
       });
     }

@@ -81,4 +81,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Lit window.appOptions (chargerOptions() awaité plus haut) au démarrage.
   initLogbookBridge();
 
+  // Évaluation de précision du vol : s'abonne à onDonneesPosition / onLandingResult /
+  // onLogbookState et expose window.precision.finalize (appelé par logbook.js à la
+  // confirmation de fin de vol). Sous-fonction du carnet de vol (logbook ON requis).
+  // Lit window.appOptions.precisionEnabled au décollage.
+  initPrecision();
+
 });

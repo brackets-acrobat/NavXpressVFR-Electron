@@ -44,7 +44,13 @@ function askPatternModal(airportCode) {
 // Recherche aéroport — utilise la base OurAirports locale
 // (utilisée par toutes les modales)
 // -------------------------------------------------------
-async function rechercherAeroport(icao, statusEl, latEl, lonEl, nameEl) {
+// latRadioName / lonRadioName (optionnels) : noms EXPLICITES des groupes de
+// radios N/S et E/W à synchroniser avec le signe des coordonnées. À fournir
+// quand les radios ne sont pas dans le même conteneur direct que les inputs
+// (ex. modale « Créer un plan » : input dans .input-group, radios dans un div
+// frère .cf-radio-group → l'auto-détection par closest() échoue et le signe
+// Ouest/Sud était perdu). Sans ces paramètres, on retombe sur l'auto-détection.
+async function rechercherAeroport(icao, statusEl, latEl, lonEl, nameEl, latRadioName, lonRadioName) {
   const code = icao.trim().toUpperCase();
   if (!code) return;
 
@@ -74,21 +80,25 @@ async function rechercherAeroport(icao, statusEl, latEl, lonEl, nameEl) {
     latEl.value = Math.abs(lat).toFixed(6);
     lonEl.value = Math.abs(lon).toFixed(6);
 
-    // Mettre à jour les radios N/S et E/W si présentes dans le même formulaire
-    const latRadioName = latEl.closest('form, div')
+    // Noms des groupes de radios N/S et E/W : explicites si fournis par
+    // l'appelant, sinon auto-détection depuis le conteneur du champ (fragile —
+    // échoue si le radio est dans un div frère, cf. en-tête de la fonction).
+    const latRN = latRadioName || latEl.closest('form, div')
       ?.querySelector('input[type="radio"][value="N"], input[type="radio"][value="S"]')
       ?.name;
-    const lonRadioName = lonEl.closest('form, div')
+    const lonRN = lonRadioName || lonEl.closest('form, div')
       ?.querySelector('input[type="radio"][value="E"], input[type="radio"][value="W"]')
       ?.name;
 
-    if (latRadioName) {
+    if (latRN) {
       const latDir = lat >= 0 ? 'N' : 'S';
-      document.querySelector(`input[name="${latRadioName}"][value="${latDir}"]`).checked = true;
+      const el = document.querySelector(`input[name="${latRN}"][value="${latDir}"]`);
+      if (el) el.checked = true;
     }
-    if (lonRadioName) {
+    if (lonRN) {
       const lonDir = lon >= 0 ? 'E' : 'W';
-      document.querySelector(`input[name="${lonRadioName}"][value="${lonDir}"]`).checked = true;
+      const el = document.querySelector(`input[name="${lonRN}"][value="${lonDir}"]`);
+      if (el) el.checked = true;
     }
 
     statusEl.className = 'search-status ok';

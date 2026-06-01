@@ -79,7 +79,9 @@ contextBridge.exposeInMainWorld('api', {
     logbookRecordDirectTo: (dt) => ipcRenderer.invoke('logbook-direct-to', dt),
     logbookHistorique: () => ipcRenderer.invoke('logbook-historique'),
     // Réponse à la modale « Le vol est-il terminé ? » (true = Oui → écriture).
-    logbookEndResponse: (confirmed) => ipcRenderer.invoke('logbook-end-response', !!confirmed),
+    // `precision` (optionnel) = score d'évaluation de précision à stocker dans la fiche.
+    logbookEndResponse: (confirmed, precision) =>
+        ipcRenderer.invoke('logbook-end-response', !!confirmed, precision),
     // Main → renderer : événements de la machine à états et résultats de calcul.
     onLogbookState: (callback) => {
         const listener = (_event, data) => callback(data);

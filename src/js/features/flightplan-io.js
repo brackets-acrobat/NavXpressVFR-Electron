@@ -52,7 +52,9 @@ function initFlightPlanIO() {
         document.getElementById('search-status-dep'),
         document.getElementById('create-lat-dep'),
         document.getElementById('create-lon-dep'),
-        document.getElementById('create-icao-dep')
+        document.getElementById('create-icao-dep'),
+        'dep-lat-dir',
+        'dep-lon-dir'
       );
     });
 
@@ -62,7 +64,9 @@ function initFlightPlanIO() {
         document.getElementById('search-status-arr'),
         document.getElementById('create-lat-arr'),
         document.getElementById('create-lon-arr'),
-        document.getElementById('create-icao-arr')
+        document.getElementById('create-icao-arr'),
+        'arr-lat-dir',
+        'arr-lon-dir'
       );
     });
 

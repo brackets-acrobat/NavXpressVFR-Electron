@@ -52,3 +52,69 @@
     const capMagDeg = (rvDeg + deriveDeg - declinaisonMoyenneGlobale + 360) % 360;
     return { distanceNM, rvDeg, capMagDeg, gs, tempsSec, tempsFormate };
   }
+
+  // --------------------------------------------------------------------------
+  // Helpers géo partagés (haversine + cross-track) + résolution du leg actif.
+  // Utilisés par l'évaluation de précision (precision.js). sim.js conserve ses
+  // propres copies locales (non refactoré ici pour ne pas toucher à sa machine
+  // sons/déviation) — duplication mineure assumée.
+  // --------------------------------------------------------------------------
+
+  // Distance grand-cercle entre deux points (nautical miles).
+  function distanceNM(lat1, lon1, lat2, lon2) {
+    const R_NM = 3440.065;
+    const toRad = d => d * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2
+      + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R_NM * Math.asin(Math.min(1, Math.sqrt(a)));
+  }
+
+  // Cross-track distance (XTD) signée d'un point P à la route grand-cercle A→B
+  // (nautical miles). Positif = à droite de la route, négatif = à gauche.
+  // Pour un test de seuil, prendre Math.abs(). (Identique à sim.js.)
+  function crossTrackNM(latP, lonP, latA, lonA, latB, lonB) {
+    const R_NM = 3440.065;
+    const toRad = d => d * Math.PI / 180;
+    const φA = toRad(latA), λA = toRad(lonA);
+    const φP = toRad(latP), λP = toRad(lonP);
+    const φB = toRad(latB), λB = toRad(lonB);
+    const Δφap = φP - φA, Δλap = λP - λA;
+    const aap = Math.sin(Δφap / 2) ** 2
+      + Math.cos(φA) * Math.cos(φP) * Math.sin(Δλap / 2) ** 2;
+    const d_AP = 2 * Math.atan2(Math.sqrt(aap), Math.sqrt(1 - aap));
+    function bearing(φ1, λ1, φ2, λ2) {
+      const y = Math.sin(λ2 - λ1) * Math.cos(φ2);
+      const x = Math.cos(φ1) * Math.sin(φ2)
+        - Math.sin(φ1) * Math.cos(φ2) * Math.cos(λ2 - λ1);
+      return Math.atan2(y, x);
+    }
+    const θ_AB = bearing(φA, λA, φB, λB);
+    const θ_AP = bearing(φA, λA, φP, λP);
+    return Math.asin(Math.sin(d_AP) * Math.sin(θ_AP - θ_AB)) * R_NM;
+  }
+
+  // Résout le leg actif courant (dep → arr) pour les features qui ont besoin de
+  // la trajectoire suivie (ex. évaluation de précision). MÊME logique de choix
+  // que sim.js (modes Direct-To externe / Direct-To plan / leg du plan), pour
+  // que le « leg » vu par la précision corresponde à celui vu par l'alerte de
+  // déviation. Retourne { dep:{lat,lon}, arr:{lat,lon} } ou null s'il n'y a pas
+  // de leg actif (→ la précision gèle l'évaluation).
+  function getActiveLeg() {
+    if (_directToExternalActive && _directToExternalTarget && _directToOrigin) {
+      return { dep: _directToOrigin, arr: _directToExternalTarget };
+    }
+    if (!flightPlan || flightPlan.length < 2) return null;
+    if (activeLegIndex < 1 || activeLegIndex >= flightPlan.length) return null;
+    const dep = (_directToActive && _directToOrigin)
+      ? _directToOrigin
+      : flightPlan[activeLegIndex - 1];
+    const arr = flightPlan[activeLegIndex];
+    if (!dep || !arr
+      || !Number.isFinite(dep.lat) || !Number.isFinite(dep.lon)
+      || !Number.isFinite(arr.lat) || !Number.isFinite(arr.lon)) {
+      return null;
+    }
+    return { dep, arr };
+  }

@@ -1157,8 +1157,10 @@ ipcMain.handle('logbook-direct-to', async (event, dt) => {
 });
 
 // Réponse de la modale « Le vol est-il terminé ? » (Oui = true → écriture).
-ipcMain.handle('logbook-end-response', async (event, confirmed) => {
-  if (_logbookEngine) _logbookEngine.confirmEndOfFlight(!!confirmed);
+// `precision` (optionnel) = score d'évaluation de précision calculé côté renderer,
+// stocké dans la fiche du vol avant écriture JSONL.
+ipcMain.handle('logbook-end-response', async (event, confirmed, precision) => {
+  if (_logbookEngine) _logbookEngine.confirmEndOfFlight(!!confirmed, precision);
   return { ok: true };
 });
 
