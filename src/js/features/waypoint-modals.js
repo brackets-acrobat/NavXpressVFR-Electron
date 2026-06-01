@@ -96,7 +96,7 @@ function initWaypointModals() {
       await calculerDeclinaisonCentroide();
       flightPlan.forEach((p, idx) => tracerPointVisuel(p, idx));
       redessinerSegments();
-      const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
+      const bounds = L.latLngBounds(flightPlanDisplayLatLngs());
       map.fitBounds(bounds, { padding: [50, 50] });
 
       mettreAJourLogDeNav();

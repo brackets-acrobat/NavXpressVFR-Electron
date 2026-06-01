@@ -30,7 +30,7 @@ function ouvrirModaleConfirmation(latlng, insertLeg, moveIndex) {
   }
 
   latEl.value = latlng.lat.toFixed(6);
-  lonEl.value = latlng.lng.toFixed(6);
+  lonEl.value = wrapLon(latlng.lng).toFixed(6);
   errEl.textContent = '';
 
   overlay.classList.add('visible');
@@ -47,14 +47,16 @@ function ouvrirModaleConfirmation(latlng, insertLeg, moveIndex) {
     overlay.classList.remove('visible');
 
     if (moveIndex !== null) {
-      // Déplacement : mise à jour des coordonnées du point existant
+      // Déplacement : mise à jour des coordonnées du point existant.
+      // wrapLon : le drag a pu se faire dans un repère déroulé (antiméridien) →
+      // on re-normalise la longitude stockée dans [-180, 180].
       flightPlan[moveIndex].lat = latlng.lat;
-      flightPlan[moveIndex].lon = latlng.lng;
+      flightPlan[moveIndex].lon = wrapLon(latlng.lng);
       flightPlan[moveIndex].name = name;
       flightPlan[moveIndex].ident = name;
     } else {
       // Scission : insertion du nouveau point dans le plan
-      const nouveauPoint = { name, ident: name, lat: latlng.lat, lon: latlng.lng };
+      const nouveauPoint = { name, ident: name, lat: latlng.lat, lon: wrapLon(latlng.lng) };
       flightPlan.splice(insertLeg, 0, nouveauPoint);
       const altVoisin = legAltitudes[insertLeg] ?? ALT_DEFAULT;
       legAltitudes.splice(insertLeg, 0, altVoisin);
@@ -74,7 +76,7 @@ function ouvrirModaleConfirmation(latlng, insertLeg, moveIndex) {
     await calculerDeclinaisonCentroide();
     flightPlan.forEach((p, idx) => tracerPointVisuel(p, idx));
     redessinerSegments();
-    const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
+    const bounds = L.latLngBounds(flightPlanDisplayLatLngs());
     map.fitBounds(bounds, { padding: [50, 50] });
     mettreAJourLogDeNav();
   };
@@ -183,7 +185,7 @@ function ouvrirModaleDeleteLeg(legIndex) {
     flightPlan.forEach((p, idx) => tracerPointVisuel(p, idx));
     redessinerSegments();
     if (flightPlan.length > 1) {
-      const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
+      const bounds = L.latLngBounds(flightPlanDisplayLatLngs());
       map.fitBounds(bounds, { padding: [50, 50], animate: false });
     }
     mettreAJourLogDeNav();

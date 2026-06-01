@@ -156,7 +156,7 @@ function initLegModals() {
     flightPlan.forEach((p, idx) => tracerPointVisuel(p, idx));
     redessinerSegments();
     if (flightPlan.length > 1) {
-      const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
+      const bounds = L.latLngBounds(flightPlanDisplayLatLngs());
       map.fitBounds(bounds, { padding: [50, 50], animate: false });
     }
     mettreAJourLogDeNav();

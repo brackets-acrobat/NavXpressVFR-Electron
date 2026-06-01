@@ -4,6 +4,52 @@
 // ============================================================
 
 // -------------------------------------------------------
+// Antiméridien (ligne de changement de date) — longitudes « déroulées » pour
+// l'AFFICHAGE uniquement. Chaque point est ramené à moins de 180° de longitude
+// du précédent, afin que segments, marqueurs et cadrage franchissent la ligne
+// ±180° par le plus court chemin (ex. Tokyo RJTT → Los Angeles KLAX = Pacifique,
+// et non Asie/Europe/Atlantique). Les longitudes STOCKÉES dans flightPlan
+// restent normalisées dans [-180, 180] (la donnée n'est pas modifiée).
+// -------------------------------------------------------
+function _unwrapLons(points) {
+  const out = [];
+  let prev = null;
+  for (const p of points) {
+    let lon = (p && Number.isFinite(p.lon)) ? p.lon : 0;
+    if (prev !== null) {
+      while (lon - prev > 180) lon -= 360;
+      while (lon - prev < -180) lon += 360;
+    }
+    out.push(lon);
+    prev = lon;
+  }
+  return out;
+}
+
+// Longitude d'affichage (déroulée) du point d'index idx de flightPlan.
+function _displayLon(idx) {
+  if (!Array.isArray(flightPlan) || idx == null || idx < 0 || idx >= flightPlan.length) {
+    return null;
+  }
+  const disp = _unwrapLons(flightPlan.slice(0, idx + 1));
+  return disp[disp.length - 1];
+}
+
+// Paires [lat, lonAffichage] de tout le plan, pour L.latLngBounds (fitBounds) :
+// le cadrage suit ainsi lui aussi le plus court chemin à travers l'antiméridien.
+function flightPlanDisplayLatLngs() {
+  const disp = _unwrapLons(flightPlan);
+  return flightPlan.map((p, i) => [p.lat, disp[i]]);
+}
+
+// Ramène une longitude quelconque dans [-180, 180] — pour stocker une coordonnée
+// issue d'un clic / drag effectué dans le repère « déroulé » (peut sortir de la
+// plage standard quand le plan franchit la ligne de changement de date).
+function wrapLon(l) {
+  return ((l + 180) % 360 + 360) % 360 - 180;
+}
+
+// -------------------------------------------------------
 // Supprime tous les segments de route de la carte
 // -------------------------------------------------------
 function supprimerSegmentsCarte() {
@@ -29,6 +75,9 @@ function redessinerSegments() {
   supprimerSegmentsCarte();
   if (flightPlan.length < 2) return;
 
+  // Longitudes d'affichage déroulées (gestion antiméridien).
+  const disp = _unwrapLons(flightPlan);
+
   for (let i = 1; i < flightPlan.length; i++) {
     const ptA = flightPlan[i - 1];
     const ptB = flightPlan[i];
@@ -36,7 +85,7 @@ function redessinerSegments() {
     const baseColor = _legColor(legIndex, activeLegIndex);
 
     const seg = L.polyline(
-      [[ptA.lat, ptA.lon], [ptB.lat, ptB.lon]],
+      [[ptA.lat, disp[i - 1]], [ptB.lat, disp[i]]],
       { color: baseColor, weight: 3, opacity: 0.85 }
     ).addTo(map);
     seg._baseColor = baseColor;
@@ -133,7 +182,11 @@ function tracerPointVisuel(point, indexDansFlightPlan) {
     fillOpacity: 0.9
   };
 
-  const marqueur = L.circleMarker([point.lat, point.lon], stylePointVFR)
+  // Longitude d'affichage déroulée (antiméridien) : le marqueur reste dans le
+  // même « tour du monde » que les segments adjacents. La coordonnée stockée
+  // (point.lon) n'est pas modifiée.
+  const dispLon = (indexDansFlightPlan != null) ? _displayLon(indexDansFlightPlan) : null;
+  const marqueur = L.circleMarker([point.lat, dispLon != null ? dispLon : point.lon], stylePointVFR)
     .addTo(map);
   marqueur._wpName = point.name;
   _bindWaypointTooltip(marqueur, indexDansFlightPlan);

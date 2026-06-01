@@ -171,7 +171,7 @@ function initFlightPlanIO() {
       await calculerDeclinaisonCentroide();
       flightPlan.forEach((p, idx) => tracerPointVisuel(p, idx));
       redessinerSegments();
-      const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
+      const bounds = L.latLngBounds(flightPlanDisplayLatLngs());
       map.fitBounds(bounds, { padding: [50, 50] });
 
       mettreAJourLogDeNav();
@@ -246,7 +246,7 @@ function initFlightPlanIO() {
         redessinerSegments();
 
         if (flightPlan.length > 0) {
-          const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
+          const bounds = L.latLngBounds(flightPlanDisplayLatLngs());
           map.fitBounds(bounds, { padding: [50, 50] });
         }
 
@@ -340,7 +340,7 @@ function initFlightPlanIO() {
         redessinerSegments();
 
         if (flightPlan.length > 0) {
-          const bounds = L.latLngBounds(flightPlan.map(p => [p.lat, p.lon]));
+          const bounds = L.latLngBounds(flightPlanDisplayLatLngs());
           map.fitBounds(bounds, { padding: [50, 50] });
         }
 
