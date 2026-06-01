@@ -101,17 +101,43 @@ function fmtDuration(ms) {
   return `${m}m${String(s % 60).padStart(2, '0')}s`;
 }
 
+// node-simconnect `readString*` décode les octets en Latin-1 (1 octet = 1
+// caractère). MSFS envoie en réalité les libellés en UTF-8 → tous les
+// caractères accentués finissent en mojibake (`é` UTF-8 = C3 A9 lu comme
+// `Ã©`, puis ré-encodé en UTF-8 → C3 83 C2 A9 dans le JSONL).
+//
+// On reconstruit les octets d'origine en passant par Buffer 'latin1', puis
+// on décode en UTF-8 strict. Certaines entrées MSFS sont DÉJÀ pré-corrompues
+// en amont (triple-encoding : « EstÃÂ¢ncia » au lieu de « Estância ») —
+// on itère jusqu'à idempotence (≤ 4 passes). À chaque passe, si la séquence
+// n'est plus valide UTF-8, on s'arrête sur le dernier état décodable ;
+// pour une chaîne ASCII / déjà propre, dès la 1ère passe la séquence est
+// invalide et on retourne la chaîne d'entrée inchangée.
+const _utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+function fixUtf8(s) {
+  if (!s) return s;
+  let cur = s;
+  for (let i = 0; i < 4; i++) {
+    let next;
+    try { next = _utf8Decoder.decode(Buffer.from(cur, 'latin1')); }
+    catch (_) { return cur; }
+    if (next === cur) return cur;
+    cur = next;
+  }
+  return cur;
+}
+
 // Lit la chaîne occupant tout le reste du buffer (champ NAME en
 // dernière position : pas de troncature, pas de devinette de taille).
 function readTrailingString(buf) {
   const rem = buf.remaining();
   if (rem <= 0) return '';
-  try { return buf.readString(rem).replace(/ +$/, '').trim(); }
+  try { return fixUtf8(buf.readString(rem).replace(/ +$/, '').trim()); }
   catch (_) { return ''; }
 }
 function readStr8(buf) {
   const saved = buf.getOffset();
-  try { return buf.readString8().trim(); }
+  try { return fixUtf8(buf.readString8().trim()); }
   catch (_) { buf.setOffset(saved); return ''; }
 }
 
