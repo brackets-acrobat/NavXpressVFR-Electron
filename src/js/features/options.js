@@ -26,6 +26,13 @@ const DEFAULT_OPTIONS = {
   finalArrivalEnabled: true,
   logbookEnabled: true,
   precisionEnabled: true,
+  // Préférences d'affichage carte (restaurées au démarrage). Gérées par map.js
+  // via setAppOption — pas d'UI dans la modale Options.
+  layerAirportsEnabled: true,
+  layerHeliportsEnabled: true,
+  layerSeaplanesEnabled: true,
+  layerNavaidsEnabled: true,
+  mapBaseLayer: 'osm', // 'satellite' | 'topo' | 'osm'
 };
 
 // État global mutable (lecture par d'autres features, écriture via setAppOption).

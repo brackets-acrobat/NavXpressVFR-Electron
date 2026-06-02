@@ -30,7 +30,11 @@ function initMap() {
       { key: 'topo', layer: layerTopo, label: '🗺️ Topo', next: '🗺️ OSM' },
       { key: 'osm', layer: layerOSM, label: '🗺️ OSM', next: '🛰️ Satellite' },
     ];
-    let currentLayerIdx = 2;
+    // Fond restauré depuis les options (défaut OSM). map.js tourne après
+    // chargerOptions() (awaité dans ui.js), donc window.appOptions est prêt.
+    const _savedBase = (window.appOptions && window.appOptions.mapBaseLayer) || 'osm';
+    let currentLayerIdx = layers.findIndex(l => l.key === _savedBase);
+    if (currentLayerIdx < 0) currentLayerIdx = 2; // OSM par défaut
     layers[currentLayerIdx].layer.addTo(map);
 
     // --- Bouton déroulant de changement de fond ---
@@ -41,7 +45,7 @@ function initMap() {
       L.DomEvent.disableScrollPropagation(wrapper);
 
       const btn = L.DomUtil.create('button', 'btn-layer-toggle', wrapper);
-      btn.innerHTML = '🗺️ OSM ▾';
+      btn.innerHTML = layers[currentLayerIdx].label + ' ▾';
 
       const dropdown = L.DomUtil.create('div', 'layer-dropdown', wrapper);
       dropdown.style.display = 'none';
@@ -55,11 +59,12 @@ function initMap() {
       options.forEach(opt => {
         const item = L.DomUtil.create('div', 'layer-dropdown-item', dropdown);
         item.innerHTML = opt.label;
-        if (opt.key === 'osm') item.classList.add('active');
+        if (opt.key === layers[currentLayerIdx].key) item.classList.add('active');
         item.addEventListener('click', () => {
           map.removeLayer(layers[currentLayerIdx].layer);
           currentLayerIdx = layers.findIndex(l => l.key === opt.key);
           layers[currentLayerIdx].layer.addTo(map);
+          setAppOption('mapBaseLayer', opt.key); // persiste le fond choisi
           // Si les espaces aériens sont activés, les remettre au premier plan
           // (sinon la nouvelle couche de tuiles les masque)
           if (airspacesVisible && airspaceTileLayer && airspaceTileLayer.bringToFront) {
@@ -92,9 +97,13 @@ function initMap() {
     // --- ÉTAT DES COUCHES (espaces aériens, aéroports, navaids) ---
     let airspacesVisible = false;
     let airspaceTileLayer = null;
-    let airportsEnabled = true;
-    let heliportsEnabled = true;
-    let navaidsEnabled = true;
+    // État initial des calques : restauré depuis window.appOptions (chargé et
+    // awaité par ui.js avant initMap). `!== false` → défaut true si absent.
+    const _opt = window.appOptions || {};
+    let airportsEnabled = _opt.layerAirportsEnabled !== false;
+    let heliportsEnabled = _opt.layerHeliportsEnabled !== false;
+    let seaplanesEnabled = _opt.layerSeaplanesEnabled !== false;
+    let navaidsEnabled = _opt.layerNavaidsEnabled !== false;
 
     function creerCoucheEspacesAeriens() {
       // La clé API est injectée automatiquement par le main process via
@@ -138,6 +147,7 @@ function initMap() {
     const ZOOM_MIN_AEROPORTS = 8;
     const airportsLayer = L.layerGroup().addTo(map);
     const heliportsLayer = L.layerGroup().addTo(map);
+    const seaplanesLayer = L.layerGroup().addTo(map);
     let _aeroportsMoveTimer = null;
     let _aeroportsLastRequestId = 0;
 
@@ -147,6 +157,7 @@ function initMap() {
       medium_airport: 7,
       small_airport: 5,
       heliport: 6,
+      seaplane_base: 6,
     };
 
     // Construit l'icône SVG d'un aéroport (cercle + trait piste orienté)
@@ -168,6 +179,29 @@ function initMap() {
           html: svgH,
           iconSize: [sizeH, sizeH],
           iconAnchor: [sizeH / 2, sizeH / 2],
+        });
+      }
+
+      // Hydrobase : cercle bleu eau avec le trait de piste (orienté).
+      if (airport.type === 'seaplane_base') {
+        const rs = TAILLES_AEROPORT.seaplane_base || 6;
+        const sizeS = rs * 2 + 12;
+        const headingS = airport.runway ? airport.runway.headingDegT : 0;
+        const hasRwyS = !!airport.runway;
+        const extS = rs + 4;
+        const svgS = `
+          <svg viewBox="-${sizeS / 2} -${sizeS / 2} ${sizeS} ${sizeS}" width="${sizeS}" height="${sizeS}" style="overflow:visible;">
+            ${hasRwyS ? `<line x1="-${extS}" y1="0" x2="${extS}" y2="0"
+                  stroke="#0d4d6e" stroke-width="2.2" stroke-linecap="round"
+                  transform="rotate(${headingS - 90})"/>` : ''}
+            <circle cx="0" cy="0" r="${rs}" fill="#2970ff" stroke="#0a2a66" stroke-width="1.6"/>
+          </svg>
+        `;
+        return L.divIcon({
+          className: 'airport-marker seaplane-marker',
+          html: svgS,
+          iconSize: [sizeS, sizeS],
+          iconAnchor: [sizeS / 2, sizeS / 2],
         });
       }
 
@@ -217,17 +251,19 @@ function initMap() {
 
     async function refreshAirportsOnMap() {
       if (!map) return;
-      // Aéroports et hélistations partagent la même requête bbox mais sont
-      // rendus dans deux couches distinctes, pilotées par deux toggles.
-      if (!airportsEnabled && !heliportsEnabled) {
+      // Aéroports, hélistations et hydrobases partagent la même requête bbox
+      // mais sont rendus dans des couches distinctes, pilotées par trois toggles.
+      if (!airportsEnabled && !heliportsEnabled && !seaplanesEnabled) {
         airportsLayer.clearLayers();
         heliportsLayer.clearLayers();
+        seaplanesLayer.clearLayers();
         return;
       }
       const zoom = map.getZoom();
       if (zoom < ZOOM_MIN_AEROPORTS) {
         airportsLayer.clearLayers();
         heliportsLayer.clearLayers();
+        seaplanesLayer.clearLayers();
         return;
       }
       const b = map.getBounds();
@@ -253,15 +289,19 @@ function initMap() {
         // Pas de données = silencieux (l'utilisateur n'a peut-être pas encore importé)
         airportsLayer.clearLayers();
         heliportsLayer.clearLayers();
+        seaplanesLayer.clearLayers();
         return;
       }
 
       airportsLayer.clearLayers();
       heliportsLayer.clearLayers();
+      seaplanesLayer.clearLayers();
       for (const a of res.airports) {
         const isHeli = a.type === 'heliport';
+        const isSeaplane = a.type === 'seaplane_base';
         // Chaque type respecte son propre toggle
-        if (isHeli ? !heliportsEnabled : !airportsEnabled) continue;
+        const enabled = isHeli ? heliportsEnabled : isSeaplane ? seaplanesEnabled : airportsEnabled;
+        if (!enabled) continue;
         const marker = L.marker([a.lat, a.lon], {
           icon: makeAirportIcon(a),
           interactive: true,
@@ -276,7 +316,7 @@ function initMap() {
         });
         // Click → ouvrir la modale d'informations détaillées
         marker.on('click', () => ouvrirInfoAeroport(a.ident));
-        marker.addTo(isHeli ? heliportsLayer : airportsLayer);
+        marker.addTo(isHeli ? heliportsLayer : isSeaplane ? seaplanesLayer : airportsLayer);
       }
     }
 
@@ -478,6 +518,7 @@ function initMap() {
           { id: 'airspaces', labelFr: 'Espaces aériens', labelEn: 'Airspaces', checked: airspacesVisible },
           { id: 'airports', labelFr: 'Aéroports', labelEn: 'Airports', checked: airportsEnabled },
           { id: 'heliports', labelFr: 'Hélistations', labelEn: 'Heliports', checked: heliportsEnabled },
+          { id: 'seaplanes', labelFr: 'Hydrobases', labelEn: 'Seaplane bases', checked: seaplanesEnabled },
           { id: 'navaids', labelFr: 'Navaids', labelEn: 'Navaids', checked: navaidsEnabled },
         ];
         items.forEach(it => {
@@ -495,12 +536,19 @@ function initMap() {
               if (!ok) input.checked = false; // ex: pas de clé API → toggle refusé
             } else if (it.id === 'airports') {
               airportsEnabled = on;
+              setAppOption('layerAirportsEnabled', on);
               if (on) refreshAirportsOnMap(); else airportsLayer.clearLayers();
             } else if (it.id === 'heliports') {
               heliportsEnabled = on;
+              setAppOption('layerHeliportsEnabled', on);
               if (on) refreshAirportsOnMap(); else heliportsLayer.clearLayers();
+            } else if (it.id === 'seaplanes') {
+              seaplanesEnabled = on;
+              setAppOption('layerSeaplanesEnabled', on);
+              if (on) refreshAirportsOnMap(); else seaplanesLayer.clearLayers();
             } else if (it.id === 'navaids') {
               navaidsEnabled = on;
+              setAppOption('layerNavaidsEnabled', on);
               if (on) refreshNavaidsOnMap(); else navaidsLayer.clearLayers();
             }
           });

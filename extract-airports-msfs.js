@@ -11,7 +11,8 @@
  *             la liste MONDIALE (~85 694) avec icao/region/pos.
  *   Phase 2 — détail : pour chaque ICAO, requestFacilityData
  *             (fenêtré/throttlé) → pistes (QFU, cap vrai, long.,
- *             larg., surface, ILS), fréquences COM, hélipads.
+ *             larg., surface, ILS, position du centre + seuils
+ *             calculés), fréquences COM, hélipads.
  *
  * Chaque enregistrement utilise des noms de champs compatibles
  * OurAirports (ident/icao_code/type/name/latitude_deg/…) + des
@@ -91,6 +92,25 @@ const FREQ_TYPE = {
 // Helpers
 // --------------------------------------------------------------
 function round(v, n) { const f = 10 ** n; return Math.round(v * f) / f; }
+// Projette un point (lat/lon en °) sur une distance (m) selon un cap VRAI (°).
+// Formule du grand cercle (rayon terrestre moyen) — suffisant à l'échelle piste.
+function projectLatLon(latDeg, lonDeg, bearingDeg, distM) {
+  const R = 6371000;
+  const d = distM / R;
+  const br = (bearingDeg * Math.PI) / 180;
+  const lat1 = (latDeg * Math.PI) / 180;
+  const lon1 = (lonDeg * Math.PI) / 180;
+  const lat2 = Math.asin(
+    Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(br)
+  );
+  const lon2 =
+    lon1 +
+    Math.atan2(
+      Math.sin(br) * Math.sin(d) * Math.cos(lat1),
+      Math.cos(d) - Math.sin(lat1) * Math.sin(lat2)
+    );
+  return { lat: (lat2 * 180) / Math.PI, lon: (((lon2 * 180) / Math.PI + 540) % 360) - 180 };
+}
 function pad2(n) { return String(n).padStart(2, '0'); }
 function desig(d) { return DESIGNATOR[d] || ''; }
 function surfaceLabel(code) { return SURFACE_LABEL[code] || `code ${code}`; }
@@ -158,6 +178,9 @@ function defineAirport(h) {
   add('NAME');            // string (dernier champ du nœud)
 
   add('OPEN RUNWAY');
+  add('LATITUDE');              // f64 — centre de la piste (sépare les parallèles)
+  add('LONGITUDE');             // f64
+  add('ALTITUDE');              // f64 (m)
   add('PRIMARY_NUMBER');        // i32
   add('PRIMARY_DESIGNATOR');    // i32
   add('SECONDARY_NUMBER');      // i32
@@ -215,6 +238,9 @@ function parseAirportNode(d) {
 }
 
 function parseRunwayNode(d, surfaceCodes) {
+  const rwyLat = d.readFloat64();        // centre géométrique de la piste
+  const rwyLon = d.readFloat64();
+  const rwyAlt = d.readFloat64();        // mètres
   const n1 = d.readInt32();
   const d1 = d.readInt32();
   const n2 = d.readInt32();
@@ -235,18 +261,28 @@ function parseRunwayNode(d, surfaceCodes) {
   const primaryHeadingT = round(heading, 1);
   const secondaryHeadingT = round((heading + 180) % 360, 1);
 
+  // Seuils calculés depuis le centre + cap + longueur (seuils géométriques,
+  // sans tenir compte d'un éventuel seuil décalé). Le seuil "primaire" (où le
+  // numéro primaire est peint) est à l'arrière du sens de décollage → cap+180.
+  const half = (Number.isFinite(length_m) ? length_m : 0) / 2;
+  const haveCenter = Number.isFinite(rwyLat) && Number.isFinite(rwyLon);
+  const primaryThr = haveCenter ? projectLatLon(rwyLat, rwyLon, (heading + 180) % 360, half) : null;
+  const secondaryThr = haveCenter ? projectLatLon(rwyLat, rwyLon, heading, half) : null;
+
   // OurAirports : le_ = extrémité au numéro le plus bas.
-  let le_ident, he_ident, le_heading_degT, he_heading_degT, le_ils, he_ils;
+  let le_ident, he_ident, le_heading_degT, he_heading_degT, le_ils, he_ils, le_thr, he_thr;
   if (n1 <= n2) {
     le_ident = primaryIdent; he_ident = secondaryIdent;
     le_heading_degT = primaryHeadingT; he_heading_degT = secondaryHeadingT;
     le_ils = ilsIcao1 ? { icao: ilsIcao1, region: ilsReg1 } : null;
     he_ils = ilsIcao2 ? { icao: ilsIcao2, region: ilsReg2 } : null;
+    le_thr = primaryThr; he_thr = secondaryThr;
   } else {
     le_ident = secondaryIdent; he_ident = primaryIdent;
     le_heading_degT = secondaryHeadingT; he_heading_degT = primaryHeadingT;
     le_ils = ilsIcao2 ? { icao: ilsIcao2, region: ilsReg2 } : null;
     he_ils = ilsIcao1 ? { icao: ilsIcao1, region: ilsReg1 } : null;
+    le_thr = secondaryThr; he_thr = primaryThr;
   }
 
   return {
@@ -264,6 +300,14 @@ function parseRunwayNode(d, surfaceCodes) {
     closed: 0,
     le_ils,
     he_ils,
+    // Position de la piste (MSFS) + seuils calculés → tracé sans superposition.
+    latitude_deg: haveCenter ? round(rwyLat, 6) : null,
+    longitude_deg: haveCenter ? round(rwyLon, 6) : null,
+    elevation_ft: Number.isFinite(rwyAlt) ? Math.round(rwyAlt * M_TO_FT) : null,
+    le_latitude_deg: le_thr ? round(le_thr.lat, 6) : null,
+    le_longitude_deg: le_thr ? round(le_thr.lon, 6) : null,
+    he_latitude_deg: he_thr ? round(he_thr.lat, 6) : null,
+    he_longitude_deg: he_thr ? round(he_thr.lon, 6) : null,
   };
 }
 

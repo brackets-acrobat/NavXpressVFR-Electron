@@ -824,34 +824,45 @@
                 <div id="airport-info-type"></div>
             </div>
             <div class="airport-info-body">
-                <!-- Section : Général -->
-                <div class="airport-info-section">
-                    <h4 data-i18n="apInfoGeneral">Informations générales</h4>
-                    <div id="airport-info-general"></div>
+                <!-- Colonne gauche : schéma des pistes (masquée si pas de coords) -->
+                <div class="airport-info-col-left" id="airport-info-col-left">
+                    <div class="airport-info-section" id="airport-info-diagram-section">
+                        <h4 data-i18n="apInfoDiagram">Schéma des pistes</h4>
+                        <div id="airport-info-diagram"></div>
+                    </div>
                 </div>
 
-                <!-- Section : Pistes -->
-                <div class="airport-info-section">
-                    <h4 data-i18n="apInfoRunways">Pistes</h4>
-                    <div id="airport-info-runways"></div>
-                </div>
+                <!-- Colonne droite : informations textuelles -->
+                <div class="airport-info-col-right">
+                    <!-- Section : Général -->
+                    <div class="airport-info-section">
+                        <h4 data-i18n="apInfoGeneral">Informations générales</h4>
+                        <div id="airport-info-general"></div>
+                    </div>
 
-                <!-- Section : Hélipads (affichée seulement si présents) -->
-                <div class="airport-info-section" id="airport-info-helipads-section">
-                    <h4 data-i18n="apInfoHelipads">Hélipads</h4>
-                    <div id="airport-info-helipads"></div>
-                </div>
+                    <!-- Section : Pistes -->
+                    <div class="airport-info-section">
+                        <h4 data-i18n="apInfoRunways">Pistes</h4>
+                        <div id="airport-info-runways"></div>
+                    </div>
 
-                <!-- Section : Fréquences -->
-                <div class="airport-info-section">
-                    <h4 data-i18n="apInfoFrequencies">Fréquences</h4>
-                    <div id="airport-info-frequencies"></div>
-                </div>
+                    <!-- Section : Hélipads (affichée seulement si présents) -->
+                    <div class="airport-info-section" id="airport-info-helipads-section">
+                        <h4 data-i18n="apInfoHelipads">Hélipads</h4>
+                        <div id="airport-info-helipads"></div>
+                    </div>
 
-                <!-- Section : Commentaires -->
-                <div class="airport-info-section">
-                    <h4 data-i18n="apInfoComments">Commentaires</h4>
-                    <div id="airport-info-comments"></div>
+                    <!-- Section : Fréquences -->
+                    <div class="airport-info-section">
+                        <h4 data-i18n="apInfoFrequencies">Fréquences</h4>
+                        <div id="airport-info-frequencies"></div>
+                    </div>
+
+                    <!-- Section : Commentaires -->
+                    <div class="airport-info-section">
+                        <h4 data-i18n="apInfoComments">Commentaires</h4>
+                        <div id="airport-info-comments"></div>
+                    </div>
                 </div>
             </div>
         </div>

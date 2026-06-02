@@ -222,6 +222,7 @@ const TRANSLATIONS = {
 
     // Modale détails aéroport
     apInfoGeneral: "Informations générales",
+    apInfoDiagram: "Schéma des pistes",
     apInfoRunways: "Pistes",
     apInfoHelipads: "Hélipads",
     apInfoFrequencies: "Fréquences",
@@ -558,6 +559,7 @@ const TRANSLATIONS = {
 
     // Airport info modal
     apInfoGeneral: "General information",
+    apInfoDiagram: "Runway layout",
     apInfoRunways: "Runways",
     apInfoHelipads: "Helipads",
     apInfoFrequencies: "Frequencies",

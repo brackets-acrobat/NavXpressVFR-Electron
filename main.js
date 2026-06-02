@@ -312,6 +312,7 @@ function createWindow() {
     setTimeout(() => {
       if (!splash.isDestroyed()) splash.close();
       if (!mainWindow.isDestroyed()) {
+        mainWindow.maximize(); // ouvre la fenêtre agrandie (plein écran fenêtré)
         mainWindow.show();
         mainWindow.focus();
       }
@@ -753,7 +754,7 @@ function buildFromMsfs() {
   const text = fs.readFileSync(p, 'utf-8');
   const lines = text.split('\n');
 
-  const TYPES_OK = new Set(['large_airport', 'medium_airport', 'small_airport', 'heliport']);
+  const TYPES_OK = new Set(['large_airport', 'medium_airport', 'small_airport', 'heliport', 'seaplane_base']);
   const index = new Map();      // recherche : tous codes -> objet
   const list = [];              // carte : large/medium/small
   const rawIdx = new Map();     // ident -> objet complet (tous types)
@@ -787,6 +788,13 @@ function buildFromMsfs() {
       surface: r.surface || '',
       lighted: r.lighted === true || r.lighted === 1 || r.lighted === '1',
       closed: r.closed === true || r.closed === 1 || r.closed === '1',
+      // Position (MSFS) + seuils calculés → tracé du schéma sans superposition
+      latitude_deg: Number.isFinite(r.latitude_deg) ? r.latitude_deg : null,
+      longitude_deg: Number.isFinite(r.longitude_deg) ? r.longitude_deg : null,
+      le_latitude_deg: Number.isFinite(r.le_latitude_deg) ? r.le_latitude_deg : null,
+      le_longitude_deg: Number.isFinite(r.le_longitude_deg) ? r.le_longitude_deg : null,
+      he_latitude_deg: Number.isFinite(r.he_latitude_deg) ? r.he_latitude_deg : null,
+      he_longitude_deg: Number.isFinite(r.he_longitude_deg) ? r.he_longitude_deg : null,
     })) : [];
     if (a.ident) runwaysIdx.set(identUp, rws);
 

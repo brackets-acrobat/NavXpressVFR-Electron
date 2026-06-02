@@ -15,6 +15,8 @@ async function ouvrirInfoAeroport(ident) {
   const typeEl = document.getElementById('airport-info-type');
   const genEl = document.getElementById('airport-info-general');
   const rwyEl = document.getElementById('airport-info-runways');
+  const diagEl = document.getElementById('airport-info-diagram');
+  const diagColLeft = document.getElementById('airport-info-col-left');
   const heliEl = document.getElementById('airport-info-helipads');
   const heliSection = document.getElementById('airport-info-helipads-section');
   const freqEl = document.getElementById('airport-info-frequencies');
@@ -27,6 +29,8 @@ async function ouvrirInfoAeroport(ident) {
   typeEl.textContent = '';
   genEl.innerHTML = '<div class="ap-info-empty">…</div>';
   rwyEl.innerHTML = '';
+  if (diagEl) diagEl.innerHTML = '';
+  if (diagColLeft) diagColLeft.hidden = true;
   if (heliEl) heliEl.innerHTML = '';
   if (heliSection) heliSection.style.display = 'none';
   freqEl.innerHTML = '';
@@ -85,6 +89,18 @@ async function ouvrirInfoAeroport(ident) {
   if (a.wikipedia_link) rowsGen.push(['Wikipedia', `<a class="ap-info-link" href="${escapeHtml(a.wikipedia_link)}" target="_blank" rel="noopener">${escapeHtml(a.wikipedia_link)}</a>`]);
   if (a.keywords) rowsGen.push([currentLang === 'fr' ? 'Mots-clés' : 'Keywords', escapeHtml(a.keywords)]);
   genEl.innerHTML = buildKVTable(rowsGen);
+
+  // --- Schéma des pistes (tracé géométrique depuis les seuils) ---
+  if (diagEl && diagColLeft) {
+    const svg = buildRunwayDiagram(res.runways, res.helipads);
+    if (svg) {
+      diagEl.innerHTML = svg;
+      diagColLeft.hidden = false;
+    } else {
+      diagEl.innerHTML = '';
+      diagColLeft.hidden = true;
+    }
+  }
 
   // --- Pistes ---
   if (!res.runways || res.runways.length === 0) {
@@ -167,6 +183,186 @@ async function ouvrirInfoAeroport(ident) {
       </div>
     `).join('');
   }
+}
+
+// -------------------------------------------------------
+// Schéma des pistes — SVG vectoriel à l'échelle, à partir des
+// seuils géométriques (le_/he_latitude_deg) fournis par MSFS.
+// Les pistes parallèles ont des coordonnées distinctes → pas de
+// superposition. Projection équirectangulaire locale (échelle
+// uniforme = angles préservés), nord en haut.
+// -------------------------------------------------------
+// Couleur/rendu d'une piste selon sa surface (label MSFS).
+// paved=true → revêtue (axe + piano keys) ; sinon surface naturelle.
+function rwySurfaceStyle(label) {
+  const s = String(label || '').toLowerCase();
+  if (/grass|turf|forest/.test(s)) return { fill: '#34663a', edge: '#5c8a5f', paved: false }; // herbe = vert
+  if (/dirt|gravel|sand|shale|coral|earth|mud/.test(s)) return { fill: '#6e5436', edge: '#9a7b50', paved: false }; // terre = marron
+  if (/water/.test(s)) return { fill: '#2970ff', edge: '#7da6ff', paved: false }; // eau = bleu
+  if (/snow|ice/.test(s)) return { fill: '#aeb6bf', edge: '#dde3e9', paved: false }; // neige/glace
+  // Par défaut : dur (concrete, asphalt, bitumin., tarmac, macadam, brick,
+  // steel mats, oil treated, planks, urban, inconnu…) → gris bitume.
+  return { fill: '#41464f', edge: '#cfd4db', paved: true };
+}
+
+function buildRunwayDiagram(runways, helipads) {
+  const W = 360, H = 360, PAD = 30;
+  const rwys = Array.isArray(runways) ? runways : [];
+  const helis = Array.isArray(helipads) ? helipads : [];
+
+  // Pistes exploitables : deux seuils géolocalisés.
+  const usable = rwys.filter(r =>
+    Number.isFinite(r.le_latitude_deg) && Number.isFinite(r.le_longitude_deg) &&
+    Number.isFinite(r.he_latitude_deg) && Number.isFinite(r.he_longitude_deg));
+  const heliPts = helis.filter(h =>
+    Number.isFinite(h.latitude_deg) && Number.isFinite(h.longitude_deg));
+
+  if (usable.length === 0 && heliPts.length === 0) return null;
+
+  // Référence de projection = barycentre de tous les points.
+  const all = [];
+  usable.forEach(r => {
+    all.push([r.le_latitude_deg, r.le_longitude_deg]);
+    all.push([r.he_latitude_deg, r.he_longitude_deg]);
+  });
+  heliPts.forEach(h => all.push([h.latitude_deg, h.longitude_deg]));
+  const lat0 = all.reduce((s, p) => s + p[0], 0) / all.length;
+  const lon0 = all.reduce((s, p) => s + p[1], 0) / all.length;
+  const cosL = Math.cos(lat0 * Math.PI / 180);
+  const M_PER_DEG = 111320;
+  const toM = (lat, lon) => ({ x: (lon - lon0) * M_PER_DEG * cosL, y: (lat - lat0) * M_PER_DEG });
+
+  // Bornes en mètres.
+  let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
+  const acc = (m) => { if (m.x < xmin) xmin = m.x; if (m.x > xmax) xmax = m.x; if (m.y < ymin) ymin = m.y; if (m.y > ymax) ymax = m.y; };
+  const segs = usable.map(r => {
+    const le = toM(r.le_latitude_deg, r.le_longitude_deg);
+    const he = toM(r.he_latitude_deg, r.he_longitude_deg);
+    acc(le); acc(he);
+    return { le, he, r };
+  });
+  const hPts = heliPts.map(h => { const m = toM(h.latitude_deg, h.longitude_deg); acc(m); return { m, h }; });
+
+  const drawW = W - 2 * PAD, drawH = H - 2 * PAD;
+  const spanX = xmax - xmin, spanY = ymax - ymin;
+  const sX = spanX > 1 ? drawW / spanX : Infinity;
+  const sY = spanY > 1 ? drawH / spanY : Infinity;
+  let scale = Math.min(sX, sY);
+  if (!Number.isFinite(scale) || scale <= 0) scale = 0.05; // cas dégénéré (1 point)
+  const contentW = spanX * scale, contentH = spanY * scale;
+  const offX = PAD + (drawW - contentW) / 2;
+  const offY = PAD + (drawH - contentH) / 2;
+  const px = (m) => offX + (m.x - xmin) * scale;          // x écran
+  const py = (m) => offY + (ymax - m.y) * scale;          // y écran (nord en haut)
+
+  const parts = [];
+
+  // Géométrie écran de chaque piste (axe + perpendiculaire unitaires).
+  const drawn = segs.map(({ le, he, r }) => {
+    const A = { x: px(le), y: py(le) };
+    const B = { x: px(he), y: py(he) };
+    let ax = B.x - A.x, ay = B.y - A.y;
+    const len = Math.hypot(ax, ay) || 1;
+    ax /= len; ay /= len;                 // axe unitaire
+    const nx = -ay, ny = ax;              // perpendiculaire unitaire
+    const mid = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 };
+    const ang = Math.atan2(ay, ax);
+    return { A, B, ax, ay, nx, ny, len, mid, ang, r };
+  });
+
+  // Largeur DESSINÉE : stylisée (lisible, pas à l'échelle réelle de la largeur)
+  // mais plafonnée à ~78 % du plus petit écart perpendiculaire entre pistes
+  // quasi-parallèles → elles ne fusionnent jamais visuellement.
+  let maxW = 16;
+  for (let i = 0; i < drawn.length; i++) {
+    for (let j = i + 1; j < drawn.length; j++) {
+      let da = Math.abs(drawn[i].ang - drawn[j].ang) % Math.PI;
+      if (da > Math.PI / 2) da = Math.PI - da;     // 0 = parallèle
+      if (da < 0.35) {                              // < ~20° → quasi-parallèles
+        const dxm = drawn[j].mid.x - drawn[i].mid.x, dym = drawn[j].mid.y - drawn[i].mid.y;
+        const perp = Math.abs(dxm * drawn[i].nx + dym * drawn[i].ny);
+        if (perp > 0.5) maxW = Math.min(maxW, perp * 0.78);
+      }
+    }
+  }
+  maxW = Math.max(4, maxW);
+
+  // Pistes : rectangle coloré selon la surface + marquages (revêtues : axe +
+  // piano keys ; non revêtues : herbe/terre sans marquage).
+  drawn.forEach(({ A, B, ax, ay, nx, ny, len, r }) => {
+    const wM = (Number(r.width_ft) || 0) * 0.3048;
+    // Largeur INDÉPENDANTE du zoom (sinon les pistes longues = traits plats),
+    // légèrement proportionnelle à la largeur réelle, puis plafonnée anti-fusion.
+    let wPx = wM > 0 ? wM / 4.2 : 11;
+    wPx = Math.min(Math.max(8, Math.min(wPx, 14)), maxW);
+    const hw = wPx / 2;
+    const surf = rwySurfaceStyle(r.surface);
+    const corners = [
+      [A.x + nx * hw, A.y + ny * hw],
+      [B.x + nx * hw, B.y + ny * hw],
+      [B.x - nx * hw, B.y - ny * hw],
+      [A.x - nx * hw, A.y - ny * hw],
+    ].map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+    parts.push(`<polygon points="${corners}" fill="${surf.fill}" stroke="${surf.edge}" stroke-width="1" stroke-linejoin="round"/>`);
+
+    const inset = Math.min(hw + 3, len * 0.16);
+    if (surf.paved && wPx >= 6 && len > 26) {
+      // Axe central pointillé blanc
+      const sx = A.x + ax * inset, sy = A.y + ay * inset;
+      const ex = B.x - ax * inset, ey = B.y - ay * inset;
+      parts.push(`<line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#eef0f3" stroke-width="1" stroke-dasharray="5 5" opacity="0.8"/>`);
+      // Piano keys (marquage de seuil) aux deux extrémités
+      const usableW = wPx * 0.78;
+      const n = Math.max(4, Math.min(10, Math.round(usableW / 2.2)));
+      const spacing = usableW / n;
+      const sw = Math.max(0.8, spacing * 0.5);
+      const keyLen = Math.min(len * 0.14, 13);
+      const keyGap = Math.min(hw * 0.5, 3);
+      [[A, ax, ay], [B, -ax, -ay]].forEach(([P, dx, dy]) => {
+        const startx = P.x + dx * keyGap, starty = P.y + dy * keyGap;
+        for (let i = 0; i < n; i++) {
+          const t = -usableW / 2 + spacing * (i + 0.5);
+          const x1 = startx + nx * t, y1 = starty + ny * t;
+          const x2 = x1 + dx * keyLen, y2 = y1 + dy * keyLen;
+          parts.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#eef0f3" stroke-width="${sw.toFixed(2)}" stroke-linecap="butt"/>`);
+        }
+      });
+    } else if (!surf.paved && wPx >= 6 && len > 26) {
+      // Surfaces naturelles : léger axe pour la lisibilité, sans marquage blanc.
+      const sx = A.x + ax * inset, sy = A.y + ay * inset;
+      const ex = B.x - ax * inset, ey = B.y - ay * inset;
+      parts.push(`<line x1="${sx.toFixed(1)}" y1="${sy.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${surf.edge}" stroke-width="1" stroke-dasharray="3 6" opacity="0.55"/>`);
+    }
+  });
+
+  // Hélipads : petit losange/carré + H.
+  hPts.forEach(({ m, h }) => {
+    const cx = px(m), cy = py(m), s = 6;
+    parts.push(`<rect x="${(cx - s).toFixed(1)}" y="${(cy - s).toFixed(1)}" width="${(2 * s).toFixed(1)}" height="${(2 * s).toFixed(1)}" rx="1.5" fill="#1f2a3a" stroke="#5aa6ff" stroke-width="1.2"/>`);
+    parts.push(`<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" fill="#8fc0ff" font-size="8" font-weight="700" text-anchor="middle" dominant-baseline="central">H</text>`);
+  });
+
+  // Étiquettes QFU aux deux extrémités (décalées vers l'extérieur de l'axe).
+  const label = (m, other, txt) => {
+    const x = px(m), y = py(m), ox = px(other), oy = py(other);
+    let dx = x - ox, dy = y - oy;
+    const d = Math.hypot(dx, dy) || 1;
+    dx /= d; dy /= d;
+    const lx = x + dx * 13, ly = y + dy * 13;
+    return `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" fill="#eef0f3" font-size="10" font-weight="600" text-anchor="middle" dominant-baseline="central" paint-order="stroke" stroke="#10131a" stroke-width="2.5">${escapeHtml(txt)}</text>`;
+  };
+  segs.forEach(({ le, he, r }) => {
+    if (r.le_ident) parts.push(label(le, he, r.le_ident));
+    if (r.he_ident) parts.push(label(he, le, r.he_ident));
+  });
+
+  // Rose des vents (nord en haut).
+  const nx = W - 16, ny = 18;
+  parts.push(`<line x1="${nx}" y1="${ny + 10}" x2="${nx}" y2="${ny - 8}" stroke="#5aa6ff" stroke-width="1.4"/>`);
+  parts.push(`<path d="M ${nx} ${ny - 11} L ${nx - 3.5} ${ny - 5} L ${nx + 3.5} ${ny - 5} Z" fill="#5aa6ff"/>`);
+  parts.push(`<text x="${nx}" y="${ny + 19}" fill="#8fb4e8" font-size="8" font-weight="700" text-anchor="middle">N</text>`);
+
+  return `<svg viewBox="0 0 ${W} ${H}" class="ap-rwy-diagram" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Runway layout">${parts.join('')}</svg>`;
 }
 
 function fermerInfoAeroport() {
