@@ -303,6 +303,12 @@ const TRANSLATIONS = {
     mapCtxDirectTo: "Direct To",
     mapCtxMeasureFrom: "Distance à partir de ce point",
     mapCtxMeasureClear: "Effacer la mesure",
+    // Coordonnées du point (clic droit → "Coordonnées du point")
+    mapCtxCoords: "Coordonnées du point",
+    coordsPointTitle: "Coordonnées du point",
+    coordsCopyTooltip: "Copier les coordonnées",
+    coordsCopied: "Copié !",
+    pasteCoords: "Coller les coordonnées de la carte",
     dtPointName: "Point sur la carte",
     dtPointConfirmTextFmt: (dist) => `Effectuer un Direct To sur ce point (${dist} NM) ?`,
     // Repères visuels (clic droit → ajouter un repère)
@@ -633,6 +639,12 @@ const TRANSLATIONS = {
     mapCtxDirectTo: "Direct To",
     mapCtxMeasureFrom: "Distance from this point",
     mapCtxMeasureClear: "Clear measurement",
+    // Point coordinates (right-click → "Point coordinates")
+    mapCtxCoords: "Point coordinates",
+    coordsPointTitle: "Point coordinates",
+    coordsCopyTooltip: "Copy coordinates",
+    coordsCopied: "Copied!",
+    pasteCoords: "Paste coordinates from map",
     dtPointName: "Map point",
     dtPointConfirmTextFmt: (dist) => `Direct To this point (${dist} NM)?`,
     // Visual markers (right-click → add a marker)

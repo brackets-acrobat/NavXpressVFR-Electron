@@ -50,6 +50,15 @@ const MAP_CONTEXT_MENU_ITEMS = [
       }
     },
   },
+  {
+    id: 'coords',
+    labelKey: 'mapCtxCoords',
+    action: (latlng) => {
+      if (typeof window.ouvrirModaleCoordsPoint === 'function') {
+        window.ouvrirModaleCoordsPoint(latlng);
+      }
+    },
+  },
   // --- Ajouter ici les futurs items du menu contextuel ---
 ];
 

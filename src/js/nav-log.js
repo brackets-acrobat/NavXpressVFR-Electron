@@ -146,6 +146,9 @@ function mettreAJourLogDeNav() {
       subtitle.textContent = currentLang === 'fr'
         ? `Insertion entre ${ptA.name} et ${ptB.name}`
         : `Inserting between ${ptA.name} and ${ptB.name}`;
+      // Affiche/cache le bouton "Coller les coordonnées de la carte" selon
+      // qu'une copie est disponible en mémoire (coordsCopiees).
+      if (typeof window.rafraichirBoutonsCollage === 'function') window.rafraichirBoutonsCollage();
       document.getElementById('insert-wp-overlay').classList.add('visible');
     });
     row.querySelectorAll('td')[2].appendChild(btnPlus);

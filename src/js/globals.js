@@ -50,6 +50,14 @@ let reperesVisuels = [];
 // État connexion simulateur (hissé en Phase 2 — Lot C ; lu par sim, Direct To, toggle i18n)
 let _simState = 'disconnected';   // disconnected | connecting | connected
 
+// --- Coordonnées copiées depuis la carte (clic droit → "Coordonnées du point") ---
+// { lat, lon } en décimal signé, ou null si rien n'est copié.
+// Posé par la modale "Coordonnées du point" (icône Copier), consommé UNE SEULE
+// FOIS par "Insérer un point tournant" ou "Éditer le leg" (bouton Coller) puis
+// remis à null. Tant que c'est null, les boutons Coller restent cachés.
+// Géré par map-coords.js.
+let coordsCopiees = null;
+
 const ALT_MIN = 500;
 const ALT_MAX = 15000;
 const ALT_DEFAULT = 3000;

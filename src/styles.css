@@ -3199,3 +3199,74 @@ tr:hover {
     /* Liste un peu plus haute que dans les modales waypoint (on a la place ici) */
     max-height: 320px;
 }
+/* -------------------------------------------------- */
+/* Coordonnées du point (clic droit) + boutons Coller */
+/* -------------------------------------------------- */
+
+/* Champs lat/lon en lecture seule de la modale "Coordonnées du point" */
+#coords-point-lat,
+#coords-point-lon {
+    cursor: default;
+}
+
+/* Rangée icône Copier + message "Copié !" */
+.coords-point-copy-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 16px 0 4px 0;
+}
+
+/* Petite icône "Copier" */
+.coords-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: #0e0e0e;
+    border: 1px solid #00bcd4;
+    border-radius: 6px;
+    color: #00bcd4;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.coords-copy-btn:hover {
+    background: #00bcd4;
+    color: #121212;
+    box-shadow: 0 0 10px rgba(0, 188, 212, 0.5);
+}
+
+.coords-copied-msg {
+    color: #00e5ff;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+/* Bouton "Coller les coordonnées de la carte" (modales Insérer / Éditer leg) */
+.btn-paste-coords {
+    display: block;
+    width: 100%;
+    margin: 4px 0 10px 0;
+    padding: 7px 10px;
+    background: rgba(0, 188, 212, 0.10);
+    border: 1px dashed #00bcd4;
+    border-radius: 6px;
+    color: #00e5ff;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s;
+}
+
+.btn-paste-coords:hover {
+    background: rgba(0, 188, 212, 0.22);
+    box-shadow: 0 0 8px rgba(0, 188, 212, 0.35);
+}
+
+.btn-paste-coords::before {
+    content: "📋 ";
+}

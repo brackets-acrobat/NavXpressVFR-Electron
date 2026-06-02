@@ -72,9 +72,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   // APRÈS initMap (contrôle Leaflet) — utilise window.api.rechercheModale.
   initMapSearch();
 
+  // "Coordonnées du point" : expose window.ouvrirModaleCoordsPoint (utilisé par
+  // le menu contextuel) et window.rafraichirBoutonsCollage (boutons Coller des
+  // modales Insérer / Éditer le leg). Doit être appelé AVANT initMapContextMenu.
+  initMapCoords();
+
   // Doit être appelé APRÈS initMap (carte présente), initDirectTo (expose
-  // window.demanderDirectToPoint), initMapMeasure (fonctions de mesure) et
-  // initMapMarkers (window.demanderAjoutRepere) — toutes utilisées par le menu.
+  // window.demanderDirectToPoint), initMapMeasure (fonctions de mesure),
+  // initMapMarkers (window.demanderAjoutRepere) et initMapCoords
+  // (window.ouvrirModaleCoordsPoint) — toutes utilisées par le menu.
   initMapContextMenu();
 
   initWaypointModals();

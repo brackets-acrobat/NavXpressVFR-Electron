@@ -155,6 +155,10 @@ function ouvrirModaleEditLeg(legIndex) {
 
   document.getElementById('edit-leg-error').textContent = '';
 
+  // Affiche/cache les boutons "Coller les coordonnées de la carte" (départ +
+  // arrivée) selon qu'une copie est disponible en mémoire (coordsCopiees).
+  if (typeof window.rafraichirBoutonsCollage === 'function') window.rafraichirBoutonsCollage();
+
   // Stocker l'index courant pour la validation
   window._editLegIndex = legIndex;
   document.getElementById('edit-leg-overlay').style.display = 'flex';
