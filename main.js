@@ -250,12 +250,44 @@ function parseCSV(text) {
   return out;
 }
 
+// Fenêtre de démarrage (splash) : petit panneau sans cadre, transparent et
+// au-dessus de tout, affiché immédiatement pendant que la fenêtre principale
+// se construit. Fermé dès que la principale est prête (ready-to-show), avec
+// une durée minimale d'affichage pour ne pas avoir un simple flash.
+function createSplash() {
+  const splash = new BrowserWindow({
+    width: 380,
+    height: 440,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    alwaysOnTop: true,
+    center: true,
+    skipTaskbar: true,
+    show: false,
+    webPreferences: { contextIsolation: true }
+  });
+  splash.loadFile(path.join(__dirname, 'src/splash.html'));
+  splash.once('ready-to-show', () => {
+    if (!splash.isDestroyed()) {
+      splash.show();
+      splash._shownAt = Date.now(); // horodatage de l'affichage effectif
+    }
+  });
+  return splash;
+}
+
 function createWindow() {
+  const splash = createSplash();
+  const SPLASH_MIN_MS = 5000; // durée minimale visible du splash (à partir de son affichage)
+
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 850,
     minWidth: 1280,
     minHeight: 700,
+    show: false, // resté caché jusqu'à ready-to-show (le splash patiente)
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -271,6 +303,20 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   }
   mainWindow.loadFile(path.join(__dirname, 'src/index.html'));
+
+  // Bascule splash → fenêtre principale une fois le rendu prêt, mais pas avant
+  // que le splash soit resté visible au moins SPLASH_MIN_MS depuis son affichage.
+  mainWindow.once('ready-to-show', () => {
+    const shownAt = splash.isDestroyed() ? Date.now() : (splash._shownAt || Date.now());
+    const reste = Math.max(0, SPLASH_MIN_MS - (Date.now() - shownAt));
+    setTimeout(() => {
+      if (!splash.isDestroyed()) splash.close();
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }, reste);
+  });
 }
 
 // --- ÉCOUTEURS INTER-PROCESSUS (IPC) ---
