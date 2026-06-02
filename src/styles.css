@@ -3105,3 +3105,97 @@ tr:hover {
     color: #888;
     font-family: monospace;
 }
+
+/* -------------------------------------------------- */
+/* Bouton loupe « Rechercher » (bas-gauche carte)     */
+/* -------------------------------------------------- */
+.map-search-wrapper {
+    /* Wrapper Leaflet en bottomleft — pas de margin par défaut, on aligne sur les autres contrôles */
+    margin-bottom: 8px;
+}
+
+.btn-map-search {
+    background-color: #1a1a1a;
+    color: #00bcd4;
+    border: 1px solid #00bcd4;
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+    transition: background-color 0.2s, color 0.2s, transform 0.1s;
+}
+
+.btn-map-search:hover {
+    background-color: #00bcd4;
+    color: #121212;
+}
+
+.btn-map-search:active {
+    transform: scale(0.94);
+}
+
+.btn-map-search svg {
+    display: block;
+}
+
+/* -------------------------------------------------- */
+/* Modale Recherche (loupe carte)                     */
+/* -------------------------------------------------- */
+#map-search-popup {
+    position: relative;
+    width: 560px;
+    max-width: 94vw;
+}
+
+.ms-field {
+    margin-bottom: 12px;
+}
+
+.ms-field-label {
+    display: block;
+    color: #00bcd4;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 6px;
+}
+
+.ms-radio-row {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.ms-search-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.ms-input {
+    flex: 1;
+    background-color: #0e0e0e;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    color: #e0e0e0;
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.ms-input:focus {
+    border-color: #00bcd4;
+}
+
+#map-search-popup .wp-search-results.visible {
+    /* Liste un peu plus haute que dans les modales waypoint (on a la place ici) */
+    max-height: 320px;
+}

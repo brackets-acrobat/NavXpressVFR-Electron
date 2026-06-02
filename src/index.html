@@ -1336,6 +1336,63 @@
         </div>
     </div>
 
+    <!-- Modale Recherche aéroport / navaid (bouton loupe en bas à gauche de la carte) -->
+    <div id="map-search-overlay" class="modal-overlay">
+        <div id="map-search-popup" class="modal-popup">
+            <button class="airport-info-close" id="btn-map-search-close" title="Fermer">×</button>
+            <h3 id="map-search-title" data-i18n="mapSearchTitle"
+                style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                🔍 Rechercher</h3>
+
+            <!-- Choix entité (Aéroport / Navaid) -->
+            <div class="ms-field">
+                <label class="ms-field-label" data-i18n="mapSearchEntityLabel">Type</label>
+                <div class="ms-radio-row">
+                    <label class="radio-label">
+                        <input type="radio" name="ms-entity" value="airport" checked>
+                        <span data-i18n="mapSearchEntityAirport">Aéroport</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="ms-entity" value="navaid">
+                        <span data-i18n="mapSearchEntityNavaid">Navaid</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Choix champ (libellés mis à jour dynamiquement selon l'entité) -->
+            <div class="ms-field">
+                <label class="ms-field-label" data-i18n="mapSearchFieldLabel">Rechercher par</label>
+                <div class="ms-radio-row">
+                    <label class="radio-label">
+                        <input type="radio" name="ms-field" value="name" checked>
+                        <span id="ms-field-name-label">Nom</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="ms-field" value="code">
+                        <span id="ms-field-code-label">Code ICAO</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Input + bouton -->
+            <div class="ms-search-row">
+                <input type="text" id="ms-input" class="ms-input"
+                       autocomplete="off" spellcheck="false">
+                <button id="btn-ms-search" class="btn-search" data-i18n="btnSearch">Rechercher</button>
+            </div>
+
+            <div id="ms-status" class="search-status" style="min-height:14px; margin:6px 0;"></div>
+
+            <!-- Liste des résultats (>1) -->
+            <div id="ms-results" class="wp-search-results"></div>
+
+            <!-- Actions bas de modale -->
+            <div class="create-flight-actions" style="margin-top:18px;">
+                <button id="btn-ms-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
+            </div>
+        </div>
+    </div>
+
     <!-- i18n chargé AVANT tous les modules -->
     <script src="i18n.js"></script>
     <!-- Modules extraits de ui.js (Phase 1). L'ORDRE compte (scope global partagé) :
@@ -1370,6 +1427,7 @@
     <script src="js/features/map-markers.js"></script>
     <script src="js/features/uncertainty-circle.js"></script>
     <script src="js/features/agl-warning.js"></script>
+    <script src="js/features/map-search.js"></script>
     <script src="js/features/map-context-menu.js"></script>
     <script src="js/features/timers.js"></script>
     <script src="js/features/reset.js"></script>

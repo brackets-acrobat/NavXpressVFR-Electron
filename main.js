@@ -1070,6 +1070,131 @@ ipcMain.handle('details-navaid', async (event, id) => {
 });
 
 // ============================================================
+// 12. RECHERCHE MODALE (bouton loupe carte)
+// ------------------------------------------------------------
+// Recherche d'un aéroport ou d'un navaid par un champ donné.
+//   payload = { entity: 'airport'|'navaid', field: 'name'|'icao'|'ident', query: string }
+// Sémantique :
+//   - field='name' : sous-chaîne, insensible casse + accents
+//   - field='icao'|'ident' : match EXACT, insensible casse
+// Le résultat est plafonné à RECHERCHE_MODALE_MAX (50) ; on positionne
+// `truncated:true` si la liste a été tronquée afin que le renderer puisse
+// inviter l'utilisateur à affiner sa recherche.
+// ============================================================
+const RECHERCHE_MODALE_MAX = 50;
+
+function _normalizeForSearch(s) {
+  // NFD + suppression des diacritiques (U+0300..U+036F) → "Saint-Étienne" devient "saint-etienne"
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+ipcMain.handle('recherche-modale', async (event, payload) => {
+  if (!payload) return { ok: false, reason: 'no-payload' };
+  const entity = payload.entity;
+  const field = payload.field;
+  const queryRaw = String(payload.query || '');
+  if (!queryRaw.trim()) return { ok: false, reason: 'empty' };
+
+  // -------- AÉROPORTS --------
+  if (entity === 'airport') {
+    if (!_oaAirportsList) loadOurAirportsListForMap();
+    if (!_oaAirportsList) return { ok: false, reason: 'no-data' };
+
+    const matches = [];
+    let truncated = false;
+
+    if (field === 'name') {
+      const qNorm = _normalizeForSearch(queryRaw);
+      if (!qNorm) return { ok: false, reason: 'empty' };
+      for (const a of _oaAirportsList) {
+        if (!a.name) continue;
+        if (!_normalizeForSearch(a.name).includes(qNorm)) continue;
+        if (matches.length >= RECHERCHE_MODALE_MAX) { truncated = true; break; }
+        matches.push({
+          kind: 'airport',
+          code: a.code || a.ident,
+          type: a.type,
+          country: a.country,
+          name: a.name,
+          lat: a.lat, lon: a.lon,
+          ident: a.ident,
+        });
+      }
+    } else if (field === 'icao') {
+      const up = queryRaw.trim().toUpperCase();
+      for (const a of _oaAirportsList) {
+        if (!a.icao) continue;
+        if (String(a.icao).toUpperCase() !== up) continue;
+        if (matches.length >= RECHERCHE_MODALE_MAX) { truncated = true; break; }
+        matches.push({
+          kind: 'airport',
+          code: a.code || a.ident,
+          type: a.type,
+          country: a.country,
+          name: a.name,
+          lat: a.lat, lon: a.lon,
+          ident: a.ident,
+        });
+      }
+    } else {
+      return { ok: false, reason: 'invalid-field' };
+    }
+
+    return { ok: true, matches, truncated };
+  }
+
+  // -------- NAVAIDS --------
+  if (entity === 'navaid') {
+    if (!_oaNavaidsList) loadOurAirportsNavaidsList();
+    if (!_oaNavaidsList) return { ok: false, reason: 'no-data' };
+
+    const matches = [];
+    let truncated = false;
+
+    if (field === 'name') {
+      const qNorm = _normalizeForSearch(queryRaw);
+      if (!qNorm) return { ok: false, reason: 'empty' };
+      for (const n of _oaNavaidsList) {
+        if (!n.name) continue;
+        if (!_normalizeForSearch(n.name).includes(qNorm)) continue;
+        if (matches.length >= RECHERCHE_MODALE_MAX) { truncated = true; break; }
+        matches.push({
+          kind: 'navaid',
+          code: n.ident,
+          type: n.type,
+          country: n.country,
+          name: n.name,
+          lat: n.lat, lon: n.lon,
+          id: n.id,
+        });
+      }
+    } else if (field === 'ident') {
+      const up = queryRaw.trim().toUpperCase();
+      for (const n of _oaNavaidsList) {
+        if (!n.ident) continue;
+        if (String(n.ident).toUpperCase() !== up) continue;
+        if (matches.length >= RECHERCHE_MODALE_MAX) { truncated = true; break; }
+        matches.push({
+          kind: 'navaid',
+          code: n.ident,
+          type: n.type,
+          country: n.country,
+          name: n.name,
+          lat: n.lat, lon: n.lon,
+          id: n.id,
+        });
+      }
+    } else {
+      return { ok: false, reason: 'invalid-field' };
+    }
+
+    return { ok: true, matches, truncated };
+  }
+
+  return { ok: false, reason: 'invalid-entity' };
+});
+
+// ============================================================
 // LOGBOOK — instance unique du moteur carnet de vol
 // ------------------------------------------------------------
 // Créée tardivement (dans whenReady) parce qu'elle a besoin du

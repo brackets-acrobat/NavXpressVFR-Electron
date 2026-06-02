@@ -62,6 +62,10 @@ contextBridge.exposeInMainWorld('api', {
     // RECHERCHE MULTI (airports + navaids), retourne toutes les correspondances
     chercherCorrespondances: (code) => ipcRenderer.invoke('chercher-correspondances', code),
 
+    // RECHERCHE MODALE (bouton loupe carte)
+    // payload = { entity: 'airport'|'navaid', field: 'name'|'icao'|'ident', query: string }
+    rechercheModale: (payload) => ipcRenderer.invoke('recherche-modale', payload),
+
     // AÉROPORTS DANS UNE BOUNDING BOX (pour affichage sur la carte)
     aeroportsDansBbox: (bbox) => ipcRenderer.invoke('aeroports-bbox', bbox),
 

@@ -68,6 +68,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Doit être appelé APRÈS initMap (le bouton est un contrôle Leaflet).
   initUncertaintyCircle();
 
+  // Bouton 🔍 « Rechercher » en bas à gauche de la carte. Doit être appelé
+  // APRÈS initMap (contrôle Leaflet) — utilise window.api.rechercheModale.
+  initMapSearch();
+
   // Doit être appelé APRÈS initMap (carte présente), initDirectTo (expose
   // window.demanderDirectToPoint), initMapMeasure (fonctions de mesure) et
   // initMapMarkers (window.demanderAjoutRepere) — toutes utilisées par le menu.
