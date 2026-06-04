@@ -122,10 +122,25 @@ function initSim() {
   // Alerte sonore de proximité waypoint
   //   Reçoit la position de l'avion toutes les 5 s depuis MSFS,
   //   calcule la distance au point d'arrivée du leg actif et
-  //   joue waypoint_fr.wav / waypoint_en.wav quand < 1.5 NM.
+  //   joue waypoint_fr.wav / waypoint_en.wav dans le rayon waypoint
+  //   (1,5 NM mode normal / 1,0 NM mode difficile).
   // ----------------------------------------------------------
-  const WAYPOINT_RADIUS_NM = 1.5;
-  const DEVIATION_MAX_NM = 1.2;
+  // Rayons de proximité — deux jeux de valeurs selon le mode de navigation
+  // (option hardNavigationMode : false = normal/souple, true = difficile/serré).
+  //   _waypointRadiusNM() : arrivée waypoint + déclenchement son touch + bascule
+  //                         de leg + zone de suspension d'arrivée → 1,5 NM normal,
+  //                         1,0 NM difficile.
+  //   _deviationMaxNM()   : demi-largeur du couloir d'écart latéral → 1,2 NM
+  //                         normal, 0,7 NM difficile.
+  // PATTERN_RADIUS_NM (zone de SUSPENSION des alertes de déviation autour d'un
+  // aéroport en tour de piste) reste à 2 NM dans les DEUX modes : on ne veut pas
+  // qu'un avion en pattern sorte de la zone de suspension et déclenche une alerte
+  // de déviation alors que le travers à la trajectoire est normal.
+  function _hardNav() {
+    return !!(window.appOptions && window.appOptions.hardNavigationMode === true);
+  }
+  function _waypointRadiusNM() { return _hardNav() ? 1.0 : 1.5; }
+  function _deviationMaxNM() { return _hardNav() ? 0.7 : 1.2; }
   const PATTERN_RADIUS_NM = 2;
   // Précharge des fichiers audio (situés dans src/sounds/)
   const _wpSounds = {
@@ -159,7 +174,7 @@ function initSim() {
 
   // État de l'alerte d'écart latéral
   let _deviationLegIndex = null;     // session pour laquelle on a alerté la dernière fois
-  let _deviationOutside = false;     // currently hors du couloir 1.2 NM
+  let _deviationOutside = false;     // currently hors du couloir de déviation
   let _deviationLastAlertTime = 0;   // timestamp ms de la dernière alerte (pour rappel toutes les 2 min)
   const DEVIATION_REMIND_MS = 2 * 60 * 1000; // 2 minutes
 
@@ -269,7 +284,7 @@ function initSim() {
     }
 
     const distance = _distanceNM(pos.lat, pos.lon, arr.lat, arr.lon);
-    const insideRadius = distance < WAYPOINT_RADIUS_NM;
+    const insideRadius = distance < _waypointRadiusNM();
 
     // --- Vérification de l'écart latéral à la trajectoire active ---
     // Toggle utilisateur (modale Options) : alerte de déviation désactivée
@@ -288,14 +303,15 @@ function initSim() {
       //     tour de piste — le pilote tourne, l'écart à la trajectoire est attendu.
       //     En mode 'ext', dep est la position avion gelée (pas un aéroport) → seul
       //     arr.pattern compte.
-      //  2. Approche d'arrivée : à < 1,5 NM (= WAYPOINT_RADIUS_NM) du point d'arrivée,
-      //     on suspend les alertes pour tous les arrivées (pattern ou non). Pour les
-      //     legs du plan, ça aligne le comportement avec le franchissement du rayon
-      //     d'annonce (le leg bascule à 1,5 NM, donc plus d'alerte de toute façon).
+      //  2. Approche d'arrivée : à < _waypointRadiusNM() (1,5 NM normal / 1,0 NM
+      //     difficile) du point d'arrivée, on suspend les alertes pour toutes les
+      //     arrivées (pattern ou non). Pour les legs du plan, ça aligne le
+      //     comportement avec le franchissement du rayon d'annonce (le leg bascule
+      //     à ce même rayon, donc plus d'alerte de toute façon).
       //  3. Direct To externe juste arrivé : on vient de basculer en mode 'plan' sur
       //     le leg N+1, mais l'avion est encore près de l'aéroport visité — pas sur
       //     le nouveau leg. Tant qu'on reste proche du dernier point d'arrivée
-      //     externe (2 NM si pattern, 1,5 NM sinon), on suspend les alertes.
+      //     externe (2 NM si pattern, _waypointRadiusNM() sinon), on suspend les alertes.
       //     Libération par hystérésis quand l'avion s'éloigne (> 2× le rayon).
       const distToDep = _distanceNM(pos.lat, pos.lon, dep.lat, dep.lon);
 
@@ -304,7 +320,7 @@ function initSim() {
         const dExt = _distanceNM(
           pos.lat, pos.lon, _extDtLastArrival.lat, _extDtLastArrival.lon
         );
-        const rExt = _extDtLastArrival.pattern ? PATTERN_RADIUS_NM : WAYPOINT_RADIUS_NM;
+        const rExt = _extDtLastArrival.pattern ? PATTERN_RADIUS_NM : _waypointRadiusNM();
         if (dExt > rExt * 2) {
           _extDtLastArrival = null;   // hystérésis — libère la mémoire
         } else if (dExt < rExt) {
@@ -315,7 +331,7 @@ function initSim() {
       const inPatternZone =
         (dep.pattern && distToDep < PATTERN_RADIUS_NM) ||
         (arr.pattern && distance < PATTERN_RADIUS_NM) ||
-        (distance < WAYPOINT_RADIUS_NM) ||
+        (distance < _waypointRadiusNM()) ||
         nearExtArrived;
 
       if (inPatternZone) {
@@ -325,7 +341,7 @@ function initSim() {
         }
       } else {
         const xtd = _crossTrackNM(pos.lat, pos.lon, dep.lat, dep.lon, arr.lat, arr.lon);
-        const horsCouloir = Math.abs(xtd) > DEVIATION_MAX_NM;
+        const horsCouloir = Math.abs(xtd) > _deviationMaxNM();
         if (horsCouloir) {
           const now = Date.now();
           if (!_deviationOutside) {
@@ -419,7 +435,7 @@ function initSim() {
   //   - dernier point du plan → son cuckoo (finalArrivalEnabled)
   //   - point intermédiaire   → son waypoint (waypointAnnounceEnabled)
   //
-  // Rayon de replay = WAYPOINT_RADIUS_NM (1.5 NM), identique au rayon qui
+  // Rayon de replay = _waypointRadiusNM() (1.5 NM), identique au rayon qui
   // déclenche l'annonce d'arrivée d'origine (insideRadius).
   document.addEventListener('app-option-changed', (e) => {
     if (!e.detail || e.detail.value !== true) return;
@@ -435,7 +451,7 @@ function initSim() {
     // sa position est « expliquée » par cette arrivée → on ne teste pas le plan.
     if (_extDtLastArrival
         && _distanceNM(_lastAircraftPos.lat, _lastAircraftPos.lon,
-                       _extDtLastArrival.lat, _extDtLastArrival.lon) < WAYPOINT_RADIUS_NM) {
+                       _extDtLastArrival.lat, _extDtLastArrival.lon) < _waypointRadiusNM()) {
       if (_extDtLastArrival.pattern) {
         if (key === 'touchAnnounceEnabled') _jouerSonTouch();
       } else {
@@ -458,7 +474,7 @@ function initSim() {
     if (!wp || typeof wp.lat !== 'number' || typeof wp.lon !== 'number') return;
 
     // L'avion est-il encore dans le rayon d'annonce de ce point ?
-    if (_distanceNM(_lastAircraftPos.lat, _lastAircraftPos.lon, wp.lat, wp.lon) >= WAYPOINT_RADIUS_NM) return;
+    if (_distanceNM(_lastAircraftPos.lat, _lastAircraftPos.lon, wp.lat, wp.lon) >= _waypointRadiusNM()) return;
 
     // Type de son de ce point → ne jouer que s'il correspond au toggle réactivé.
     let matchKey, jouer;

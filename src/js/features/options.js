@@ -26,6 +26,10 @@ const DEFAULT_OPTIONS = {
   finalArrivalEnabled: true,
   logbookEnabled: true,
   precisionEnabled: true,
+  // Mode de navigation : false = normal (marges actuelles), true = difficile
+  // (marges réduites). Lu par sim.js : couloir de déviation 1,2→0,7 NM et rayon
+  // waypoint/toucher/bascule de leg 1,5→1,0 NM. Défaut false → comportement inchangé.
+  hardNavigationMode: false,
   // Préférences d'affichage carte (restaurées au démarrage). Gérées par map.js
   // via setAppOption — pas d'UI dans la modale Options.
   layerAirportsEnabled: true,
@@ -143,6 +147,54 @@ function initOptions() {
     });
   }
 
+  // Toggle "Navigation en mode difficile".
+  // NB : la checkbox est verrouillée (disabled) en vol — voir le listener
+  // onLogbookState plus bas (impossible de changer de mode une fois décollé).
+  const cbHardNav = document.getElementById('opt-hard-nav');
+  if (cbHardNav) {
+    cbHardNav.checked = !!window.appOptions.hardNavigationMode;
+    cbHardNav.addEventListener('change', () => {
+      setAppOption('hardNavigationMode', cbHardNav.checked);
+    });
+  }
+
+  // Verrou du toggle difficulté en vol : au décollage (FSM 'IN_FLIGHT') on
+  // interdit le changement de mode de navigation ; déverrouillage au retour au
+  // sol ('OFF_TRACK'). Même principe que le toggle précision (precision.js).
+  // onLogbookState s'appuie sur ipcRenderer.on → plusieurs abonnés cohabitent.
+  if (cbHardNav && window.api && typeof window.api.onLogbookState === 'function') {
+    window.api.onLogbookState((s) => {
+      if (!s || !s.state) return;
+      if (s.state === 'IN_FLIGHT') cbHardNav.disabled = true;
+      else if (s.state === 'OFF_TRACK') cbHardNav.disabled = false;
+    });
+  }
+
+  // Lien "(voir les marges)" → ouvre la modale comparative des marges.
+  // Le lien est DANS le <label for="opt-hard-nav"> : sans preventDefault +
+  // stopPropagation, cliquer le lien basculerait aussi la checkbox.
+  const margesOverlay = document.getElementById('margins-overlay');
+  const linkShowMargins = document.getElementById('link-show-margins');
+  const btnMarginsClose = document.getElementById('btn-margins-close');
+
+  function _fermerMarges() {
+    if (margesOverlay) margesOverlay.classList.remove('visible');
+  }
+
+  if (linkShowMargins && margesOverlay) {
+    linkShowMargins.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      margesOverlay.classList.add('visible');
+    });
+  }
+  if (btnMarginsClose) btnMarginsClose.addEventListener('click', _fermerMarges);
+  if (margesOverlay) {
+    margesOverlay.addEventListener('click', e => {
+      if (e.target === margesOverlay) _fermerMarges();
+    });
+  }
+
   function _ouvrirOptions() {
     if (!optionsOverlay) return;
     // Resynchronise les checkboxes au cas où l'état aurait changé ailleurs.
@@ -153,6 +205,7 @@ function initOptions() {
     if (cbFinalArrival) cbFinalArrival.checked = !!window.appOptions.finalArrivalEnabled;
     if (cbLogbook) cbLogbook.checked = !!window.appOptions.logbookEnabled;
     if (cbPrecision) cbPrecision.checked = !!window.appOptions.precisionEnabled;
+    if (cbHardNav) cbHardNav.checked = !!window.appOptions.hardNavigationMode;
     optionsOverlay.classList.add('visible');
   }
 
@@ -170,9 +223,15 @@ function initOptions() {
     });
   }
 
-  // Touche Escape → fermeture
+  // Touche Escape → fermeture. La modale Marges s'empile au-dessus des Options :
+  // on la ferme en priorité (et on s'arrête là pour ne pas fermer aussi Options).
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && optionsOverlay && optionsOverlay.classList.contains('visible')) {
+    if (e.key !== 'Escape') return;
+    if (margesOverlay && margesOverlay.classList.contains('visible')) {
+      _fermerMarges();
+      return;
+    }
+    if (optionsOverlay && optionsOverlay.classList.contains('visible')) {
       _fermerOptions();
     }
   });

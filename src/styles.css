@@ -2390,6 +2390,18 @@ tr:hover {
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
 }
 
+/* Lien "(voir les marges)" dans le toggle Navigation mode difficile */
+.margins-link {
+    color: #00bcd4;
+    text-decoration: underline;
+    cursor: pointer;
+    margin-left: 4px;
+}
+
+.margins-link:hover {
+    color: #4dd0e1;
+}
+
 /* -------------------------------------------------- */
 /* Modale Carnet de vol (liste + détails)             */
 /* -------------------------------------------------- */

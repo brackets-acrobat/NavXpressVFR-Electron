@@ -1103,10 +1103,57 @@
                     <span data-i18n="optPrecision">Évaluation de précision du vol</span>
                     <input type="checkbox" class="toggle-switch" id="opt-precision-enabled">
                 </label>
+                <label class="layer-toggle-row" for="opt-hard-nav">
+                    <span>
+                        <span data-i18n="optHardNav">Navigation en mode difficile</span>
+                        <a href="#" id="link-show-margins" class="margins-link" data-i18n="optHardNavSeeMargins">(voir les marges)</a>
+                    </span>
+                    <input type="checkbox" class="toggle-switch" id="opt-hard-nav">
+                </label>
             </div>
 
             <div class="create-flight-actions" style="margin-top:16px;">
                 <button id="btn-options-close" class="btn-primary" data-i18n="btnClose">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Marges de navigation (ouverte depuis le lien du toggle mode difficile) -->
+    <div id="margins-overlay" class="modal-overlay">
+        <div id="margins-popup" class="modal-popup" style="width:480px;">
+            <h3 data-i18n="marginsTitle"
+                style="margin:0 0 12px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Marges de navigation</h3>
+            <p data-i18n="marginsIntro" style="font-size:13px; line-height:1.5; margin:0 0 14px 0; color:#bbb;">
+                Le mode difficile resserre les marges de déclenchement des alertes et de validation des points pour corser la navigation.</p>
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="border-bottom:1px solid #00bcd4;">
+                        <th data-i18n="marginsColParam" style="text-align:left; padding:6px 8px; color:#00bcd4;">Paramètre</th>
+                        <th data-i18n="marginsColNormal" style="text-align:center; padding:6px 8px; color:#00bcd4;">Mode normal</th>
+                        <th data-i18n="marginsColHard" style="text-align:center; padding:6px 8px; color:#00bcd4;">Mode difficile</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid #333;">
+                        <td data-i18n="marginsRowDeviation" style="padding:6px 8px;">Couloir de déviation latérale</td>
+                        <td data-i18n="marginsDevNormal" style="text-align:center; padding:6px 8px;">1,2 NM</td>
+                        <td data-i18n="marginsDevHard" style="text-align:center; padding:6px 8px; color:#ffa726;">0,7 NM</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #333;">
+                        <td data-i18n="marginsRowWaypoint" style="padding:6px 8px;">Arrivée waypoint / toucher / bascule de leg</td>
+                        <td data-i18n="marginsWpNormal" style="text-align:center; padding:6px 8px;">1,5 NM</td>
+                        <td data-i18n="marginsWpHard" style="text-align:center; padding:6px 8px; color:#ffa726;">1,0 NM</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="marginsRowSuspension" style="padding:6px 8px;">Zone de suspension (tour de piste)</td>
+                        <td data-i18n="marginsSuspNormal" style="text-align:center; padding:6px 8px;">2 NM</td>
+                        <td data-i18n="marginsSuspHard" style="text-align:center; padding:6px 8px;">2 NM</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="create-flight-actions" style="margin-top:16px;">
+                <button id="btn-margins-close" class="btn-primary" data-i18n="btnClose">Fermer</button>
             </div>
         </div>
     </div>
