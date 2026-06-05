@@ -1502,6 +1502,40 @@ h1 {
     /* transform: translate(offX,offY) translate(-50%,-50%) rotate(Xdeg) — inline JS */
 }
 
+/* --- Flanquement VOR : étiquette du tracé (miroir de map-measure-label) --- */
+.flanquement-label {
+    background: transparent !important;
+    border: none !important;
+}
+
+.flanquement-label-inner {
+    display: inline-block;
+    color: #ff00cc;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 14px;
+    line-height: 1;
+    font-weight: bold;
+    white-space: nowrap;
+    pointer-events: none;
+    /* Contour blanc 1px (8 directions) pour rester lisible sur tous les fonds */
+    text-shadow:
+        -1px -1px 0 #fff, 0 -1px 0 #fff, 1px -1px 0 #fff,
+        -1px 0 0 #fff, 1px 0 0 #fff,
+        -1px 1px 0 #fff, 0 1px 0 #fff, 1px 1px 0 #fff;
+    transform-origin: 50% 50%;
+    /* transform inline depuis flanquement.js */
+}
+
+/* En-tête de groupe dans la liste de la modale flanquement */
+.flanquement-group-head {
+    color: #888;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 4px 4px;
+    border-bottom: 1px solid #1f1f1f;
+}
+
 /* -------------------------------------------------- */
 /* Modale info Direct To                              */
 /* -------------------------------------------------- */

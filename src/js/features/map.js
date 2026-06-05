@@ -482,6 +482,23 @@ function initMap() {
           sticky: false,
         });
         marker.on('click', () => ouvrirInfoNavaid(n.id));
+        // Clic droit sur un VOR (famille VOR / VOR-DME / VORTAC : stations qui
+        // émettent des radiaux) → menu contextuel avec l'item "Flanquement VOR".
+        // On stoppe la propagation pour ne pas aussi ouvrir le menu carte générique.
+        if (/^VOR/.test(n.type || '')) {
+          marker.on('contextmenu', (e) => {
+            if (e.originalEvent) {
+              e.originalEvent.preventDefault();
+              e.originalEvent.stopPropagation();
+            }
+            L.DomEvent.stopPropagation(e);
+            const ox = (e.originalEvent && e.originalEvent.pageX) || 0;
+            const oy = (e.originalEvent && e.originalEvent.pageY) || 0;
+            if (typeof window.ouvrirMenuContextuelCarte === 'function') {
+              window.ouvrirMenuContextuelCarte(e.latlng, ox, oy, { navaid: n });
+            }
+          });
+        }
         marker.addTo(navaidsLayer);
       }
     }

@@ -1452,6 +1452,46 @@
         </div>
     </div>
 
+    <!-- Modale Flanquement VOR — choix de la cible (point du plan / repère visuel) -->
+    <div id="flanquement-overlay" class="modal-overlay">
+        <div class="modal-popup" style="width:440px;">
+            <h3 data-i18n="flanquementTitle"
+                style="margin:0 0 6px 0; color:#ce93d8; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Flanquement VOR</h3>
+            <p style="color:#888; font-size:12px; margin:0 0 14px 0;">
+                <span data-i18n="flanquementSubtitle">Tracer un radial depuis</span>
+                <strong id="flanquement-vor-ident" style="color:#ce93d8;">—</strong>
+                <span data-i18n="flanquementSubtitleTo">vers&nbsp;:</span>
+            </p>
+            <div id="flanquement-empty" class="dt-wp-empty" style="display:none; color:#888; font-size:13px; padding:8px 4px;"
+                data-i18n="flanquementEmpty">
+                Aucun point tournant ni repère visuel dans le plan de vol.</div>
+            <div id="flanquement-list" class="dt-wp-list"
+                style="max-height:280px; overflow-y:auto;"></div>
+            <div id="flanquement-error" class="field-error"></div>
+            <div class="create-flight-actions">
+                <button id="btn-flanquement-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
+                <button id="btn-flanquement-validate" class="btn-primary" data-i18n="flanquementBtnTrace"
+                    style="background:#8e24aa; border-color:#8e24aa;">Tracer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale confirmation suppression d'un flanquement (clic sur le tracé) -->
+    <div id="flanquement-delete-overlay" class="modal-overlay">
+        <div class="modal-popup" style="width:380px;">
+            <h3 data-i18n="flanquementDeleteTitle"
+                style="margin:0 0 14px 0; color:#e53935; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Supprimer le flanquement</h3>
+            <p id="flanquement-delete-text" style="color:#e0e0e0; font-size:13px; margin:0 0 16px 0;"></p>
+            <div class="create-flight-actions">
+                <button id="btn-flanquement-delete-no" class="btn-secondary" data-i18n="btnNo">Non</button>
+                <button id="btn-flanquement-delete-yes" class="btn-primary" data-i18n="btnYes"
+                    style="background:#e53935; border-color:#e53935;">Oui</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modale "Coordonnées du point" — clic droit carte → coords GPS + copie -->
     <div id="coords-point-overlay" class="modal-overlay">
         <div class="modal-popup" style="width:400px;">
@@ -1601,6 +1641,7 @@
     <script src="js/features/map-search.js"></script>
     <script src="js/features/map-coords.js"></script>
     <script src="js/features/map-context-menu.js"></script>
+    <script src="js/features/flanquement.js"></script>
     <script src="js/features/timers.js"></script>
     <script src="js/features/reset.js"></script>
     <script src="js/features/leg-modals-init.js"></script>

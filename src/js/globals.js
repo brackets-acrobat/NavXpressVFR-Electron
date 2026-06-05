@@ -47,6 +47,15 @@ let _directToPointMarker = null;
 // Géré par map-markers.js ; lu par flightplan-io.js (save) ; vidé par reset.js.
 let reperesVisuels = [];
 
+// --- Flanquements VOR (clic droit sur un VOR → "Flanquement VOR") ---
+// Radiaux tracés depuis un VOR vers un point du plan (point tournant) ou un
+// repère visuel, avec étiquette « R-090° / 12.3 NM ». Sauvegardés dans le plan
+// .navxpv. Chaque entrée : { vorIdent, vorLat, vorLon, targetName, targetKind,
+// lat, lon, radialMag, distNM, line, label } où line/label sont les objets
+// Leaflet (non sérialisés ; radialMag/distNM recalculés au chargement).
+// Géré par flanquement.js ; lu par flightplan-io.js (save) ; vidé par reset.js.
+let flanquements = [];
+
 // État connexion simulateur (hissé en Phase 2 — Lot C ; lu par sim, Direct To, toggle i18n)
 let _simState = 'disconnected';   // disconnected | connecting | connected
 

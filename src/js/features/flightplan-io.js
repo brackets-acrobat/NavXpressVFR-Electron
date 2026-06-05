@@ -286,6 +286,7 @@ function initFlightPlanIO() {
         marqueursCarte = [];
         supprimerSegmentsCarte();
         if (typeof window.effacerTousReperesVisuels === 'function') window.effacerTousReperesVisuels();
+        if (typeof window.effacerTousFlanquements === 'function') window.effacerTousFlanquements();
 
         // Re-peupler les waypoints
         for (const wp of data.waypoints) {
@@ -349,6 +350,12 @@ function initFlightPlanIO() {
           window.chargerReperesVisuels(data.markers);
         }
 
+        // Flanquements VOR (radiaux) — APRÈS calculerDeclinaisonCentroide ci-dessus
+        // (le radial magnétique en dépend) et APRÈS chargement des repères (cibles).
+        if (typeof window.chargerFlanquements === 'function') {
+          window.chargerFlanquements(data.flanquements);
+        }
+
         mettreAJourLogDeNav();
       } catch (err) {
         console.error('Erreur chargement .navxpv:', err);
@@ -392,6 +399,19 @@ function initFlightPlanIO() {
           description: r.description || '',
           lat: r.lat,
           lon: r.lon,
+        })),
+        // Flanquements VOR (radiaux tracés vers un point/repère) — on sérialise
+        // l'identité de la station + la géométrie ; radial/distance recalculés
+        // au chargement (la déclinaison magnétique peut avoir changé).
+        flanquements: (typeof flanquements !== 'undefined' ? flanquements : []).map(f => ({
+          vorIdent: f.vorIdent || '',
+          vorLat: f.vorLat,
+          vorLon: f.vorLon,
+          targetName: f.targetName || '',
+          targetKind: f.targetKind || 'waypoint',
+          lat: f.lat,
+          lon: f.lon,
+          rangeNM: f.rangeNM,
         })),
       };
 

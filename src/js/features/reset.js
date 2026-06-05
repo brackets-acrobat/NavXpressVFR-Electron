@@ -22,6 +22,7 @@ function initReset() {
     marqueursCarte = [];
     supprimerSegmentsCarte();
     if (typeof window.effacerTousReperesVisuels === 'function') window.effacerTousReperesVisuels();
+    if (typeof window.effacerTousFlanquements === 'function') window.effacerTousFlanquements();
     actualiserAffichageDeclinaison();
     mettreAJourLogDeNav();
   }

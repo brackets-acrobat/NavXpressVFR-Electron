@@ -7,12 +7,30 @@
 // Pour ajouter une entrée future, ajouter un item à ce tableau.
 // ============================================================
 
+// Contexte de l'ouverture courante du menu (module-level pour que les prédicats
+// `visible()` et les `action()` des items — définis hors de initMapContextMenu —
+// puissent le consulter). Mis à jour à chaque ouverture, remis à null à la
+// fermeture. Ex. { navaid } quand on a fait un clic droit sur un VOR.
+let _mapCtxContext = null;
+
 // Registre des items du menu. Ordre = ordre d'affichage.
 // labelKey  : clé i18n pour le libellé (cf. src/i18n.js).
-// action    : fonction (latlng) appelée quand l'utilisateur clique sur l'item.
+// action    : fonction (latlng, context) appelée quand l'utilisateur clique sur
+//             l'item. `context` = _mapCtxContext de l'ouverture courante (ou null).
 // visible   : (optionnel) prédicat () => bool. Si défini et retourne false,
 //             l'item n'est pas rendu à l'ouverture du menu.
 const MAP_CONTEXT_MENU_ITEMS = [
+  {
+    id: 'flanquement-vor',
+    labelKey: 'mapCtxFlanquement',
+    // Ne s'affiche que sur clic droit d'un VOR (contexte navaid présent).
+    visible: () => !!(_mapCtxContext && _mapCtxContext.navaid),
+    action: (latlng, context) => {
+      if (context && context.navaid && typeof window.ouvrirModaleFlanquement === 'function') {
+        window.ouvrirModaleFlanquement(context.navaid);
+      }
+    },
+  },
   {
     id: 'direct-to',
     labelKey: 'mapCtxDirectTo',
@@ -93,10 +111,12 @@ function initMapContextMenu() {
   function _fermer() {
     menuEl.style.display = 'none';
     _currentLatLng = null;
+    _mapCtxContext = null;
   }
 
-  function _ouvrir(latlng, pageX, pageY) {
+  function _ouvrir(latlng, pageX, pageY, context) {
     _currentLatLng = latlng;
+    _mapCtxContext = context || null;
     _construireMenu();   // refresh i18n au cas où la langue ait changé
 
     // Positionnement : on affiche d'abord pour mesurer, puis on ajuste si
@@ -118,9 +138,10 @@ function initMapContextMenu() {
     const itemId = li.dataset.itemId;
     const item = MAP_CONTEXT_MENU_ITEMS.find(x => x.id === itemId);
     const latlng = _currentLatLng;
+    const context = _mapCtxContext;
     _fermer();
     if (item && latlng && typeof item.action === 'function') {
-      try { item.action(latlng); }
+      try { item.action(latlng, context); }
       catch (err) { console.error('Map context menu action error:', err); }
     }
   });
@@ -134,8 +155,14 @@ function initMapContextMenu() {
     }
     const ox = (e.originalEvent && e.originalEvent.pageX) || 0;
     const oy = (e.originalEvent && e.originalEvent.pageY) || 0;
-    _ouvrir(e.latlng, ox, oy);
+    _ouvrir(e.latlng, ox, oy, null);
   });
+
+  // Ouverture programmatique avec contexte (ex. clic droit sur un marqueur VOR,
+  // déclenché depuis map.js). Le contexte est consulté par visible()/action().
+  window.ouvrirMenuContextuelCarte = (latlng, pageX, pageY, context) => {
+    _ouvrir(latlng, pageX, pageY, context);
+  };
 
   // Fermeture par clic ailleurs : CAPTURE-phase + stopImmediatePropagation,
   // pour intercepter le clic AVANT que la carte (et notamment l'outil de

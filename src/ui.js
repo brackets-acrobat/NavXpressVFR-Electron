@@ -83,6 +83,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // (window.ouvrirModaleCoordsPoint) — toutes utilisées par le menu.
   initMapContextMenu();
 
+  // Flanquement VOR : expose window.ouvrirModaleFlanquement (appelé par le menu
+  // contextuel sur clic droit d'un VOR), chargerFlanquements / effacerTous
+  // (flightplan-io + reset). Doit être appelé APRÈS initMap (carte présente).
+  initFlanquement();
+
   initWaypointModals();
 
   // Pont carnet de vol : décore mettreAJourLogDeNav (doit donc être appelé
