@@ -1124,6 +1124,64 @@ ipcMain.handle('details-navaid', async (event, id) => {
 });
 
 // ============================================================
+// 11bis. MÉTÉO METAR (aviationweather.gov)
+// ------------------------------------------------------------
+// Renvoie le METAR brut d'un aéroport (code OACI). Beaucoup de petits
+// aérodromes VFR n'émettent PAS de METAR : dans ce cas on cherche la station
+// émettrice LA PLUS PROCHE dans une bbox autour des coordonnées.
+//   payload = { icao, lat, lon }
+//   retour  = { ok:true, station, raw, name, exact, distNM } | { ok:false, reason }
+// API publique, sans clé. Réutilise httpsGetFollow (User-Agent + redirections).
+// ============================================================
+ipcMain.handle('metar-aeroport', async (event, payload) => {
+  const icao = payload && payload.icao ? String(payload.icao).trim().toUpperCase() : '';
+  const lat = payload && Number.isFinite(payload.lat) ? payload.lat : null;
+  const lon = payload && Number.isFinite(payload.lon) ? payload.lon : null;
+
+  // 1) Essai direct sur le code OACI.
+  if (/^[A-Z0-9]{4}$/.test(icao)) {
+    try {
+      const url = `https://aviationweather.gov/api/data/metar?ids=${encodeURIComponent(icao)}&format=json`;
+      const arr = JSON.parse(await httpsGetFollow(url));
+      if (Array.isArray(arr) && arr.length && arr[0] && arr[0].rawOb) {
+        return { ok: true, station: arr[0].icaoId, raw: arr[0].rawOb, name: arr[0].name || '', exact: true };
+      }
+    } catch (e) {
+      console.warn('[METAR] requête directe KO', icao, e.message);
+    }
+  }
+
+  // 2) Fallback : station émettrice la plus proche dans une bbox ~0,8° (~48 NM).
+  if (lat != null && lon != null) {
+    try {
+      const d = 0.8;
+      const bbox = `${(lat - d).toFixed(3)},${(lon - d).toFixed(3)},${(lat + d).toFixed(3)},${(lon + d).toFixed(3)}`;
+      const url = `https://aviationweather.gov/api/data/metar?bbox=${encodeURIComponent(bbox)}&format=json`;
+      const arr = JSON.parse(await httpsGetFollow(url));
+      if (Array.isArray(arr)) {
+        const withRaw = arr.filter(o => o && o.rawOb && Number.isFinite(o.lat) && Number.isFinite(o.lon));
+        if (withRaw.length) {
+          withRaw.sort((a, b) => _distNM(lat, lon, a.lat, a.lon) - _distNM(lat, lon, b.lat, b.lon));
+          const best = withRaw[0];
+          return {
+            ok: true,
+            station: best.icaoId,
+            raw: best.rawOb,
+            name: best.name || '',
+            exact: String(best.icaoId || '').toUpperCase() === icao,
+            distNM: Math.round(_distNM(lat, lon, best.lat, best.lon)),
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('[METAR] requête bbox KO', e.message);
+    }
+  }
+
+  return { ok: false, reason: 'no-metar' };
+});
+
+// ============================================================
 // 12. RECHERCHE MODALE (bouton loupe carte)
 // ------------------------------------------------------------
 // Recherche d'un aéroport ou d'un navaid par un champ donné.
@@ -1392,6 +1450,9 @@ function broadcastSimStatus(payload) {
   BrowserWindow.getAllWindows().forEach(w => {
     try { w.webContents.send('simconnect-status', payload); } catch (_) {}
   });
+  // Déconnexion = on n'est plus en vol → on relâche le verrou du toggle
+  // « mode difficile » (sinon il resterait grisé après une perte de connexion).
+  if (payload && payload.state === 'disconnected') broadcastFlightAirborne(false);
 }
 
 function broadcastDonneesVol(payload) {
@@ -1403,6 +1464,20 @@ function broadcastDonneesVol(payload) {
 function broadcastPosition(payload) {
   BrowserWindow.getAllWindows().forEach(w => {
     try { w.webContents.send('donnees-position', payload); } catch (_) {}
+  });
+}
+
+// État « en vol » (airborne) diffusé au renderer INDÉPENDAMMENT du carnet de
+// vol : sert à verrouiller le toggle « Navigation en mode difficile » dès le
+// décollage, même si le logbook est désactivé. Basé sur SIM ON GROUND, lu en
+// continu dans le groupe SC_TRACK. Émis seulement au changement (anti-spam).
+let _lastAirborne = null;
+function broadcastFlightAirborne(airborne) {
+  airborne = !!airborne;
+  if (airborne === _lastAirborne) return;
+  _lastAirborne = airborne;
+  BrowserWindow.getAllWindows().forEach(w => {
+    try { w.webContents.send('flight-airborne', { airborne }); } catch (_) {}
   });
 }
 
@@ -1566,6 +1641,8 @@ ipcMain.handle('simconnect-connecter', async () => {
           const gs       = data.data.readFloat64();
           const altAgl   = data.data.readFloat64();
           const parkBrake = data.data.readInt32() !== 0;
+          // Verrou « mode difficile » : diffusé indépendamment du carnet de vol.
+          broadcastFlightAirborne(!onGround);
           if (_logbookEngine) {
             _logbookEngine.feedTracking({
               onGround, eng1, eng2, lat, lon,

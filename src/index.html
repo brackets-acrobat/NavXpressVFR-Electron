@@ -110,42 +110,8 @@
                                 data-i18n="btnImportOurAirports">🌐 Importer données OurAirports</button>
                         </div>
 
-                        <!-- Boîte Chronomètre + Timer + bouton Carnet de vol à droite -->
-                        <div id="chrono-logbook-row">
-                        <div id="chrono-timer-box">
-                            <!-- Chronomètre MM:SS -->
-                            <div class="chrono-item">
-                                <div class="chrono-label" data-i18n="chronoLabel">Chronomètre</div>
-                                <div class="chrono-display" id="chrono-display">00:00</div>
-                                <div class="chrono-buttons">
-                                    <button class="chrono-btn chrono-btn-start" id="chrono-start"
-                                        data-i18n-title="chronoStart" title="Démarrer">▶</button>
-                                    <button class="chrono-btn chrono-btn-stop" id="chrono-stop"
-                                        data-i18n-title="chronoStop" title="Arrêter">⏸</button>
-                                    <button class="chrono-btn chrono-btn-reset" id="chrono-reset"
-                                        data-i18n-title="chronoReset" title="Remise à zéro">↺</button>
-                                </div>
-                            </div>
-                            <!-- Timer HH:MM:SS -->
-                            <div class="chrono-item">
-                                <div class="chrono-label" data-i18n="timerLabel">Timer</div>
-                                <div class="chrono-display" id="timer-display">00:00:00</div>
-                                <div class="chrono-buttons">
-                                    <button class="chrono-btn chrono-btn-start" id="timer-start"
-                                        data-i18n-title="chronoStart" title="Démarrer">▶</button>
-                                    <button class="chrono-btn chrono-btn-stop" id="timer-stop"
-                                        data-i18n-title="chronoStop" title="Arrêter">⏸</button>
-                                    <button class="chrono-btn chrono-btn-reset" id="timer-reset"
-                                        data-i18n-title="chronoReset" title="Remise à zéro">↺</button>
-                                </div>
-                            </div>
-                        </div>
-                            <!-- Bouton Carnet de vol (style boutons d'import) -->
-                            <button id="btn-logbook" class="btn-secondary btn-logbook"
-                                data-i18n="btnLogbook">📖 Carnet de vol</button>
-                        </div>
-
-                        <!-- Boutons Carburant + Changement réservoir + Conversions + Direct To sur la même ligne -->
+                        <!-- Ligne de boutons : Carburant / Réservoir / Conversions / Profil /
+                             Direct To / Carnet de vol — tous à la même hauteur. -->
                         <div class="dt-conv-row">
                             <button id="btn-fuel" class="btn-fuel" data-i18n-title="fuelBtnTooltip"
                                 title="Emport carburant">
@@ -173,6 +139,61 @@
                                 data-i18n-title="dtBtnTooltipDisabled" title="Direct To — MSFS doit être connecté">
                                 <span class="dt-icon" aria-hidden="true">D&nbsp;➤</span>
                             </button>
+                            <!-- Carnet de vol : même hauteur que les autres, largeur = texte -->
+                            <button id="btn-logbook" class="btn-secondary btn-logbook"
+                                data-i18n="btnLogbook">📖 Carnet de vol</button>
+                        </div>
+
+                        <!-- Boîte Chronomètre + boîte METAR, côte à côte (largeurs égales 50/50). -->
+                        <div id="chrono-metar-row">
+                            <div id="chrono-timer-box">
+                                <!-- Chronomètre MM:SS -->
+                                <div class="chrono-item">
+                                    <div class="chrono-label" data-i18n="chronoLabel">Chronomètre</div>
+                                    <div class="chrono-display" id="chrono-display">00:00</div>
+                                    <div class="chrono-buttons">
+                                        <button class="chrono-btn chrono-btn-start" id="chrono-start"
+                                            data-i18n-title="chronoStart" title="Démarrer">▶</button>
+                                        <button class="chrono-btn chrono-btn-stop" id="chrono-stop"
+                                            data-i18n-title="chronoStop" title="Arrêter">⏸</button>
+                                        <button class="chrono-btn chrono-btn-reset" id="chrono-reset"
+                                            data-i18n-title="chronoReset" title="Remise à zéro">↺</button>
+                                    </div>
+                                </div>
+                                <!-- Timer HH:MM:SS -->
+                                <div class="chrono-item">
+                                    <div class="chrono-label" data-i18n="timerLabel">Timer</div>
+                                    <div class="chrono-display" id="timer-display">00:00:00</div>
+                                    <div class="chrono-buttons">
+                                        <button class="chrono-btn chrono-btn-start" id="timer-start"
+                                            data-i18n-title="chronoStart" title="Démarrer">▶</button>
+                                        <button class="chrono-btn chrono-btn-stop" id="timer-stop"
+                                            data-i18n-title="chronoStop" title="Arrêter">⏸</button>
+                                        <button class="chrono-btn chrono-btn-reset" id="timer-reset"
+                                            data-i18n-title="chronoReset" title="Remise à zéro">↺</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Boîte METAR départ / arrivée (stations les plus proches) -->
+                            <div id="metar-box">
+                                <div id="metar-box-head">
+                                    <span data-i18n="metarTitle">METAR</span>
+                                    <button id="btn-metar-refresh" type="button"
+                                        data-i18n-title="metarRefreshTitle" title="Rafraîchir les METAR">↻</button>
+                                </div>
+                                <div class="metar-row">
+                                    <button class="metar-eye" id="metar-dep-eye" type="button" disabled
+                                        data-i18n-title="metarEyeTitle" title="Décoder ce METAR">👁</button>
+                                    <span class="metar-label" data-i18n="metarDep">Départ</span>
+                                    <span class="metar-raw" id="metar-dep-raw">—</span>
+                                </div>
+                                <div class="metar-row">
+                                    <button class="metar-eye" id="metar-arr-eye" type="button" disabled
+                                        data-i18n-title="metarEyeTitle" title="Décoder ce METAR">👁</button>
+                                    <span class="metar-label" data-i18n="metarArr">Arrivée</span>
+                                    <span class="metar-raw" id="metar-arr-raw">—</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1219,6 +1240,17 @@
         </div>
     </div>
 
+    <!-- Modale METAR décodé (ouverte par le bouton œil de la boîte METAR) -->
+    <div id="metar-decode-overlay" class="modal-overlay">
+        <div id="metar-decode-popup" class="modal-popup">
+            <button id="btn-metar-decode-close" class="airport-info-close" aria-label="Fermer">×</button>
+            <h3 class="logbook-h3" data-i18n="metarModalTitle">METAR décodé</h3>
+            <div id="metar-decode-station"></div>
+            <div id="metar-decode-raw"></div>
+            <div id="metar-decode-body"></div>
+        </div>
+    </div>
+
     <!-- Modale "Tour de piste / Toucher prévu ?" -->
     <div id="ask-pattern-overlay" class="modal-overlay">
         <div class="modal-popup" style="width:380px;">
@@ -1561,6 +1593,7 @@
     <script src="js/features/logbook.js"></script>
     <script src="js/features/logbook-bridge.js"></script>
     <script src="js/features/precision.js"></script>
+    <script src="js/features/metar.js"></script>
     <!-- Orchestrateur : DOMContentLoaded qui appelle les init* dans l'ordre — chargé en dernier -->
     <script src="ui.js"></script>
 </body>

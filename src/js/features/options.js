@@ -149,7 +149,7 @@ function initOptions() {
 
   // Toggle "Navigation en mode difficile".
   // NB : la checkbox est verrouillée (disabled) en vol — voir le listener
-  // onLogbookState plus bas (impossible de changer de mode une fois décollé).
+  // onFlightAirborne plus bas (impossible de changer de mode une fois décollé).
   const cbHardNav = document.getElementById('opt-hard-nav');
   if (cbHardNav) {
     cbHardNav.checked = !!window.appOptions.hardNavigationMode;
@@ -158,15 +158,14 @@ function initOptions() {
     });
   }
 
-  // Verrou du toggle difficulté en vol : au décollage (FSM 'IN_FLIGHT') on
-  // interdit le changement de mode de navigation ; déverrouillage au retour au
-  // sol ('OFF_TRACK'). Même principe que le toggle précision (precision.js).
-  // onLogbookState s'appuie sur ipcRenderer.on → plusieurs abonnés cohabitent.
-  if (cbHardNav && window.api && typeof window.api.onLogbookState === 'function') {
-    window.api.onLogbookState((s) => {
-      if (!s || !s.state) return;
-      if (s.state === 'IN_FLIGHT') cbHardNav.disabled = true;
-      else if (s.state === 'OFF_TRACK') cbHardNav.disabled = false;
+  // Verrou du toggle difficulté en vol : grisé dès que l'avion est en l'air,
+  // réactivé au sol (ou à la déconnexion du simulateur). On s'appuie sur l'état
+  // « airborne » (SimVar SIM ON GROUND) diffusé par main, INDÉPENDANT du carnet
+  // de vol → le verrou fonctionne même quand le logbook est désactivé.
+  if (cbHardNav && window.api && typeof window.api.onFlightAirborne === 'function') {
+    window.api.onFlightAirborne((s) => {
+      if (!s) return;
+      cbHardNav.disabled = !!s.airborne;
     });
   }
 

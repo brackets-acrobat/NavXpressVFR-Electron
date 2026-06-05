@@ -5,6 +5,13 @@ contextBridge.exposeInMainWorld('api', {
     onStatusSimConnect: (callback) => ipcRenderer.on('simconnect-status', (event, status) => callback(status)),
     onDonneesVol: (callback) => ipcRenderer.on('donnees-vol', (event, data) => callback(data)),
     onDonneesPosition: (callback) => ipcRenderer.on('donnees-position', (event, data) => callback(data)),
+    // État « en vol » (airborne) — indépendant du carnet de vol. Sert à
+    // verrouiller le toggle « Navigation en mode difficile » dès le décollage.
+    onFlightAirborne: (callback) => {
+        const listener = (_event, data) => callback(data);
+        ipcRenderer.on('flight-airborne', listener);
+        return () => ipcRenderer.removeListener('flight-airborne', listener);
+    },
 
     // CONNEXION SIMCONNECT (MSFS)
     simConnectConnecter: () => ipcRenderer.invoke('simconnect-connecter'),
@@ -75,6 +82,10 @@ contextBridge.exposeInMainWorld('api', {
     // NAVAIDS dans la bbox + détails par id
     navaidsDansBbox: (bbox) => ipcRenderer.invoke('navaids-bbox', bbox),
     detailsNavaid: (id) => ipcRenderer.invoke('details-navaid', id),
+
+    // MÉTÉO METAR (aviationweather.gov) — { icao, lat, lon } → METAR brut
+    // de l'aéroport ou de la station émettrice la plus proche.
+    metarAeroport: (payload) => ipcRenderer.invoke('metar-aeroport', payload),
 
     // LOGBOOK (carnet de vol automatisé + analyseur d'atterrissage)
     // Renderer → main : poussent l'état nécessaire au moteur côté main process.

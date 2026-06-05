@@ -341,7 +341,9 @@ h1 {
     flex-direction: row;
     align-items: flex-start;
     gap: 16px;
-    margin-bottom: 20px;
+    /* Espace sous le bloc haut (= sous la boîte METAR) avant le Log de
+       navigation. Aligné sur l'espace de la ligne de boutons → METAR (10px). */
+    margin-bottom: 10px;
 }
 
 /* Colonne droite : boutons + boite waypoint empilés */
@@ -446,24 +448,40 @@ h1 {
    bouton de la rangée d'import #btn-api : même hauteur (hérite de
    .btn-secondary) et même largeur via calc (4 boutons + 3 gaps de 8px dans
    un conteneur de même largeur que cette rangée). */
-#chrono-logbook-row {
+/* Ligne des deux boîtes : Chronomètre + METAR côte à côte, largeurs égales. */
+#chrono-metar-row {
     display: flex;
     flex-direction: row;
     gap: 8px;
-    align-items: flex-start;
+    align-items: stretch;   /* les deux boîtes ont la même hauteur */
 }
 
-#chrono-logbook-row .btn-logbook {
-    flex: 0 0 auto;
-    width: calc((100% - 24px) / 4);
-    text-align: center;
-    white-space: normal;
-    line-height: 1.2;
+/* Chronomètre : largeur fixe 400px (contient tout son contenu sans débordement).
+   METAR : prend toute la largeur restante. */
+#chrono-metar-row > #chrono-timer-box {
+    flex: 0 0 400px;
+}
+
+#chrono-metar-row > #metar-box {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Bouton Carnet de vol dans la ligne de boutons : même hauteur (46px) que les
+   autres boutons, largeur = juste le texte. */
+.dt-conv-row .btn-logbook {
+    height: 46px;
+    width: auto;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    line-height: 1;
     border-color: #00bcd4;
     color: #00bcd4;
 }
 
-#chrono-logbook-row .btn-logbook:hover {
+.dt-conv-row .btn-logbook:hover {
     background-color: #00bcd4;
     color: #121212;
     border-color: #00bcd4;
@@ -481,9 +499,152 @@ h1 {
     flex-direction: column;
     gap: 8px;
     box-sizing: border-box;
-    /* Largeur fixe : label (100px) + display (130px) + 3 boutons (98px) + gaps + padding */
-    align-self: flex-start;
-    width: 400px;
+    /* La largeur est gérée par #chrono-metar-row (flex 1 1 0 = 50%). */
+}
+
+/* -------------------------------------------------- */
+/* Boîte METAR (départ / arrivée)                     */
+/* -------------------------------------------------- */
+#metar-box {
+    background-color: #1a1a1a;
+    border: 1px solid #2d2d2d;
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    box-sizing: border-box;
+    overflow: hidden;       /* jamais d'ascenseur : on tronque plutôt */
+}
+
+#metar-box-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #00bcd4;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 11px;
+}
+
+#btn-metar-refresh {
+    background: transparent;
+    border: none;
+    color: #00bcd4;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 4px;
+}
+
+#btn-metar-refresh:hover {
+    background-color: #00bcd4;
+    color: #121212;
+}
+
+.metar-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.metar-eye {
+    flex: 0 0 auto;
+    background: transparent;
+    border: 1px solid #444;
+    color: #bbb;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1;
+    padding: 2px 5px;
+}
+
+.metar-eye:hover:not(:disabled) {
+    border-color: #00bcd4;
+    color: #00bcd4;
+}
+
+.metar-eye:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.metar-label {
+    flex: 0 0 auto;
+    color: #888;
+    min-width: 54px;
+}
+
+.metar-raw {
+    flex: 1 1 120px;
+    min-width: 0;
+    color: #e0e0e0;
+    font-family: 'Consolas', 'Monaco', monospace;
+    word-break: break-word;
+}
+
+/* -------------------------------------------------- */
+/* Modale METAR décodé                                */
+/* -------------------------------------------------- */
+#metar-decode-popup {
+    position: relative;
+    width: 560px;
+    max-width: 94vw;
+    max-height: 85vh;
+    overflow: auto;
+}
+
+#metar-decode-station {
+    color: #00bcd4;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+/* Ligne « station la plus proche · N NM » (déplacée depuis la boîte METAR). */
+.metar-decode-note {
+    color: #e0a030;
+    font-weight: normal;
+    font-style: italic;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+#metar-decode-raw {
+    font-family: 'Consolas', 'Monaco', monospace;
+    background: #121212;
+    border: 1px solid #2d2d2d;
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: #e0e0e0;
+    margin-bottom: 14px;
+    word-break: break-word;
+    font-size: 13px;
+}
+
+.md-line {
+    display: flex;
+    gap: 12px;
+    padding: 5px 0;
+    border-bottom: 1px solid #242424;
+}
+
+.md-line:last-child {
+    border-bottom: none;
+}
+
+.md-label {
+    flex: 0 0 130px;
+    color: #888;
+}
+
+.md-value {
+    flex: 1 1 auto;
+    color: #e0e0e0;
 }
 
 /* -------------------------------------------------- */
@@ -1313,7 +1474,10 @@ h1 {
     flex-direction: column;
     align-items: flex-start;
     /* aligné à gauche comme les autres sections */
-    margin-bottom: 20px;
+    /* Pas de marge basse : l'espace sous le bloc haut est géré par
+       #top-row (margin-bottom), sinon cette marge dépasse et agrandit le
+       vide au-dessus du Log de navigation. */
+    margin-bottom: 0;
 }
 
 #config-vol>.config-section-inner {

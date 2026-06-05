@@ -97,4 +97,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Lit window.appOptions.precisionEnabled au décollage.
   initPrecision();
 
+  // Boîte METAR (départ / arrivée) à côté du chronomètre : décore
+  // mettreAJourLogDeNav pour re-récupérer les METAR quand le départ/arrivée
+  // du plan change, et câble le bouton œil → modale METAR décodé.
+  // Doit être appelé APRÈS initI18n (utilise t() / currentLang).
+  initMetar();
+
 });
