@@ -11,6 +11,11 @@ function mettreAJourLogDeNav() {
   const tbody = document.getElementById('nav-log-body');
   if (!tbody) return;
 
+  // Icône « Copier les points tournants » : visible seulement s'il existe au
+  // moins un point tournant (plan de > 2 points : départ et arrivée exclus).
+  const btnCopyWp = document.getElementById('btn-copy-waypoints');
+  if (btnCopyWp) btnCopyWp.style.display = (flightPlan.length > 2) ? '' : 'none';
+
   tbody.innerHTML = '';
 
   if (flightPlan.length === 0) {
@@ -192,5 +197,41 @@ function mettreAJourLogDeNav() {
 
   // Refléter l'état des legs (fait/actif/à faire) sur les segments de la carte
   if (typeof redessinerSegments === 'function') redessinerSegments();
+}
+
+// -------------------------------------------------------
+// Bouton « Copier les points tournants » (à côté du titre du log de nav).
+// Copie dans le presse-papier les noms des points tournants en MAJUSCULES,
+// séparés par un espace — départ et arrivée (1er / dernier point) exclus.
+// -------------------------------------------------------
+function initCopyWaypoints() {
+  const btn = document.getElementById('btn-copy-waypoints');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    if (!Array.isArray(flightPlan) || flightPlan.length <= 2) return;
+    // Retire les accents/diacritiques (É→E, À→A, Ç→C…) pour compatibilité max :
+    // décomposition NFD puis suppression des marques diacritiques combinantes.
+    const _sansAccents = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const noms = flightPlan.slice(1, -1)
+      .map(wp => _sansAccents(((wp && (wp.name || wp.ident)) || '').trim()).toUpperCase())
+      .filter(Boolean);
+    if (noms.length === 0) return;
+    const txt = noms.join(' ');
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).catch(() => { });
+      }
+    } catch (_) { /* ignore */ }
+
+    // Retour visuel : ✓ pendant ~1,2 s puis retour à l'icône.
+    if (btn._copyTimer) clearTimeout(btn._copyTimer);
+    btn.textContent = '✓';
+    btn.classList.add('copied');
+    btn._copyTimer = setTimeout(() => {
+      btn.textContent = '📋';
+      btn.classList.remove('copied');
+      btn._copyTimer = null;
+    }, 1200);
+  });
 }
 

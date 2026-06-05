@@ -1704,6 +1704,36 @@ h1 {
     letter-spacing: 0.5px;
 }
 
+/* Titre du log de nav : libellé + icône Copier alignés */
+.navlog-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Icône « Copier les points tournants » à côté du titre du log de nav */
+.btn-copy-waypoints {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 14px;
+    line-height: 1;
+    border-radius: 4px;
+    opacity: 0.75;
+    transition: opacity 0.15s, background-color 0.15s;
+}
+
+.btn-copy-waypoints:hover {
+    opacity: 1;
+    background-color: rgba(0, 188, 212, 0.15);
+}
+
+.btn-copy-waypoints.copied {
+    opacity: 1;
+    color: #4caf50;
+}
+
 .input-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);

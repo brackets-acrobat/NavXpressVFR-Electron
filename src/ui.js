@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initFlightPlanIO();
 
+  // Bouton « Copier les points tournants » à côté du titre du log de nav.
+  initCopyWaypoints();
+
   initValidation();
   initSim();
 
