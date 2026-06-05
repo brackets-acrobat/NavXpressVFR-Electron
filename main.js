@@ -1181,6 +1181,77 @@ ipcMain.handle('metar-aeroport', async (event, payload) => {
   return { ok: false, reason: 'no-metar' };
 });
 
+// Petit GET JSON pour aviationweather.gov : résout le corps texte, ou '' quand
+// la réponse est vide (HTTP 204 = code inconnu / aucune donnée). Rejette sur
+// erreur réseau ou statut >= 400.
+function _avwxGet(url) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { headers: { 'User-Agent': 'NavXpressVFR-Electron' } }, (res) => {
+      const { statusCode } = res;
+      if (statusCode === 204) { res.resume(); resolve(''); return; }
+      if (statusCode !== 200) { res.resume(); reject(new Error('HTTP ' + statusCode)); return; }
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
+      res.on('error', reject);
+    });
+    req.on('error', reject);
+    req.setTimeout(20000, () => req.destroy(new Error('Timeout (20s)')));
+  });
+}
+
+function _parseAvwxArray(body) {
+  if (!body || !body.trim()) return [];
+  try { const j = JSON.parse(body); return Array.isArray(j) ? j : []; }
+  catch (_) { return []; }
+}
+
+// ============================================================
+// 11ter. RECHERCHE METAR PAR CODE OACI (bouton « 🔍 METAR »)
+// ------------------------------------------------------------
+// Distingue 3 cas via aviationweather.gov :
+//   - station offrant le service METAR + relevé dispo → { status:'available', raw, ... }
+//   - station offrant le service METAR mais aucun relevé → { status:'none-now' }
+//   - station absente / sans service METAR (siteType sans 'METAR') → { status:'no-service' }
+// `siteType` provient de l'endpoint stationinfo.
+// ============================================================
+ipcMain.handle('metar-recherche', async (event, icaoRaw) => {
+  const icao = String(icaoRaw || '').trim().toUpperCase();
+  if (!/^[A-Z0-9]{2,6}$/.test(icao)) return { ok: true, status: 'invalid', icao };
+
+  try {
+    const info = _parseAvwxArray(await _avwxGet(
+      `https://aviationweather.gov/api/data/stationinfo?ids=${encodeURIComponent(icao)}&format=json`));
+    const station = info[0] || null;
+    const hasMetarService = !!(station && Array.isArray(station.siteType) && station.siteType.includes('METAR'));
+    const name = station ? (station.site || '') : '';
+
+    if (!hasMetarService) {
+      // Pas de service METAR pour ce code. On distingue alors un AÉROPORT RÉEL
+      // (présent dans la base locale MSFS/OurAirports) d'un code OACI INCONNU :
+      //   - connu d'AWC (station) ou présent en base locale → 'no-service'
+      //   - introuvable partout → 'unknown' (aéroport inconnu)
+      if (!_oaAirportsRawByIdent) loadOurAirportsListForMap();
+      const known = _oaAirportsRawByIdent ? _oaAirportsRawByIdent.get(icao) : null;
+      if (station || known) {
+        return { ok: true, status: 'no-service', icao, name: name || (known && known.name) || '' };
+      }
+      return { ok: true, status: 'unknown', icao };
+    }
+
+    // Le service METAR existe : on cherche le relevé courant.
+    const mArr = _parseAvwxArray(await _avwxGet(
+      `https://aviationweather.gov/api/data/metar?ids=${encodeURIComponent(icao)}&format=json`));
+    if (mArr.length && mArr[0] && mArr[0].rawOb) {
+      return { ok: true, status: 'available', icao, name, station: mArr[0].icaoId, raw: mArr[0].rawOb };
+    }
+    return { ok: true, status: 'none-now', icao, name };
+  } catch (e) {
+    console.warn('[METAR] recherche KO', icao, e.message);
+    return { ok: false, status: 'error', icao };
+  }
+});
+
 // ============================================================
 // 12. RECHERCHE MODALE (bouton loupe carte)
 // ------------------------------------------------------------

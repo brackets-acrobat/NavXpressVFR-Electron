@@ -453,23 +453,24 @@ h1 {
     display: flex;
     flex-direction: row;
     gap: 8px;
-    align-items: stretch;   /* les deux boîtes ont la même hauteur */
+    align-items: stretch;
+    /* les deux boîtes ont la même hauteur */
 }
 
-/* Chronomètre : largeur fixe 400px (contient tout son contenu sans débordement).
-   METAR : prend toute la largeur restante. */
-#chrono-metar-row > #chrono-timer-box {
-    flex: 0 0 400px;
+/* Chronomètre : largeur fixe 375px. METAR : prend toute la largeur restante. */
+#chrono-metar-row>#chrono-timer-box {
+    flex: 0 0 365px;
 }
 
-#chrono-metar-row > #metar-box {
+#chrono-metar-row>#metar-box {
     flex: 1 1 auto;
     min-width: 0;
 }
 
 /* Bouton Carnet de vol dans la ligne de boutons : même hauteur (46px) que les
    autres boutons, largeur = juste le texte. */
-.dt-conv-row .btn-logbook {
+.dt-conv-row .btn-logbook,
+.dt-conv-row .btn-metar-search {
     height: 46px;
     width: auto;
     padding: 0 14px;
@@ -481,7 +482,8 @@ h1 {
     color: #00bcd4;
 }
 
-.dt-conv-row .btn-logbook:hover {
+.dt-conv-row .btn-logbook:hover,
+.dt-conv-row .btn-metar-search:hover {
     background-color: #00bcd4;
     color: #121212;
     border-color: #00bcd4;
@@ -515,7 +517,8 @@ h1 {
     gap: 6px;
     font-size: 12px;
     box-sizing: border-box;
-    overflow: hidden;       /* jamais d'ascenseur : on tronque plutôt */
+    overflow: hidden;
+    /* jamais d'ascenseur : on tronque plutôt */
 }
 
 #metar-box-head {
@@ -586,6 +589,78 @@ h1 {
     color: #e0e0e0;
     font-family: 'Consolas', 'Monaco', monospace;
     word-break: break-word;
+}
+
+/* -------------------------------------------------- */
+/* Modale Recherche METAR (bouton 🔍 METAR)           */
+/* -------------------------------------------------- */
+#metar-search-popup {
+    position: relative;
+    width: 520px;
+    max-width: 94vw;
+}
+
+#metar-search-form {
+    display: flex;
+    gap: 10px;
+    /* Bloc « champ + bouton » centré horizontalement. Hauteur fixe + stretch :
+       le champ et le bouton occupent exactement la même hauteur (40px) et sont
+       donc parfaitement alignés (align-items:center laissait un décalage dû au
+       rendu interne de l'<input>). */
+    justify-content: center;
+    align-items: stretch;
+    height: 40px;
+}
+
+#metar-search-input {
+    flex: 0 0 auto;          /* largeur = ~6 caractères (attribut size="6") */
+    height: 40px;            /* même hauteur que le bouton */
+    background-color: #0e0e0e;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+    color: #e0e0e0;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 18px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 0 12px;
+    box-sizing: border-box;
+}
+
+#metar-search-input:focus {
+    outline: none;
+    border-color: #00bcd4;
+}
+
+#metar-search-form .btn-primary {
+    flex: 0 0 auto;
+    width: auto;
+    height: 40px;            /* même hauteur que le champ */
+    padding: 0 20px;
+}
+
+/* Zone de résultat : soit une ligne METAR (réutilise .metar-row/.metar-eye/
+   .metar-raw), soit un message (disponibilité). */
+#metar-search-result {
+    margin-top: 16px;
+    min-height: 24px;
+}
+
+#metar-search-result .metar-search-station {
+    color: #00bcd4;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+#metar-search-result .metar-search-msg {
+    color: #e0a030;
+    font-style: italic;
+    line-height: 1.5;
+}
+
+#metar-search-result .metar-row {
+    font-size: 13px;
 }
 
 /* -------------------------------------------------- */
@@ -971,12 +1046,20 @@ h1 {
     border: 1px solid #2a2a2a;
     border-radius: 4px;
     padding: 4px 8px;
+    /* Décalage visuel de 15px vers la gauche (sans bouger les libellés
+       « Chronomètre »/« Timer » ni les boutons, qui restent dans le flux). */
+    position: relative;
+    left: -15px;
 }
 
 .chrono-buttons {
     flex: 0 0 auto;
     display: flex;
     gap: 4px;
+    /* Décalage visuel de 10px vers la gauche (sans bouger le reste : les
+       boutons restent dans le flux, seul leur rendu est décalé). */
+    position: relative;
+    left: -10px;
 }
 
 .chrono-btn {
@@ -2853,12 +2936,14 @@ tr:hover {
         flex-direction: column;
         overflow-y: auto;
     }
+
     .airport-info-col-left {
         width: auto;
         border-right: none;
         border-bottom: 1px solid #2a2a2a;
         overflow-y: visible;
     }
+
     .airport-info-col-right {
         overflow-y: visible;
     }
@@ -3434,6 +3519,7 @@ tr:hover {
     /* Liste un peu plus haute que dans les modales waypoint (on a la place ici) */
     max-height: 320px;
 }
+
 /* -------------------------------------------------- */
 /* Coordonnées du point (clic droit) + boutons Coller */
 /* -------------------------------------------------- */

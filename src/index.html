@@ -142,6 +142,10 @@
                             <!-- Carnet de vol : même hauteur que les autres, largeur = texte -->
                             <button id="btn-logbook" class="btn-secondary btn-logbook"
                                 data-i18n="btnLogbook">📖 Carnet de vol</button>
+                            <!-- Recherche METAR par code OACI (même style que Carnet de vol) -->
+                            <button id="btn-metar-search" class="btn-secondary btn-metar-search" type="button"
+                                data-i18n="btnMetarSearch" data-i18n-title="metarSearchTooltip"
+                                title="Rechercher METAR">🔍 METAR</button>
                         </div>
 
                         <!-- Boîte Chronomètre + boîte METAR, côte à côte (largeurs égales 50/50). -->
@@ -1237,6 +1241,20 @@
             <div class="create-flight-actions" style="margin-top:18px; display:flex; justify-content:flex-end;">
                 <button id="btn-precision-result-close" class="btn-primary" data-i18n="btnClose">Fermer</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modale Recherche METAR (bouton 🔍 METAR) -->
+    <div id="metar-search-overlay" class="modal-overlay">
+        <div id="metar-search-popup" class="modal-popup">
+            <button id="btn-metar-search-close" class="airport-info-close" aria-label="Fermer">×</button>
+            <h3 class="logbook-h3" data-i18n="metarSearchTitle">Rechercher un METAR</h3>
+            <div id="metar-search-form">
+                <input type="text" id="metar-search-input" maxlength="6" size="6" autocomplete="off"
+                    spellcheck="false" data-i18n-placeholder="metarSearchPlaceholder" placeholder="LFPG">
+                <button id="btn-metar-search-go" class="btn-primary" data-i18n="btnSearch">Rechercher</button>
+            </div>
+            <div id="metar-search-result"></div>
         </div>
     </div>
 

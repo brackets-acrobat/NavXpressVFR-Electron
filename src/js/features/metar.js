@@ -101,8 +101,19 @@ function initMetar() {
   }
 
   // ---- Modale METAR décodé ---------------------------------------------
+  // Remplit la modale de décodage : en-tête HTML + METAR brut + lignes décodées.
+  function renderDecodeInto(headerHtml, raw) {
+    els.mStation.innerHTML = headerHtml;
+    els.mRaw.textContent = raw;
+    const lines = decodeMetar(raw);
+    els.mBody.innerHTML = lines.map(l =>
+      `<div class="md-line"><span class="md-label">${esc(l.label)}</span>` +
+      `<span class="md-value">${esc(l.value)}</span></div>`
+    ).join('');
+  }
+
   function refreshOpenModal() {
-    if (!openWhich) return;
+    if (!openWhich) return;   // modale ouverte par la recherche → ne pas écraser
     const st = state[openWhich];
     if (!st || st.status !== 'ok') { closeModal(); return; }
     const label = openWhich === 'dep' ? t('metarDep') : t('metarArr');
@@ -113,13 +124,7 @@ function initMetar() {
       const dist = Number.isFinite(st.distNM) ? ` · ${st.distNM} NM` : '';
       html += `<div class="metar-decode-note">≈ ${esc(t('metarNearest'))}${esc(dist)}</div>`;
     }
-    els.mStation.innerHTML = html;
-    els.mRaw.textContent = st.raw;
-    const lines = decodeMetar(st.raw);
-    els.mBody.innerHTML = lines.map(l =>
-      `<div class="md-line"><span class="md-label">${esc(l.label)}</span>` +
-      `<span class="md-value">${esc(l.value)}</span></div>`
-    ).join('');
+    renderDecodeInto(html, st.raw);
   }
 
   function openModal(which) {
@@ -127,6 +132,14 @@ function initMetar() {
     if (!st || st.status !== 'ok') return;
     openWhich = which;
     refreshOpenModal();
+    if (els.overlay) els.overlay.classList.add('visible');
+  }
+
+  // Ouvre la modale de décodage pour un METAR arbitraire (issu de la recherche).
+  // openWhich reste null → un changement de plan ne réécrit pas cette modale.
+  function openDecodeRaw(headerHtml, raw) {
+    openWhich = null;
+    renderDecodeInto(headerHtml, raw);
     if (els.overlay) els.overlay.classList.add('visible');
   }
 
@@ -141,11 +154,73 @@ function initMetar() {
   if (els.arrEye) els.arrEye.addEventListener('click', () => openModal('arr'));
   if (els.mClose) els.mClose.addEventListener('click', closeModal);
   if (els.overlay) els.overlay.addEventListener('click', (e) => { if (e.target === els.overlay) closeModal(); });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && els.overlay && els.overlay.classList.contains('visible')) {
-      e.stopPropagation();
-      closeModal();
+
+  // ---- Recherche METAR par code OACI (bouton 🔍 METAR) ----------------
+  const searchBtn     = document.getElementById('btn-metar-search');
+  const searchOverlay = document.getElementById('metar-search-overlay');
+  const searchClose   = document.getElementById('btn-metar-search-close');
+  const searchInput   = document.getElementById('metar-search-input');
+  const searchGo      = document.getElementById('btn-metar-search-go');
+  const searchResult  = document.getElementById('metar-search-result');
+
+  function openSearch() {
+    if (!searchOverlay) return;
+    if (searchResult) searchResult.innerHTML = '';
+    if (searchInput) searchInput.value = '';
+    searchOverlay.classList.add('visible');
+    if (searchInput) setTimeout(() => searchInput.focus(), 0);
+  }
+  function closeSearch() {
+    if (searchOverlay) searchOverlay.classList.remove('visible');
+  }
+  function searchMsg(text, color) {
+    if (searchResult) searchResult.innerHTML =
+      `<div class="metar-search-msg"${color ? ` style="color:${color}"` : ''}>${esc(text)}</div>`;
+  }
+  function renderSearchResult(res) {
+    if (!searchResult) return;
+    if (!res || res.status === 'error') { searchMsg(t('metarSearchErrorNet')); return; }
+    if (res.status === 'invalid')    { searchMsg(t('metarSearchInvalid')); return; }
+    if (res.status === 'unknown')    { searchMsg(t('metarSearchUnknown')); return; }
+    if (res.status === 'no-service') { searchMsg(t('metarSearchNoService')); return; }
+    if (res.status === 'none-now')   { searchMsg(t('metarSearchNoneNow')); return; }
+    if (res.status === 'available') {
+      const head = `${esc(res.station || res.icao)}${res.name ? ' — ' + esc(res.name) : ''}`;
+      searchResult.innerHTML =
+        `<div class="metar-search-station">${head}</div>` +
+        `<div class="metar-row">` +
+          `<button class="metar-eye" id="metar-search-eye" type="button" title="${esc(t('metarEyeTitle'))}">👁</button>` +
+          `<span class="metar-raw">${esc(res.raw)}</span>` +
+        `</div>`;
+      const eye = document.getElementById('metar-search-eye');
+      if (eye) eye.addEventListener('click', () => openDecodeRaw(head, res.raw));
     }
+  }
+  async function doSearch() {
+    if (!searchInput) return;
+    const code = searchInput.value.trim().toUpperCase();
+    if (!code) return;
+    searchMsg(t('metarSearchSearching'), '#888');
+    try {
+      const res = await window.api.metarRecherche(code);
+      renderSearchResult(res);
+    } catch (e) {
+      console.warn('[METAR] recherche KO', e && e.message);
+      renderSearchResult({ status: 'error' });
+    }
+  }
+
+  if (searchBtn) searchBtn.addEventListener('click', openSearch);
+  if (searchGo) searchGo.addEventListener('click', doSearch);
+  if (searchInput) searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doSearch(); } });
+  if (searchClose) searchClose.addEventListener('click', closeSearch);
+  if (searchOverlay) searchOverlay.addEventListener('click', (e) => { if (e.target === searchOverlay) closeSearch(); });
+
+  // Échap : ferme la modale du dessus en priorité (décodage > recherche).
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (els.overlay && els.overlay.classList.contains('visible')) { e.stopPropagation(); closeModal(); }
+    else if (searchOverlay && searchOverlay.classList.contains('visible')) { e.stopPropagation(); closeSearch(); }
   });
 
   // Décorateur sur mettreAJourLogDeNav : re-rendu (langue) + refresh si
@@ -222,6 +297,30 @@ function decodeMetar(raw) {
     : 'CAVOK — visibility ≥ 10 km, no cloud below 5000 ft, no significant weather';
   const CALM = FR ? 'calme' : 'calm';
 
+  // Décodeur d'une couche nuageuse, tolérant aux « slashes » des stations
+  // automatiques : cover/hauteur/type peuvent être remplacés par /// (non
+  // déterminé). Ex. BKN026/// (type inconnu), ///CB (nébulosité inconnue, CB).
+  // Renvoie la chaîne décodée, ou null si le jeton n'est pas une couche.
+  const CLOUD_RE = /^(FEW|SCT|BKN|OVC|VV|\/\/\/)(\d{3}|\/\/\/)?(CB|TCU|\/\/\/)?$/;
+  function decodeCloud(tk) {
+    const m = tk.match(CLOUD_RE);
+    if (!m) return null;
+    const coverKnown = m[1] !== '///';
+    const heightKnown = m[2] && m[2] !== '///';
+    let s;
+    if (coverKnown) {
+      s = COVER[m[1]] || m[1];
+      s += heightKnown ? ` ${FR ? 'à' : 'at'} ${parseInt(m[2], 10) * 100} ft`
+                       : (FR ? ' (hauteur non précisée)' : ' (height N/A)');
+    } else {
+      s = FR ? 'nébulosité non précisée' : 'cloud amount N/A';
+      if (heightKnown) s += ` ${FR ? 'à' : 'at'} ${parseInt(m[2], 10) * 100} ft`;
+    }
+    if (m[3] === 'CB') s += CB.CB;
+    else if (m[3] === 'TCU') s += CB.TCU;
+    return s;
+  }
+
   const out = [];
   const push = (label, value) => out.push({ label, value });
   if (!raw) return out;
@@ -286,12 +385,12 @@ function decodeMetar(raw) {
   while (tokens[i] && isWx(tokens[i])) { wx.push(decodeWx(tokens[i], { INTENS, DESC, PHENOM })); i++; }
   if (wx.length) push(t('mdWx'), wx.join(', '));
 
-  // Nuages
+  // Nuages (gère les couches « slashées » des stations auto : BKN026///, ///CB)
   const clouds = [];
-  while (tokens[i] && /^(FEW|SCT|BKN|OVC|VV)\d{3}(CB|TCU)?$/.test(tokens[i])) {
-    const m = tokens[i].match(/^(FEW|SCT|BKN|OVC|VV)(\d{3})(CB|TCU)?$/);
-    const ft = parseInt(m[2], 10) * 100;
-    clouds.push(`${COVER[m[1]] || m[1]} ${FR ? 'à' : 'at'} ${ft} ft${m[3] ? CB[m[3]] : ''}`);
+  while (tokens[i]) {
+    const c = decodeCloud(tokens[i]);
+    if (c === null) break;
+    clouds.push(c);
     i++;
   }
   if (clouds.length) push(t('mdClouds'), clouds.join(' · '));
@@ -314,6 +413,58 @@ function decodeMetar(raw) {
     push(t('mdQnh'), `${inHg.toFixed(2)} inHg (${Math.round(inHg * 33.8639)} hPa)`); i++;
   }
 
+  // Décode le contenu d'un groupe d'évolution (après TEMPO / BECMG) :
+  // indicateurs horaires FM/TL/AT, vent, visibilité, phénomènes, nuages, NSW.
+  // Réutilise les dictionnaires et helpers ci-dessus.
+  function decodeChange(toks) {
+    const parts = [];
+    for (let j = 0; j < toks.length; j++) {
+      const tk = toks[j];
+      let m;
+      if (TREND[tk]) { parts.push(TREND[tk]); continue; }
+      if ((m = tk.match(/^(FM|TL|AT)(\d{2})(\d{2})$/))) {
+        const word = m[1] === 'FM' ? (FR ? 'à partir de' : 'from')
+          : m[1] === 'TL' ? (FR ? "jusqu'à" : 'until')
+          : (FR ? 'à' : 'at');
+        parts.push(`${word} ${m[2]}:${m[3]}`);
+        continue;
+      }
+      if ((m = tk.match(/^(\d{3}|VRB)P?(\d{2,3})(?:GP?(\d{2,3}))?(KT|MPS|KMH)$/))) {
+        const unit = m[4] === 'KT' ? 'kt' : (m[4] === 'MPS' ? 'm/s' : 'km/h');
+        let v;
+        if (parseInt(m[2], 10) === 0 && m[1] === '000') v = CALM;
+        else {
+          const dir = m[1] === 'VRB' ? (FR ? 'variable' : 'variable') : `${parseInt(m[1], 10)}°`;
+          v = `${dir} / ${parseInt(m[2], 10)} ${unit}`;
+          if (m[3]) v += `, ${GUST} ${parseInt(m[3], 10)} ${unit}`;
+        }
+        parts.push(`${FR ? 'vent' : 'wind'} ${v}`);
+        continue;
+      }
+      if ((m = tk.match(/^(\d{3})V(\d{3})$/))) {
+        parts.push(`${VARY} ${parseInt(m[1], 10)}° ${FR ? 'à' : 'to'} ${parseInt(m[2], 10)}°`);
+        continue;
+      }
+      if (tk === 'CAVOK') { parts.push('CAVOK'); continue; }
+      if (tk === 'NSW') { parts.push(FR ? 'fin des phénomènes significatifs' : 'no significant weather'); continue; }
+      if (/^\d{4}$/.test(tk)) {
+        const v = parseInt(tk, 10);
+        parts.push(`${FR ? 'visi' : 'vis'} ` + (v >= 9999 ? '≥ 10 km' : (v >= 5000 ? `${(v / 1000).toFixed(0)} km` : `${v} m`)));
+        continue;
+      }
+      if (/^(M)?\d+(\/\d+)?SM$/.test(tk)) {
+        parts.push(`${FR ? 'visi' : 'vis'} ` + tk.replace('SM', ' SM').replace(/^M/, '< '));
+        continue;
+      }
+      const cloud = decodeCloud(tk);
+      if (cloud !== null) { parts.push(cloud); continue; }
+      if (NOCLOUD[tk]) { parts.push(NOCLOUD[tk]); continue; }
+      if (isWx(tk)) { parts.push(decodeWx(tk, { INTENS, DESC, PHENOM })); continue; }
+      parts.push(tk); // jeton non reconnu : laissé brut
+    }
+    return parts.join(', ');
+  }
+
   // Évolution (NOSIG / BECMG / TEMPO) + Remarques (RMK …)
   const rest = tokens.slice(i);
   const rmkIdx = rest.indexOf('RMK');
@@ -322,10 +473,10 @@ function decodeMetar(raw) {
   if (trendToks.length) {
     if (TREND[trendToks[0]]) {
       const head = TREND[trendToks[0]];
-      const tail = trendToks.slice(1).join(' ');
+      const tail = decodeChange(trendToks.slice(1));
       push(t('mdTrend'), tail ? `${head} : ${tail}` : head);
     } else {
-      push(t('mdTrend'), trendToks.join(' '));
+      push(t('mdTrend'), decodeChange(trendToks));
     }
   }
   if (rmkToks.length) push(t('mdRmk'), rmkToks.join(' '));
