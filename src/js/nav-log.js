@@ -16,6 +16,11 @@ function mettreAJourLogDeNav() {
   const btnCopyWp = document.getElementById('btn-copy-waypoints');
   if (btnCopyWp) btnCopyWp.style.display = (flightPlan.length > 2) ? '' : 'none';
 
+  // Ligne « totaux » (distance + durée) sous le tableau : masquée tant qu'il n'y
+  // a pas au moins un leg (≥ 2 points).
+  const totalsBox = document.getElementById('nav-log-totals');
+  if (totalsBox) totalsBox.style.display = (flightPlan.length >= 2) ? '' : 'none';
+
   tbody.innerHTML = '';
 
   if (flightPlan.length === 0) {
@@ -48,6 +53,10 @@ function mettreAJourLogDeNav() {
       </tr>`;
     return;
   }
+
+  // Accumulateurs pour les totaux (distance + durée) affichés sous le tableau
+  let sumDistanceNM = 0;
+  let sumDurationSec = 0;
 
   // Boucle sur les legs
   for (let i = 1; i < flightPlan.length; i++) {
@@ -87,6 +96,13 @@ function mettreAJourLogDeNav() {
       const ss = (totalSec % 60).toString().padStart(2, '0');
       tempsFormate = `${mm}:${ss}`;
     }
+
+    // Cumul de la distance pour le total
+    sumDistanceNM += distanceNM;
+
+    // Cumul de la durée TOTALE sans vent : basée uniquement sur la Vp
+    // (le vent n'intervient pas, contrairement à la durée par leg ci-dessus).
+    if (vp > 0) sumDurationSec += Math.round((distanceNM / vp) * 3600);
 
     // 5. Cap magnétique
     const capMagDeg = (rvDeg + deriveDeg - declinaisonMoyenneGlobale + 360) % 360;
@@ -193,6 +209,17 @@ function mettreAJourLogDeNav() {
     row.querySelector('td:last-child').appendChild(btnDelete);
 
     tbody.appendChild(row);
+  }
+
+  // Mise à jour des totaux (distance + durée) sous le tableau, en temps réel.
+  const elTotalDist = document.getElementById('nav-log-total-distance');
+  const elTotalDur = document.getElementById('nav-log-total-duration');
+  if (elTotalDist) elTotalDist.textContent = `${sumDistanceNM.toFixed(1)} nm`;
+  if (elTotalDur) {
+    const hh = Math.floor(sumDurationSec / 3600).toString().padStart(2, '0');
+    const mm = Math.floor((sumDurationSec % 3600) / 60).toString().padStart(2, '0');
+    const ss = (sumDurationSec % 60).toString().padStart(2, '0');
+    elTotalDur.textContent = `${hh}:${mm}:${ss}`;
   }
 
   // Refléter l'état des legs (fait/actif/à faire) sur les segments de la carte

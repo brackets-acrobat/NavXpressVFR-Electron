@@ -1734,6 +1734,28 @@ h1 {
     color: #4caf50;
 }
 
+/* Ligne « totaux » (distance + durée) centrée sous le tableau des legs */
+.nav-log-totals {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 28px;
+    margin-top: 8px;
+    padding: 6px 4px;
+    font-size: 13px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.nav-log-total-item {
+    white-space: nowrap;
+}
+
+.nav-log-total-value {
+    font-weight: bold;
+    color: #00bcd4;
+}
+
 .input-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);

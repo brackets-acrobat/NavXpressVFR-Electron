@@ -51,6 +51,8 @@ const TRANSLATIONS = {
     // Nav log table
     navLog: "Log de Navigation (Legs)",
     copyWaypointsTooltip: "Copier les points tournants",
+    totalDistance: "Distance totale",
+    totalDuration: "Durée totale (TSV)",
     colLeg: "N° leg",
     colFrom: "Depuis",
     colTo: "Vers",
@@ -450,6 +452,8 @@ const TRANSLATIONS = {
     // Nav log table
     navLog: "Navigation Log (Legs)",
     copyWaypointsTooltip: "Copy turning points",
+    totalDistance: "Total distance",
+    totalDuration: "Total duration (no-wind)",
     colLeg: "Leg #",
     colFrom: "From",
     colTo: "To",
