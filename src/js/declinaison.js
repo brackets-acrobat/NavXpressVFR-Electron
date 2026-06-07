@@ -56,9 +56,5 @@ function actualiserAffichageDeclinaison() {
   if (inputDecl) {
     inputDecl.value = `${absVal}° ${dirStr}`;
   }
-
-  // Mise à jour du span déclinaison à côté du logo (le logo reste intact)
-  const declSpan = document.getElementById('app-decl');
-  if (declSpan) declSpan.textContent = `(D: ${absVal}° ${dirStr})`;
 }
 

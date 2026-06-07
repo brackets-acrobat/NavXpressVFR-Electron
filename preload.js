@@ -5,6 +5,12 @@ contextBridge.exposeInMainWorld('api', {
     onStatusSimConnect: (callback) => ipcRenderer.on('simconnect-status', (event, status) => callback(status)),
     onDonneesVol: (callback) => ipcRenderer.on('donnees-vol', (event, data) => callback(data)),
     onDonneesPosition: (callback) => ipcRenderer.on('donnees-position', (event, data) => callback(data)),
+    // Horloges du simulateur (UTC + locale), poussées 1×/seconde.
+    onSimTime: (callback) => {
+        const listener = (_event, data) => callback(data);
+        ipcRenderer.on('sim-time', listener);
+        return () => ipcRenderer.removeListener('sim-time', listener);
+    },
     // État « en vol » (airborne) — indépendant du carnet de vol. Sert à
     // verrouiller le toggle « Navigation en mode difficile » dès le décollage.
     onFlightAirborne: (callback) => {

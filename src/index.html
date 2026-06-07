@@ -18,8 +18,19 @@
             <header>
                 <h1 id="app-title">
                     <img src="img/logo_navxpressvfr.png" alt="NavXpressVFR" class="app-logo">
-                    <span id="app-decl" class="app-decl"></span>
                 </h1>
+                <!-- Horloges du simulateur (UTC + locale), centrées dans l'espace
+                     restant. Masquées tant qu'aucune donnée de temps n'est reçue. -->
+                <div id="sim-clocks" class="sim-clocks" style="display:none;">
+                    <div class="sim-clock">
+                        <span class="sim-clock-label" data-i18n="clockUtc">UTC</span>
+                        <span id="sim-clock-utc" class="sim-clock-time">--:--:--</span>
+                    </div>
+                    <div class="sim-clock">
+                        <span class="sim-clock-label" data-i18n="clockLocal">LOC</span>
+                        <span id="sim-clock-local" class="sim-clock-time">--:--:--</span>
+                    </div>
+                </div>
                 <div class="header-right">
                     <button type="button" class="btn-options" id="btn-options"
                         data-i18n="btnOptions" data-i18n-title="btnOptionsTooltip" title="Options">⚙️ Options</button>
@@ -1259,6 +1270,17 @@
         </div>
     </div>
 
+    <!-- Modale Vitesse verticale d'atterrissage — s'ouvre à chaque toucher
+         (VS retenue par la FSM, rebonds exclus) et se ferme seule après 10 s. -->
+    <div id="landing-rate-overlay" class="modal-overlay">
+        <div id="landing-rate-popup" class="modal-popup">
+            <h3 class="logbook-h3" data-i18n="lrTitle">Atterrissage</h3>
+            <div id="landing-rate-value"><span id="landing-rate-vs">—</span><span class="landing-rate-unit">ft/min</span></div>
+            <div id="landing-rate-vslabel" class="landing-rate-sub" data-i18n="lrVsLabel">Vitesse verticale</div>
+            <div id="landing-rate-g" class="landing-rate-g"></div>
+        </div>
+    </div>
+
     <!-- Modale Recherche METAR (bouton 🔍 METAR) -->
     <div id="metar-search-overlay" class="modal-overlay">
         <div id="metar-search-popup" class="modal-popup">
@@ -1645,6 +1667,7 @@
     <script src="js/features/imports.js"></script>
     <script src="js/features/map.js"></script>
     <script src="js/features/sim.js"></script>
+    <script src="js/features/simclock.js"></script>
     <script src="js/features/flightplan-io.js"></script>
     <script src="js/features/fuel.js"></script>
     <script src="js/features/validation.js"></script>

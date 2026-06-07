@@ -348,4 +348,56 @@ function initLogbook() {
   if (window.api && typeof window.api.onLogbookConfirmCancel === 'function') {
     window.api.onLogbookConfirmCancel(() => _closeEnd());
   }
+
+  // --- Modale « Vitesse verticale d'atterrissage » ----------------------
+  // S'ouvre à CHAQUE toucher (event 'landing-result', déjà filtré des rebonds
+  // par la FSM main → c'est exactement la VS retenue/enregistrée). Affiche la
+  // VS pendant LANDING_RATE_MS puis se ferme automatiquement. Refermable
+  // manuellement (clic extérieur / Escape).
+  const LANDING_RATE_MS = 10_000;
+  const lrOverlay = document.getElementById('landing-rate-overlay');
+  const lrVsEl = document.getElementById('landing-rate-vs');
+  const lrGEl = document.getElementById('landing-rate-g');
+  let _lrTimer = null;
+
+  function _closeLandingRate() {
+    if (_lrTimer) { clearTimeout(_lrTimer); _lrTimer = null; }
+    if (lrOverlay) lrOverlay.classList.remove('visible');
+  }
+
+  // Classe de sévérité selon |VS| (ft/min) — purement visuel.
+  function _lrSeverity(absVs) {
+    if (absVs < 100) return 'lr-soft';
+    if (absVs < 300) return 'lr-normal';
+    if (absVs < 500) return 'lr-firm';
+    if (absVs < 800) return 'lr-hard';
+    return 'lr-crash';
+  }
+
+  function _showLandingRate(r) {
+    if (!lrOverlay || !lrVsEl || !r) return;
+    const vs = Number(r.verticalSpeedFpm);
+    if (!Number.isFinite(vs)) return;
+    lrVsEl.textContent = String(Math.round(vs));
+    lrVsEl.className = _lrSeverity(Math.abs(vs));
+    if (lrGEl) {
+      lrGEl.textContent = Number.isFinite(r.gForceMax)
+        ? `${t('lrGLabel')} : ${r.gForceMax} G`
+        : '';
+    }
+    if (_lrTimer) clearTimeout(_lrTimer);
+    lrOverlay.classList.add('visible');
+    _lrTimer = setTimeout(_closeLandingRate, LANDING_RATE_MS);
+  }
+
+  if (lrOverlay) {
+    lrOverlay.addEventListener('click', (e) => { if (e.target === lrOverlay) _closeLandingRate(); });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && lrOverlay && lrOverlay.classList.contains('visible')) _closeLandingRate();
+  });
+
+  if (window.api && typeof window.api.onLandingResult === 'function') {
+    window.api.onLandingResult((r) => _showLandingRate(r));
+  }
 }

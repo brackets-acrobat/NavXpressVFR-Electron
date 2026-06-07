@@ -41,6 +41,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   initValidation();
   initSim();
 
+  // Horloges du simulateur (UTC + locale) dans le header : s'abonne à onSimTime.
+  initSimClock();
+
   // Avertissement audio « < 500 ft AGL » : s'abonne à onDonneesPosition.
   // Indépendant des autres features (pas d'UI, pas de carte).
   initAglWarning();

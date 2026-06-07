@@ -227,6 +227,37 @@ header {
     flex-shrink: 0;
 }
 
+/* Horloges du simulateur — occupent l'espace restant et se centrent dedans */
+.sim-clocks {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    gap: 28px;
+    min-width: 0;
+}
+
+.sim-clock {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.sim-clock-label {
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.sim-clock-time {
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 18px;
+    font-weight: 600;
+    color: #00bcd4;
+    font-variant-numeric: tabular-nums;
+}
+
 h1 {
     color: #00bcd4;
     margin: 0;
@@ -243,12 +274,6 @@ h1 {
     height: 40px;
     width: auto;
     display: block;
-}
-
-.app-decl {
-    font-size: 13px;
-    color: #888;
-    font-weight: normal;
 }
 
 .status-badge {
@@ -2921,6 +2946,54 @@ tr:hover {
     margin: 10px 0 6px 0;
 }
 
+
+/* -------------------------------------------------- */
+/* Modale vitesse verticale d'atterrissage            */
+/* -------------------------------------------------- */
+#landing-rate-popup {
+    width: 300px;
+    text-align: center;
+}
+
+#landing-rate-value {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 6px;
+    margin: 14px 0 2px 0;
+}
+
+#landing-rate-vs {
+    font-size: 52px;
+    font-weight: 700;
+    line-height: 1;
+    color: #00bcd4;
+}
+
+.landing-rate-unit {
+    font-size: 16px;
+    color: #bbb;
+}
+
+.landing-rate-sub {
+    font-size: 13px;
+    color: #bbb;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.landing-rate-g {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #e0e0e0;
+}
+
+/* Sévérité du toucher (appliquée sur #landing-rate-vs) */
+#landing-rate-vs.lr-soft   { color: #4caf50; }
+#landing-rate-vs.lr-normal { color: #00bcd4; }
+#landing-rate-vs.lr-firm   { color: #ffc107; }
+#landing-rate-vs.lr-hard   { color: #ff9800; }
+#landing-rate-vs.lr-crash  { color: #f44336; }
 
 /* -------------------------------------------------- */
 /* Modale détails d'un aéroport                       */

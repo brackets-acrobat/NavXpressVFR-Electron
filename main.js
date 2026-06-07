@@ -1491,6 +1491,9 @@ const SC_LANDING_REQ_ID = 4;
 // Identification appareil (chaînes constantes, lues en ONCE).
 const SC_AIRCRAFT_DEF_ID = 5;
 const SC_AIRCRAFT_REQ_ID = 5;
+// Horloges du simulateur (UTC + locale), lues 1×/seconde.
+const SC_TIME_DEF_ID = 6;
+const SC_TIME_REQ_ID = 6;
 
 // État courant du sampling rapide côté SimConnect : permet d'éviter de
 // renvoyer la même commande NEVER/SIM_FRAME plusieurs fois de suite.
@@ -1535,6 +1538,14 @@ function broadcastDonneesVol(payload) {
 function broadcastPosition(payload) {
   BrowserWindow.getAllWindows().forEach(w => {
     try { w.webContents.send('donnees-position', payload); } catch (_) {}
+  });
+}
+
+// Horloges du simulateur : secondes écoulées depuis minuit, UTC et locale.
+// Diffusé 1×/seconde au renderer qui formate en HH:MM:SS.
+function broadcastSimTime(payload) {
+  BrowserWindow.getAllWindows().forEach(w => {
+    try { w.webContents.send('sim-time', payload); } catch (_) {}
   });
 }
 
@@ -1691,6 +1702,19 @@ ipcMain.handle('simconnect-connecter', async () => {
       0, 0, 0
     );
 
+    // --- Groupe TIME (horloges sim) — 1 update par seconde ---
+    // ZULU TIME / LOCAL TIME = secondes écoulées depuis minuit (UTC / locale).
+    // Ordre de définition = ordre de lecture dans simObjectData.
+    handle.addToDataDefinition(SC_TIME_DEF_ID, 'ZULU TIME',  'seconds', SCDataType.FLOAT64);
+    handle.addToDataDefinition(SC_TIME_DEF_ID, 'LOCAL TIME', 'seconds', SCDataType.FLOAT64);
+    handle.requestDataOnSimObject(
+      SC_TIME_REQ_ID,
+      SC_TIME_DEF_ID,
+      SCConst.OBJECT_ID_USER,
+      SCPeriod.SECOND,
+      0, 0, 0   // interval 0 → 1 update chaque seconde
+    );
+
     handle.on('simObjectData', (data) => {
       try {
         if (data.requestID === SC_WIND_REQ_ID) {
@@ -1726,6 +1750,11 @@ ipcMain.handle('simconnect-connecter', async () => {
           const vsFpm  = data.data.readFloat64();
           const gForce = data.data.readFloat64();
           if (_logbookEngine) _logbookEngine.feedLandingFrame(vsFpm, gForce);
+        } else if (data.requestID === SC_TIME_REQ_ID) {
+          // Lecture dans l'ordre EXACT de la définition : ZULU puis LOCAL.
+          const zulu  = data.data.readFloat64();
+          const local = data.data.readFloat64();
+          broadcastSimTime({ zulu, local });
         } else if (data.requestID === SC_AIRCRAFT_REQ_ID) {
           // Lecture dans l'ordre EXACT de la définition (tailles de chaîne
           // correspondantes) : CATEGORY, ATC TYPE, ATC MODEL, TITLE.

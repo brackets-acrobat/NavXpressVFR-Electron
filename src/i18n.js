@@ -13,6 +13,8 @@ const TRANSLATIONS = {
     simConnectFailed: "❌ Échec — MSFS introuvable",
     simClickToConnect: "Cliquer pour se connecter à MSFS",
     simClickToDisconnect: "Cliquer pour se déconnecter",
+    clockUtc: "UTC",
+    clockLocal: "LOC",
 
     // Config section
     flightConfig: "Configuration du Vol",
@@ -231,6 +233,9 @@ const TRANSLATIONS = {
     lbEmpty: "Aucun vol enregistré pour l'instant.",
     lbReadError: "Erreur de lecture du carnet de vol.",
     lbDetailTitle: "Détails du vol",
+    lrTitle: "Atterrissage",
+    lrVsLabel: "Vitesse verticale",
+    lrGLabel: "Facteur de charge",
     lbEndTitle: "Vol terminé ?",
     lbEndQuestion: "L'avion semble être au parking. Le vol est-il terminé ?",
     lbEndYes: "Oui, enregistrer",
@@ -414,6 +419,8 @@ const TRANSLATIONS = {
     simConnectFailed: "❌ Failed — MSFS not found",
     simClickToConnect: "Click to connect to MSFS",
     simClickToDisconnect: "Click to disconnect",
+    clockUtc: "UTC",
+    clockLocal: "LOC",
 
     // Config section
     flightConfig: "Flight Configuration",
@@ -632,6 +639,9 @@ const TRANSLATIONS = {
     lbEmpty: "No flights recorded yet.",
     lbReadError: "Failed to read logbook.",
     lbDetailTitle: "Flight details",
+    lrTitle: "Landing",
+    lrVsLabel: "Vertical speed",
+    lrGLabel: "Load factor",
     lbEndTitle: "Flight finished?",
     lbEndQuestion: "The aircraft appears to be parked. Is the flight finished?",
     lbEndYes: "Yes, save",
