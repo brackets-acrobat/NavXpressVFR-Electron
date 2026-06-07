@@ -11,6 +11,12 @@ contextBridge.exposeInMainWorld('api', {
         ipcRenderer.on('sim-time', listener);
         return () => ipcRenderer.removeListener('sim-time', listener);
     },
+    // État de pause du simulateur (Pause_EX1) : { flags } (bitfield).
+    onSimPause: (callback) => {
+        const listener = (_event, data) => callback(data);
+        ipcRenderer.on('sim-pause', listener);
+        return () => ipcRenderer.removeListener('sim-pause', listener);
+    },
     // État « en vol » (airborne) — indépendant du carnet de vol. Sert à
     // verrouiller le toggle « Navigation en mode difficile » dès le décollage.
     onFlightAirborne: (callback) => {

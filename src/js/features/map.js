@@ -25,10 +25,26 @@ function initMap() {
       maxZoom: 19
     });
 
+    // Fonds CARTO (raster). Attribution OSM + CARTO requise.
+    const _cartoAttr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+    const layerCartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: _cartoAttr,
+      subdomains: 'abcd',
+      maxZoom: 20
+    });
+
+    const layerCartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: _cartoAttr,
+      subdomains: 'abcd',
+      maxZoom: 20
+    });
+
     const layers = [
-      { key: 'satellite', layer: layerSatellite, label: '🛰️ Satellite', next: '🗺️ Topo' },
-      { key: 'topo', layer: layerTopo, label: '🗺️ Topo', next: '🗺️ OSM' },
-      { key: 'osm', layer: layerOSM, label: '🗺️ OSM', next: '🛰️ Satellite' },
+      { key: 'satellite', layer: layerSatellite, label: '🛰️ Satellite' },
+      { key: 'topo', layer: layerTopo, label: '🗺️ Topo' },
+      { key: 'osm', layer: layerOSM, label: '🗺️ OSM' },
+      { key: 'positron', layer: layerCartoPositron, label: '🗺️ CARTO Positron' },
+      { key: 'dark', layer: layerCartoDark, label: '🌑 CARTO Dark Matter' },
     ];
     // Fond restauré depuis les options (défaut OSM). map.js tourne après
     // chargerOptions() (awaité dans ui.js), donc window.appOptions est prêt.
@@ -54,6 +70,8 @@ function initMap() {
         { key: 'satellite', label: '🛰️ Satellite' },
         { key: 'topo', label: '🗺️ Topo' },
         { key: 'osm', label: '🗺️ OSM' },
+        { key: 'positron', label: '🗺️ Positron' },
+        { key: 'dark', label: '🌑 Dark Matter' },
       ];
 
       options.forEach(opt => {

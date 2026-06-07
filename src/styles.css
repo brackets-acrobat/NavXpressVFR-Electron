@@ -258,6 +258,30 @@ header {
     font-variant-numeric: tabular-nums;
 }
 
+/* Badge état de pause (Pause_EX1) — ambre, à côté des horloges, légère pulsation */
+.sim-pause-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 9px;
+    border: 1px solid #ffb300;
+    border-radius: 12px;
+    background-color: rgba(255, 179, 0, 0.12);
+    color: #ffb300;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: default;
+    white-space: nowrap;
+    animation: simPausePulse 1.6s ease-in-out infinite;
+}
+
+@keyframes simPausePulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.45; }
+}
+
 h1 {
     color: #00bcd4;
     margin: 0;
@@ -3589,8 +3613,28 @@ tr:hover {
 /* Bouton loupe « Rechercher » (bas-gauche carte)     */
 /* -------------------------------------------------- */
 .map-search-wrapper {
-    /* Wrapper Leaflet en bottomleft — pas de margin par défaut, on aligne sur les autres contrôles */
+    /* Wrapper Leaflet en bottomleft — loupe + toggle jour/nuit côte à côte */
     margin-bottom: 8px;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+}
+
+/* Toggle Jour/Nuit : hérite du style rond de .btn-map-search.
+   État actif (nuit ON) = bouton plein cyan pour signaler l'état. */
+.btn-map-night.active {
+    background-color: #00bcd4;
+    color: #121212;
+}
+.btn-map-night.active:hover {
+    background-color: #00d4ed;
+}
+
+/* Mode nuit : assombrit UNIQUEMENT les tuiles, les marqueurs/route/labels
+   restent nets. Appliqué via .map-night sur #map-container. */
+.map-night .leaflet-tile-pane {
+    filter: brightness(0.6) contrast(1.05) saturate(0.9);
+    transition: filter 0.3s ease;
 }
 
 .btn-map-search {

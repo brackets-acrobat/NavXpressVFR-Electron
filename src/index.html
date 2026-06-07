@@ -30,6 +30,11 @@
                         <span class="sim-clock-label" data-i18n="clockLocal">LOC</span>
                         <span id="sim-clock-local" class="sim-clock-time">--:--:--</span>
                     </div>
+                    <!-- Badge état de pause (Pause_EX1). Masqué hors pause.
+                         Le tooltip (title) décrit l'état précis, posé par simclock.js. -->
+                    <span id="sim-pause-badge" class="sim-pause-badge" style="display:none;">
+                        ⏸ <span data-i18n="pauseBadgeLabel">PAUSE</span>
+                    </span>
                 </div>
                 <div class="header-right">
                     <button type="button" class="btn-options" id="btn-options"

@@ -36,7 +36,10 @@ const DEFAULT_OPTIONS = {
   layerHeliportsEnabled: true,
   layerSeaplanesEnabled: true,
   layerNavaidsEnabled: true,
-  mapBaseLayer: 'osm', // 'satellite' | 'topo' | 'osm'
+  mapBaseLayer: 'osm', // 'satellite' | 'topo' | 'osm' | 'positron' | 'dark'
+  // Mode nuit carte : assombrit uniquement les tuiles (.leaflet-tile-pane).
+  // false = jour (comportement inchangé). Géré par map-search.js (toggle 🌙).
+  mapNightMode: false,
 };
 
 // État global mutable (lecture par d'autres features, écriture via setAppOption).

@@ -43,6 +43,7 @@ function initMapSearch() {
 
   // --- Bouton flottant Leaflet (bottomleft) ---
   let _btnEl = null;
+  let _nightBtnEl = null;
   const ctrl = L.control({ position: 'bottomleft' });
   ctrl.onAdd = function () {
     const wrapper = L.DomUtil.create('div', 'layer-toggle-wrapper map-search-wrapper');
@@ -65,15 +66,57 @@ function initMapSearch() {
       e.stopPropagation();
       _ouvrirModale();
     });
+
+    // --- Bouton toggle Jour/Nuit (à droite de la loupe, même wrapper) ---
+    _nightBtnEl = L.DomUtil.create('button', 'btn-map-search btn-map-night', wrapper);
+    _nightBtnEl.type = 'button';
+    // Icône lune SVG (croissant)
+    _nightBtnEl.innerHTML = `
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+           stroke="currentColor" stroke-width="2.2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.5 6.5 0 0 0 9.8 9.8z"></path>
+      </svg>
+    `;
+    _nightBtnEl.title = t('mapNightBtnTooltip');
+    _nightBtnEl.setAttribute('aria-label', t('mapNightBtnTooltip'));
+    _nightBtnEl.addEventListener('click', e => {
+      e.stopPropagation();
+      _toggleNight();
+    });
+    // État initial restauré depuis les options (window.appOptions déjà chargé)
+    _applyNight(!!(window.appOptions && window.appOptions.mapNightMode));
+
     return wrapper;
   };
   ctrl.addTo(map);
 
-  // Bascule langue : titre du bouton
+  // ---------- Mode nuit : assombrit les tuiles via classe sur #map-container ----------
+  function _applyNight(on) {
+    const container = document.getElementById('map-container');
+    if (container) container.classList.toggle('map-night', on);
+    if (_nightBtnEl) {
+      _nightBtnEl.classList.toggle('active', on);
+      _nightBtnEl.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+  }
+
+  function _toggleNight() {
+    const on = !(window.appOptions && window.appOptions.mapNightMode);
+    _applyNight(on);
+    if (typeof setAppOption === 'function') setAppOption('mapNightMode', on); // persiste
+  }
+
+  // Bascule langue : titres des boutons
   function _majBtn() {
-    if (!_btnEl) return;
-    _btnEl.title = t('mapSearchBtnTooltip');
-    _btnEl.setAttribute('aria-label', t('mapSearchBtnTooltip'));
+    if (_btnEl) {
+      _btnEl.title = t('mapSearchBtnTooltip');
+      _btnEl.setAttribute('aria-label', t('mapSearchBtnTooltip'));
+    }
+    if (_nightBtnEl) {
+      _nightBtnEl.title = t('mapNightBtnTooltip');
+      _nightBtnEl.setAttribute('aria-label', t('mapNightBtnTooltip'));
+    }
   }
   window._refreshMapSearchBtn = _majBtn;
 

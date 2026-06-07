@@ -1494,6 +1494,10 @@ const SC_AIRCRAFT_REQ_ID = 5;
 // Horloges du simulateur (UTC + locale), lues 1×/seconde.
 const SC_TIME_DEF_ID = 6;
 const SC_TIME_REQ_ID = 6;
+// System event « Pause_EX1 » → état de pause du simulateur (bitfield brut,
+// décodé côté renderer). ClientEventId dans un espace de nommage distinct
+// des DEF/REQ ID ci-dessus. Bits : 1=pause complète, 4=pause active, 8=sim figé.
+const SC_PAUSE_EVENT_ID = 100;
 
 // État courant du sampling rapide côté SimConnect : permet d'éviter de
 // renvoyer la même commande NEVER/SIM_FRAME plusieurs fois de suite.
@@ -1526,7 +1530,10 @@ function broadcastSimStatus(payload) {
   });
   // Déconnexion = on n'est plus en vol → on relâche le verrou du toggle
   // « mode difficile » (sinon il resterait grisé après une perte de connexion).
-  if (payload && payload.state === 'disconnected') broadcastFlightAirborne(false);
+  if (payload && payload.state === 'disconnected') {
+    broadcastFlightAirborne(false);
+    _lastPauseFlags = null; // force le ré-envoi de l'état de pause à la reconnexion
+  }
 }
 
 function broadcastDonneesVol(payload) {
@@ -1546,6 +1553,19 @@ function broadcastPosition(payload) {
 function broadcastSimTime(payload) {
   BrowserWindow.getAllWindows().forEach(w => {
     try { w.webContents.send('sim-time', payload); } catch (_) {}
+  });
+}
+
+// État de pause du simulateur (Pause_EX1). payload = { flags } (bitfield brut).
+// Le renderer (simclock.js) décode les bits pour afficher/masquer le badge ⏸.
+// Émis seulement au changement d'état (anti-spam).
+let _lastPauseFlags = null;
+function broadcastSimPause(flags) {
+  if (flags === _lastPauseFlags) return;
+  _lastPauseFlags = flags;
+  console.log('[SimConnect] Pause_EX1 flags =', flags);
+  BrowserWindow.getAllWindows().forEach(w => {
+    try { w.webContents.send('sim-pause', { flags }); } catch (_) {}
   });
 }
 
@@ -1715,6 +1735,10 @@ ipcMain.handle('simconnect-connecter', async () => {
       0, 0, 0   // interval 0 → 1 update chaque seconde
     );
 
+    // --- System event « Pause_EX1 » : état de pause détaillé (bitfield) ---
+    // À la souscription, SimConnect envoie immédiatement l'état courant.
+    handle.subscribeToSystemEvent(SC_PAUSE_EVENT_ID, 'Pause_EX1');
+
     handle.on('simObjectData', (data) => {
       try {
         if (data.requestID === SC_WIND_REQ_ID) {
@@ -1768,6 +1792,19 @@ ipcMain.handle('simconnect-connecter', async () => {
         }
       } catch (err) {
         console.warn('[SimConnect] Lecture données KO:', err);
+      }
+    });
+
+    // System event « Pause_EX1 » : livré via la structure standard
+    // SIMCONNECT_RECV_EVENT (handler 'event'). Le « _EX1 » est seulement le nom
+    // de l'event ; recvEvent.data contient directement le bitfield de pause.
+    handle.on('event', (recvEvent) => {
+      try {
+        if (recvEvent.clientEventId === SC_PAUSE_EVENT_ID) {
+          broadcastSimPause(recvEvent.data | 0);
+        }
+      } catch (err) {
+        console.warn('[SimConnect] Lecture event KO:', err);
       }
     });
 

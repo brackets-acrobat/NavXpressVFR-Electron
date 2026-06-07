@@ -15,6 +15,12 @@ const TRANSLATIONS = {
     simClickToDisconnect: "Cliquer pour se déconnecter",
     clockUtc: "UTC",
     clockLocal: "LOC",
+    // Badge état de pause (Pause_EX1)
+    pauseBadgeLabel: "PAUSE",
+    pauseStateFull: "Pause complète",
+    pauseStateActive: "Pause active",
+    pauseStateSim: "Sim figé (interface active)",
+    pauseStateGeneric: "Simulateur en pause",
 
     // Config section
     flightConfig: "Configuration du Vol",
@@ -135,6 +141,7 @@ const TRANSLATIONS = {
 
     // Modale Rechercher (bouton loupe carte)
     mapSearchBtnTooltip: "Rechercher",
+    mapNightBtnTooltip: "Mode jour / nuit",
     mapSearchTitle: "🔍 Rechercher",
     mapSearchEntityLabel: "Type",
     mapSearchEntityAirport: "Aéroport",
@@ -421,6 +428,12 @@ const TRANSLATIONS = {
     simClickToDisconnect: "Click to disconnect",
     clockUtc: "UTC",
     clockLocal: "LOC",
+    // Pause state badge (Pause_EX1)
+    pauseBadgeLabel: "PAUSED",
+    pauseStateFull: "Full pause",
+    pauseStateActive: "Active pause",
+    pauseStateSim: "Sim frozen (UI active)",
+    pauseStateGeneric: "Simulator paused",
 
     // Config section
     flightConfig: "Flight Configuration",
@@ -541,6 +554,7 @@ const TRANSLATIONS = {
 
     // Search modal (map magnifier button)
     mapSearchBtnTooltip: "Search",
+    mapNightBtnTooltip: "Day / night mode",
     mapSearchTitle: "🔍 Search",
     mapSearchEntityLabel: "Type",
     mapSearchEntityAirport: "Airport",

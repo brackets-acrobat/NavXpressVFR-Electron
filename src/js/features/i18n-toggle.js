@@ -25,6 +25,8 @@ function initI18nToggle() {
       if (typeof window._refreshUncertaintyBtn === 'function') window._refreshUncertaintyBtn();
       // Rafraîchir le tooltip du bouton loupe « Rechercher »
       if (typeof window._refreshMapSearchBtn === 'function') window._refreshMapSearchBtn();
+      // Rafraîchir le tooltip du badge de pause (état dans la nouvelle langue)
+      if (typeof window._refreshSimPauseBadge === 'function') window._refreshSimPauseBadge();
       // Régénérer les tooltips aéroports (langue dans "Piste / Runway")
       if (typeof window._refreshAirports === 'function') window._refreshAirports();
     });

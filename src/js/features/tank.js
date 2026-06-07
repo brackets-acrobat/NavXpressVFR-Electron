@@ -63,10 +63,22 @@ function initTank() {
   }
 
   // --- Compte à rebours ---
-  let _tankRunning = false;
+  let _tankRunning = false;       // intention de marche (indépendante du gel)
+  let _tankFrozen = false;        // gelé par la pause sim (ESC / Pause_EX1)
   let _tankRemainingMs = 15 * 60 * 1000; // ms restantes
   let _tankTickHandle = null;
   let _tankEndTime = 0;
+
+  // (Re)met l'interval en cohérence avec l'état (en marche ET non gelé).
+  function _tankSyncInterval() {
+    const shouldRun = _tankRunning && !_tankFrozen;
+    if (shouldRun && !_tankTickHandle) {
+      _tankTickHandle = setInterval(_tankTick, 200);
+    } else if (!shouldRun && _tankTickHandle) {
+      clearInterval(_tankTickHandle);
+      _tankTickHandle = null;
+    }
+  }
 
   function _formatCountdown(ms) {
     if (ms < 0) ms = 0;
@@ -115,13 +127,13 @@ function initTank() {
       tankCountdown.classList.add('running');
       tankCountdown.classList.remove('finished');
     }
-    _tankTickHandle = setInterval(_tankTick, 200);
+    _tankSyncInterval();
     _tankUpdateBtns();
   }
 
   function _tankStop(reachedZero = false) {
-    if (_tankTickHandle) { clearInterval(_tankTickHandle); _tankTickHandle = null; }
     _tankRunning = false;
+    _tankSyncInterval();
     if (tankCountdown) {
       tankCountdown.classList.remove('running');
       if (reachedZero) tankCountdown.classList.add('finished');
@@ -131,8 +143,8 @@ function initTank() {
   }
 
   function _tankReset() {
-    if (_tankTickHandle) { clearInterval(_tankTickHandle); _tankTickHandle = null; }
     _tankRunning = false;
+    _tankSyncInterval();
     const m = parseInt(tankMinutes?.value, 10) || parseInt(tankSlider?.value, 10) || 15;
     _tankRemainingMs = m * 60 * 1000;
     if (tankCountdown) {
@@ -146,6 +158,36 @@ function initTank() {
   if (btnTankStart) btnTankStart.addEventListener('click', _tankStart);
   if (btnTankStop) btnTankStop.addEventListener('click', () => _tankStop(false));
   if (btnTankReset) btnTankReset.addEventListener('click', _tankReset);
+
+  // --- Gel pendant la pause simulateur (ESC / Pause_EX1) ---
+  // Le compte à rebours se fige et reprend exactement là où il s'était arrêté
+  // (le temps de pause n'est pas décompté).
+  function _setTankFrozen(frozen) {
+    frozen = !!frozen;
+    if (_tankFrozen === frozen) return;
+    if (frozen) {
+      // Fige le restant avant de suspendre.
+      if (_tankRunning) _tankRemainingMs = Math.max(0, _tankEndTime - Date.now());
+    } else {
+      // Reprend : recale l'échéance pour ne pas compter le temps de pause.
+      if (_tankRunning) _tankEndTime = Date.now() + _tankRemainingMs;
+    }
+    _tankFrozen = frozen;
+    _tankSyncInterval();
+    _renderTankCountdown();
+  }
+
+  if (window.api && typeof window.api.onSimPause === 'function') {
+    window.api.onSimPause((data) => {
+      _setTankFrozen(!!(data && (data.flags | 0) !== 0));
+    });
+  }
+  // Déconnexion MSFS : plus d'événement de reprise → on dégèle par sécurité.
+  if (window.api && typeof window.api.onStatusSimConnect === 'function') {
+    window.api.onStatusSimConnect((status) => {
+      if (status && status.state === 'disconnected') _setTankFrozen(false);
+    });
+  }
 
   // --- Ouverture / fermeture de la modale ---
   function _ouvrirTank() {
