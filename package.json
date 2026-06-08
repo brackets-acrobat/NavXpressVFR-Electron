@@ -4,12 +4,13 @@
   "description": "Logiciel de navigation VFR et tracking temps réel pour Flight Simulator",
   "main": "main.js",
   "author": "NavXpressVFR",
-  "license": "ISC",
+  "license": "GPL-3.0-or-later",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder",
     "dist:portable": "electron-builder --win portable",
-    "probe:navaids": "node probe-navaids-msfs.js"
+    "probe:navaids": "node probe-navaids-msfs.js",
+    "navaids:build": "node extract-navaids-msfs.js"
   },
   "keywords": [
     "electron",
@@ -48,7 +49,12 @@
       "!logo_icone.png",
       "!force-electron.js",
       "!package-lock.json",
-      "!**/*.md"
+      "!**/*.md",
+      "!probe-navaids-msfs.js",
+      "!analysis-navaid-fields.js",
+      "!verify-range.js",
+      "!_navtest/**/*",
+      "!_navtest_full/**/*"
     ],
     "extraResources": [],
     "asar": true,

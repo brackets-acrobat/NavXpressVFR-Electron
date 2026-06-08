@@ -1,3 +1,18 @@
+/*
+ * NavXpressVFR — Logiciel de navigation VFR pour Microsoft Flight Simulator
+ * Copyright (C) 2026 NavXpressVFR
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 // ============================================================
 // NavXpressVFR — Système de traductions bilingue FR / EN
 // ============================================================
@@ -192,8 +207,21 @@ const TRANSLATIONS = {
     msfsExtractEmpty: "⚠️ Aucun aéroport extrait. Vérifiez que MSFS 2024 tourne avec un vol en cours.",
     msfsExtractError: (msg) => `❌ Extraction échouée : ${msg}`,
 
-    // Import données OurAirports
-    btnImportOurAirports: "🌐 Import OurAirports",
+    // Import Navaids MSFS 2024 (VOR/NDB via SimConnect, traversance airways)
+    btnImportNavaids: "🛰️ Import Navaids MSFS2024",
+    navaidsConfirmTitle: "Avez-vous lancé MSFS 2024 ?",
+    navaidsConfirmMsg: "L'extraction des navaids (VOR/NDB) lit la base de Microsoft Flight Simulator 2024 en direct, en parcourant le réseau d'airways. MSFS 2024 doit être lancé, avec un vol en cours, avant de continuer. (Plusieurs minutes.)",
+    navaidsProgressTitle: "Extraction navaids MSFS 2024",
+    navaidsPhaseEnumerate: (n) => `Énumération des aéroports… (${n})`,
+    navaidsPhaseSeed: "Lecture des procédures (amorçage)…",
+    navaidsPhaseBfs: "Parcours du réseau d'airways…",
+    navaidsPhaseVor: "Détail des VOR/DME/TACAN…",
+    navaidsPhaseNdb: "Détail des NDB…",
+    navaidsPhaseDisco: "Navaids isolés (complément)…",
+    navaidsProgressStats: (nav, wpt) => `${nav} navaids · ${wpt} waypoints parcourus`,
+    navaidsExtractDone: (n) => `✅ Extraction terminée : ${n} navaids enregistrés. La base navaids MSFS 2024 est active.`,
+    navaidsExtractEmpty: "⚠️ Aucun navaid extrait. Vérifiez que MSFS 2024 tourne avec un vol en cours.",
+    navaidsExtractError: (msg) => `❌ Extraction échouée : ${msg}`,
     // Carnet de vol (bouton à droite de la boîte chronomètre)
     btnLogbook: "📖 Carnet de vol",
     // Boîte METAR (départ / arrivée) à côté de la boîte chronomètre
@@ -605,8 +633,21 @@ const TRANSLATIONS = {
     msfsExtractEmpty: "⚠️ No airport extracted. Make sure MSFS 2024 is running with a flight loaded.",
     msfsExtractError: (msg) => `❌ Extraction failed: ${msg}`,
 
-    // OurAirports data import
-    btnImportOurAirports: "🌐 Import OurAirports data",
+    // Navaids MSFS 2024 import (VOR/NDB via SimConnect, airway traversal)
+    btnImportNavaids: "🛰️ Import MSFS2024 Navaids",
+    navaidsConfirmTitle: "Have you launched MSFS 2024?",
+    navaidsConfirmMsg: "The navaid (VOR/NDB) extraction reads the Microsoft Flight Simulator 2024 database live by traversing the airway network. MSFS 2024 must be running, with a flight loaded, before continuing. (Several minutes.)",
+    navaidsProgressTitle: "MSFS 2024 navaids extraction",
+    navaidsPhaseEnumerate: (n) => `Enumerating airports… (${n})`,
+    navaidsPhaseSeed: "Reading procedures (seeding)…",
+    navaidsPhaseBfs: "Traversing the airway network…",
+    navaidsPhaseVor: "VOR/DME/TACAN details…",
+    navaidsPhaseNdb: "NDB details…",
+    navaidsPhaseDisco: "Isolated navaids (extra)…",
+    navaidsProgressStats: (nav, wpt) => `${nav} navaids · ${wpt} waypoints visited`,
+    navaidsExtractDone: (n) => `✅ Extraction complete: ${n} navaids saved. The MSFS 2024 navaid database is now active.`,
+    navaidsExtractEmpty: "⚠️ No navaid extracted. Make sure MSFS 2024 is running with a flight loaded.",
+    navaidsExtractError: (msg) => `❌ Extraction failed: ${msg}`,
     // Logbook (button to the right of the stopwatch box)
     btnLogbook: "📖 Logbook",
     // METAR box (departure / arrival) next to the stopwatch box

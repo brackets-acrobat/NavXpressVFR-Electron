@@ -1,3 +1,18 @@
+/*
+ * NavXpressVFR — Logiciel de navigation VFR pour Microsoft Flight Simulator
+ * Copyright (C) 2026 NavXpressVFR
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 const { app, BrowserWindow, ipcMain, dialog, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -15,6 +30,7 @@ const {
 
 // Moteur d'extraction des aéroports MSFS 2024 (module partagé avec le CLI).
 const { runExtraction: runMsfsExtraction } = require('./extract-airports-msfs');
+const { runExtraction: runNavaidsExtraction } = require('./extract-navaids-msfs');
 
 // Carnet de vol automatisé (machine à états + analyseur d'atterrissage)
 const { createLogbook } = require('./logbook');
@@ -116,14 +132,10 @@ function resetGlobeFds() {
   _globeFds.clear();
 }
 
-// --- OURAIRPORTS : liste des fichiers à récupérer ---
-// La base aéroports vient EXCLUSIVEMENT de MSFS 2024 (airports-msfs.jsonl) →
-// on ne télécharge plus airports/airport-frequencies/airport-comments/runways
-// depuis OurAirports. Seuls les navaids sont encore tirés d'OurAirports.
-// (countries/regions n'étaient lus nulle part, retirés aussi.)
-const OURAIRPORTS_FILES = [
-  { name: 'navaids', url: 'https://davidmegginson.github.io/ourairports-data/navaids.csv' },
-];
+// --- BASES DE DONNÉES : tout vient de MSFS 2024 via SimConnect ---
+// Aéroports : airports-msfs.jsonl (extract-airports-msfs.js).
+// Navaids   : navaids.jsonl (extract-navaids-msfs.js, traversance airways).
+// Plus aucun téléchargement OurAirports.
 
 // Télécharge une URL HTTPS en suivant jusqu'à 5 redirections.
 function httpsGetFollow(url, maxRedirects = 5) {
@@ -194,60 +206,6 @@ function downloadToFile(url, destPath, onProgress, maxRedirects = 5) {
     };
     doGet(url, maxRedirects);
   });
-}
-
-// Parser CSV minimaliste mais conforme à RFC 4180 : gère guillemets doubles,
-// virgules et sauts de ligne dans les champs entre guillemets.
-function parseCSV(text) {
-  // Normaliser les fins de ligne
-  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip BOM
-  const rows = [];
-  let row = [];
-  let field = '';
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; }
-        else { inQuotes = false; }
-      } else {
-        field += c;
-      }
-    } else {
-      if (c === '"') {
-        inQuotes = true;
-      } else if (c === ',') {
-        row.push(field); field = '';
-      } else if (c === '\r') {
-        // ignore — \n suivra
-      } else if (c === '\n') {
-        row.push(field); field = '';
-        rows.push(row); row = [];
-      } else {
-        field += c;
-      }
-    }
-  }
-  // Dernière cellule / ligne (fichier sans \n final)
-  if (field.length > 0 || row.length > 0) {
-    row.push(field);
-    rows.push(row);
-  }
-  if (rows.length === 0) return [];
-  const headers = rows[0];
-  const out = [];
-  for (let r = 1; r < rows.length; r++) {
-    const cells = rows[r];
-    // Ignorer les lignes complètement vides
-    if (cells.length === 1 && cells[0] === '') continue;
-    const obj = {};
-    for (let h = 0; h < headers.length; h++) {
-      obj[headers[h]] = cells[h] !== undefined ? cells[h] : '';
-    }
-    out.push(obj);
-  }
-  return out;
 }
 
 // Fenêtre de démarrage (splash) : petit panneau sans cadre, transparent et
@@ -681,6 +639,7 @@ function loadOurAirportsNavaidsList() {
       lat, lon,
       elev: n.elevation_ft,
       country: n.iso_country,
+      rangeNm: Number.isFinite(parseFloat(n.range_nm)) ? parseFloat(n.range_nm) : null,
     });
     if (n.id) byId.set(String(n.id), n);
   }
@@ -868,87 +827,7 @@ function ensureAirportsLoaded() {
   return true;
 }
 
-// 6. Vérifier si des fichiers OurAirports sont déjà présents (.jsonl ou .json)
-ipcMain.handle('ourairports-existe', async () => {
-  try {
-    ensureNavXpressDirs();
-    const { ourAirportsDir } = getNavXpressDirs();
-    return OURAIRPORTS_FILES.some(f =>
-      fs.existsSync(path.join(ourAirportsDir, f.name + '.jsonl')) ||
-      fs.existsSync(path.join(ourAirportsDir, f.name + '.json'))
-    );
-  } catch (err) {
-    return false;
-  }
-});
-
-// 7. Importer les données OurAirports : télécharge les CSV, les convertit au
-//    format JSONL (un objet JSON par ligne) UTF-8 et les écrit dans
-//    Documents/NavXpressVFR/ourairports data/
-ipcMain.handle('importer-ourairports', async (event) => {
-  ensureNavXpressDirs();
-  const { ourAirportsDir } = getNavXpressDirs();
-  const wc = event.sender;
-  invalidateOurAirportsIndex();
-
-  const total = OURAIRPORTS_FILES.length;
-  const results = [];
-
-  wc.send('ourairports-progress', {
-    type: 'start',
-    total,
-    files: OURAIRPORTS_FILES.map(f => f.name),
-  });
-
-  for (let i = 0; i < OURAIRPORTS_FILES.length; i++) {
-    const f = OURAIRPORTS_FILES[i];
-    wc.send('ourairports-progress', {
-      type: 'file-start',
-      index: i,
-      name: f.name,
-    });
-    try {
-      const csv = await httpsGetFollow(f.url);
-      const rows = parseCSV(csv);
-      const outPath = path.join(ourAirportsDir, f.name + '.jsonl');
-      // Format NDJSON / JSONL : un objet par ligne (lisible et streamable)
-      const lines = new Array(rows.length);
-      for (let r = 0; r < rows.length; r++) lines[r] = JSON.stringify(rows[r]);
-      fs.writeFileSync(outPath, lines.join('\n') + '\n', 'utf-8');
-      // Supprimer l'éventuel ancien .json (format tableau) devenu obsolète
-      const legacyPath = path.join(ourAirportsDir, f.name + '.json');
-      if (fs.existsSync(legacyPath)) {
-        try { fs.unlinkSync(legacyPath); } catch (_) { /* silencieux */ }
-      }
-      results.push({ name: f.name, ok: true, count: rows.length });
-      wc.send('ourairports-progress', {
-        type: 'file-done',
-        index: i,
-        name: f.name,
-        count: rows.length,
-      });
-    } catch (err) {
-      console.error('[OurAirports] Erreur sur', f.name, ':', err);
-      results.push({ name: f.name, ok: false, error: err.message });
-      wc.send('ourairports-progress', {
-        type: 'file-error',
-        index: i,
-        name: f.name,
-        error: err.message,
-      });
-    }
-  }
-
-  wc.send('ourairports-progress', {
-    type: 'done',
-    results,
-    dir: ourAirportsDir,
-  });
-
-  return { ok: true, dir: ourAirportsDir, results };
-});
-
-// 8. Recherche d'un aéroport par code dans la base OurAirports locale
+// Recherche d'un aéroport par code dans la base locale (MSFS 2024)
 ipcMain.handle('rechercher-aeroport-oa', async (event, code) => {
   if (!code) return { found: false, reason: 'empty' };
   const up = String(code).trim().toUpperCase();
@@ -1939,6 +1818,45 @@ ipcMain.handle('extraire-aeroports-msfs', async (event, options) => {
     return { ok: false, error: (err && err.message) || 'extraction échouée' };
   } finally {
     _msfsExtractRunning = false;
+  }
+});
+
+// Extraction des NAVAIDS MSFS 2024 (VOR/NDB) via SimConnect (méthode traversance
+// airways, cf. extract-navaids-msfs.js). Produit navaids.jsonl au format
+// OurAirports, relaie la progression au renderer via 'msfs-navaids-progress',
+// puis invalide les index pour reconstruire depuis la base fraîche.
+let _navaidsExtractRunning = false;
+ipcMain.handle('extraire-navaids-msfs', async (event) => {
+  if (_navaidsExtractRunning) {
+    return { ok: false, error: 'Une extraction est déjà en cours.' };
+  }
+  _navaidsExtractRunning = true;
+  const wc = event.sender;
+  ensureNavXpressDirs();
+  const { ourAirportsDir } = getNavXpressDirs();
+
+  const sendProgress = (p) => {
+    if (wc && !wc.isDestroyed()) wc.send('msfs-navaids-progress', p);
+  };
+
+  try {
+    const summary = await runNavaidsExtraction({
+      outDir: ourAirportsDir,
+      window: 80,
+      onProgress: sendProgress,
+    });
+    if (summary.file) {
+      invalidateOurAirportsIndex();
+      console.log('[MSFS] Extraction navaids terminée :', summary.navaids, 'navaids →', summary.file);
+    } else {
+      console.log('[MSFS] Extraction navaids terminée sans fichier (', summary.reason, ')');
+    }
+    return { ok: true, summary };
+  } catch (err) {
+    console.error('[MSFS] Extraction navaids échouée :', err && err.message);
+    return { ok: false, error: (err && err.message) || 'extraction échouée' };
+  } finally {
+    _navaidsExtractRunning = false;
   }
 });
 

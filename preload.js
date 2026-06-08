@@ -1,3 +1,18 @@
+/*
+ * NavXpressVFR — Logiciel de navigation VFR pour Microsoft Flight Simulator
+ * Copyright (C) 2026 NavXpressVFR
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
@@ -66,13 +81,12 @@ contextBridge.exposeInMainWorld('api', {
         return () => ipcRenderer.removeListener('msfs-extract-progress', listener);
     },
 
-    // IMPORT DONNÉES OurAirports
-    ourAirportsExiste: () => ipcRenderer.invoke('ourairports-existe'),
-    importerOurAirports: () => ipcRenderer.invoke('importer-ourairports'),
-    onOurAirportsProgress: (callback) => {
+    // EXTRACTION NAVAIDS MSFS 2024 (VOR/NDB via SimConnect)
+    msfsExtraireNavaids: () => ipcRenderer.invoke('extraire-navaids-msfs'),
+    onMsfsNavaidsProgress: (callback) => {
         const listener = (_event, data) => callback(data);
-        ipcRenderer.on('ourairports-progress', listener);
-        return () => ipcRenderer.removeListener('ourairports-progress', listener);
+        ipcRenderer.on('msfs-navaids-progress', listener);
+        return () => ipcRenderer.removeListener('msfs-navaids-progress', listener);
     },
 
     // RECHERCHE AÉROPORT (base OurAirports locale)

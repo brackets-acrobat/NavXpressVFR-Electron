@@ -1,3 +1,18 @@
+/*
+ * NavXpressVFR — Logiciel de navigation VFR pour Microsoft Flight Simulator
+ * Copyright (C) 2026 NavXpressVFR
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 // ============================================================
 // NavXpressVFR — imports.js
 // Imports OurAirports / élévation / MSFS (+ applyI18nIn partagé)
@@ -5,21 +20,7 @@
 // ============================================================
 
 function initImports() {
-  // --- Bouton + Modales : Import OurAirports ---
-  const btnImportOA = document.getElementById('btn-import-ourairports');
-  const oaConfirmOverlay = document.getElementById('oa-confirm-overlay');
-  const btnOaConfirmCancel = document.getElementById('btn-oa-confirm-cancel');
-  const btnOaConfirmOk = document.getElementById('btn-oa-confirm-ok');
-  const oaProgressOverlay = document.getElementById('oa-progress-overlay');
-  const oaProgressList = document.getElementById('oa-progress-list');
-  const oaProgressBarFill = document.getElementById('oa-progress-bar-fill');
-  const oaProgressCount = document.getElementById('oa-progress-count');
-  const oaProgressSummary = document.getElementById('oa-progress-summary');
-  const btnOaProgressClose = document.getElementById('btn-oa-progress-close');
-
-  let _oaImportInProgress = false;
-  let _oaProgressUnsub = null;
-
+  // applyI18nIn partagé (utilisé aussi par les imports élévation et aéroports MSFS).
   function applyI18nIn(el) {
     if (!el) return;
     el.querySelectorAll('[data-i18n]').forEach(n => {
@@ -27,128 +28,145 @@ function initImports() {
     });
   }
 
-  async function lancerImportOurAirports() {
-    if (_oaImportInProgress) return;
-    _oaImportInProgress = true;
+  // --- Bouton + Modales : Import Navaids MSFS 2024 (VOR/NDB via SimConnect) ---
+  // Même flux que l'import aéroports : vérifier MSFS lancé → extraction (traversance
+  // airways) → modale de progression. Produit navaids.jsonl.
+  const btnImportNavaids = document.getElementById('btn-import-navaids');
+  const navaidsConfirmOverlay = document.getElementById('navaids-confirm-overlay');
+  const btnNavaidsConfirmCancel = document.getElementById('btn-navaids-confirm-cancel');
+  const btnNavaidsConfirmOk = document.getElementById('btn-navaids-confirm-ok');
+  const navaidsCheckStatus = document.getElementById('navaids-check-status');
+  const navaidsProgressOverlay = document.getElementById('navaids-progress-overlay');
+  const navaidsProgressPhase = document.getElementById('navaids-progress-phase');
+  const navaidsProgressBarFill = document.getElementById('navaids-progress-bar-fill');
+  const navaidsProgressCount = document.getElementById('navaids-progress-count');
+  const navaidsProgressStats = document.getElementById('navaids-progress-stats');
+  const navaidsProgressSummary = document.getElementById('navaids-progress-summary');
+  const btnNavaidsProgressClose = document.getElementById('btn-navaids-progress-close');
 
-    // Réinitialiser la modale de progression
-    applyI18nIn(oaProgressOverlay);
-    oaProgressList.innerHTML = '';
-    oaProgressBarFill.style.width = '0%';
-    oaProgressCount.textContent = '0 / 0';
-    oaProgressSummary.textContent = '';
-    oaProgressSummary.style.color = '#888';
-    btnOaProgressClose.disabled = true;
-    oaProgressOverlay.classList.add('visible');
+  let _navaidsChecking = false;
+  let _navaidsExtracting = false;
+  let _navaidsUnsubProgress = null;
 
-    // Map name -> <li> pour mise à jour rapide
-    const itemByName = new Map();
-    let totalFiles = 0;
-    let doneCount = 0;
+  function openNavaidsConfirm() {
+    applyI18nIn(navaidsConfirmOverlay);
+    if (navaidsCheckStatus) { navaidsCheckStatus.textContent = ''; navaidsCheckStatus.style.color = '#aaa'; }
+    if (btnNavaidsConfirmOk) btnNavaidsConfirmOk.disabled = false;
+    if (btnNavaidsConfirmCancel) btnNavaidsConfirmCancel.disabled = false;
+    navaidsConfirmOverlay.classList.add('visible');
+  }
+  function closeNavaidsConfirm() {
+    if (_navaidsChecking) return;
+    navaidsConfirmOverlay.classList.remove('visible');
+  }
 
-    // S'abonner aux events de progression
-    if (_oaProgressUnsub) { try { _oaProgressUnsub(); } catch (_) { } }
-    _oaProgressUnsub = window.api.onOurAirportsProgress((data) => {
-      if (data.type === 'start') {
-        totalFiles = data.total;
-        doneCount = 0;
-        oaProgressCount.textContent = `0 / ${totalFiles}`;
-        oaProgressList.innerHTML = '';
-        itemByName.clear();
-        data.files.forEach(name => {
-          const li = document.createElement('li');
-          li.style.padding = '4px 8px';
-          li.style.color = '#888';
-          li.textContent = `⏸️ ${name}`;
-          oaProgressList.appendChild(li);
-          itemByName.set(name, li);
-        });
-      } else if (data.type === 'file-start') {
-        const li = itemByName.get(data.name);
-        if (li) {
-          li.style.color = '#00bcd4';
-          li.textContent = t('oaProgressDownloading')(data.name);
-        }
-      } else if (data.type === 'file-done') {
-        const li = itemByName.get(data.name);
-        if (li) {
-          li.style.color = '#00e676';
-          li.textContent = t('oaProgressFileOk')(data.name, data.count);
-        }
-        doneCount++;
-        oaProgressCount.textContent = `${doneCount} / ${totalFiles}`;
-        oaProgressBarFill.style.width = Math.round((doneCount / totalFiles) * 100) + '%';
-      } else if (data.type === 'file-error') {
-        const li = itemByName.get(data.name);
-        if (li) {
-          li.style.color = '#ff5252';
-          li.textContent = t('oaProgressFileError')(data.name) + ' — ' + data.error;
-        }
-        doneCount++;
-        oaProgressCount.textContent = `${doneCount} / ${totalFiles}`;
-        oaProgressBarFill.style.width = Math.round((doneCount / totalFiles) * 100) + '%';
-      } else if (data.type === 'done') {
-        const okCount = data.results.filter(r => r.ok).length;
-        const allOk = okCount === data.results.length;
-        oaProgressSummary.style.color = allOk ? '#00e676' : '#ffb300';
-        oaProgressSummary.innerHTML =
-          `<div>${t('oaProgressDone')(okCount, data.results.length)}</div>` +
-          `<div style="margin-top:4px; color:#888; font-size:11px; white-space:pre-wrap;">${t('oaProgressDoneDir')(data.dir)}</div>`;
-        btnOaProgressClose.disabled = false;
-      }
-    });
+  function openNavaidsProgress() {
+    if (!navaidsProgressOverlay) return;
+    applyI18nIn(navaidsProgressOverlay);
+    if (navaidsProgressBarFill) navaidsProgressBarFill.style.width = '0%';
+    if (navaidsProgressCount) navaidsProgressCount.textContent = '0 / 0';
+    if (navaidsProgressStats) navaidsProgressStats.textContent = '';
+    if (navaidsProgressSummary) { navaidsProgressSummary.textContent = ''; navaidsProgressSummary.style.color = '#888'; }
+    if (navaidsProgressPhase) { navaidsProgressPhase.style.color = '#aaa'; navaidsProgressPhase.textContent = t('msfsPhaseConnecting'); }
+    if (btnNavaidsProgressClose) btnNavaidsProgressClose.disabled = true;
+    navaidsProgressOverlay.classList.add('visible');
+  }
+  function closeNavaidsProgress() {
+    if (_navaidsExtracting) return;
+    if (navaidsProgressOverlay) navaidsProgressOverlay.classList.remove('visible');
+  }
 
-    try {
-      await window.api.importerOurAirports();
-    } catch (err) {
-      console.error('Import OurAirports échec:', err);
-      oaProgressSummary.style.color = '#ff5252';
-      oaProgressSummary.textContent = '❌ ' + err.message;
-      btnOaProgressClose.disabled = false;
-    } finally {
-      _oaImportInProgress = false;
+  function handleNavaidsProgress(p) {
+    if (!p) return;
+    const setBar = (pct) => { if (navaidsProgressBarFill) navaidsProgressBarFill.style.width = Math.max(0, Math.min(100, pct)) + '%'; };
+    if (p.phase === 'connect' || p.phase === 'connected') {
+      if (navaidsProgressPhase) navaidsProgressPhase.textContent = t('msfsPhaseConnecting');
+    } else if (p.phase === 'enumerate') {
+      if (navaidsProgressPhase) navaidsProgressPhase.textContent = t('navaidsPhaseEnumerate')(p.enumerated);
+      if (p.total) setBar(Math.round((p.packet / p.total) * 100));
+      if (navaidsProgressCount) navaidsProgressCount.textContent = String(p.enumerated);
+    } else if (p.phase === 'seed' || p.phase === 'bfs' || p.phase === 'vor' || p.phase === 'ndb' || p.phase === 'disco') {
+      const label = { seed: 'navaidsPhaseSeed', bfs: 'navaidsPhaseBfs', vor: 'navaidsPhaseVor', ndb: 'navaidsPhaseNdb', disco: 'navaidsPhaseDisco' }[p.phase];
+      if (navaidsProgressPhase) navaidsProgressPhase.textContent = t(label);
+      if (p.target > 0) setBar(Math.round((p.treated / p.target) * 100));
+      if (navaidsProgressCount) navaidsProgressCount.textContent = `${p.treated} / ${p.target}`;
+      if (navaidsProgressStats) navaidsProgressStats.textContent = t('navaidsProgressStats')(p.navaids || 0, p.seeds || 0);
+    } else if (p.phase === 'done') {
+      setBar(100);
     }
   }
 
-  if (btnImportOA) {
-    btnImportOA.addEventListener('click', async () => {
-      let existe = false;
-      try { existe = await window.api.ourAirportsExiste(); } catch (_) { }
-      if (existe) {
-        applyI18nIn(oaConfirmOverlay);
-        oaConfirmOverlay.classList.add('visible');
+  async function startNavaidsExtraction() {
+    if (_navaidsExtracting) return;
+    _navaidsChecking = false;
+    if (navaidsConfirmOverlay) navaidsConfirmOverlay.classList.remove('visible');
+    openNavaidsProgress();
+
+    _navaidsExtracting = true;
+    if (_navaidsUnsubProgress) { try { _navaidsUnsubProgress(); } catch (_) {} _navaidsUnsubProgress = null; }
+    if (window.api.onMsfsNavaidsProgress) _navaidsUnsubProgress = window.api.onMsfsNavaidsProgress(handleNavaidsProgress);
+
+    let result;
+    try {
+      result = await window.api.msfsExtraireNavaids();
+    } catch (err) {
+      result = { ok: false, error: (err && err.message) || String(err) };
+    }
+
+    _navaidsExtracting = false;
+    if (_navaidsUnsubProgress) { try { _navaidsUnsubProgress(); } catch (_) {} _navaidsUnsubProgress = null; }
+    if (btnNavaidsProgressClose) btnNavaidsProgressClose.disabled = false;
+
+    if (result && result.ok && result.summary && result.summary.file) {
+      if (navaidsProgressSummary) {
+        navaidsProgressSummary.style.color = '#00e676';
+        navaidsProgressSummary.textContent = t('navaidsExtractDone')(result.summary.navaids);
+      }
+    } else if (result && result.ok && result.summary) {
+      if (navaidsProgressSummary) {
+        navaidsProgressSummary.style.color = '#ffb300';
+        navaidsProgressSummary.textContent = t('navaidsExtractEmpty');
+      }
+    } else {
+      if (navaidsProgressSummary) {
+        navaidsProgressSummary.style.color = '#ff5252';
+        navaidsProgressSummary.textContent = t('navaidsExtractError')((result && result.error) || '?');
+      }
+    }
+  }
+
+  if (btnImportNavaids) btnImportNavaids.addEventListener('click', openNavaidsConfirm);
+  if (btnNavaidsConfirmCancel) btnNavaidsConfirmCancel.addEventListener('click', closeNavaidsConfirm);
+  if (navaidsConfirmOverlay) {
+    navaidsConfirmOverlay.addEventListener('click', (e) => { if (e.target === navaidsConfirmOverlay) closeNavaidsConfirm(); });
+  }
+  if (btnNavaidsConfirmOk) {
+    btnNavaidsConfirmOk.addEventListener('click', async () => {
+      if (_navaidsChecking) return;
+      _navaidsChecking = true;
+      btnNavaidsConfirmOk.disabled = true;
+      if (btnNavaidsConfirmCancel) btnNavaidsConfirmCancel.disabled = true;
+      if (navaidsCheckStatus) { navaidsCheckStatus.style.color = '#00bcd4'; navaidsCheckStatus.textContent = t('msfsCheckChecking'); }
+
+      let res = { running: false };
+      try { res = await window.api.msfsVerifierLancement(); }
+      catch (err) { res = { running: false, error: (err && err.message) || String(err) }; }
+
+      _navaidsChecking = false;
+      btnNavaidsConfirmOk.disabled = false;
+      if (btnNavaidsConfirmCancel) btnNavaidsConfirmCancel.disabled = false;
+
+      if (res && res.running) {
+        if (navaidsCheckStatus) { navaidsCheckStatus.style.color = '#00e676'; navaidsCheckStatus.textContent = t('msfsCheckRunning')(res.app || 'MSFS'); }
+        startNavaidsExtraction();
       } else {
-        await lancerImportOurAirports();
+        if (navaidsCheckStatus) { navaidsCheckStatus.style.color = '#ff5252'; navaidsCheckStatus.textContent = t('msfsCheckNotRunning'); }
       }
     });
   }
-
-  if (btnOaConfirmCancel) {
-    btnOaConfirmCancel.addEventListener('click', () => oaConfirmOverlay.classList.remove('visible'));
-  }
-  if (oaConfirmOverlay) {
-    oaConfirmOverlay.addEventListener('click', (e) => {
-      if (e.target === oaConfirmOverlay) oaConfirmOverlay.classList.remove('visible');
-    });
-  }
-  if (btnOaConfirmOk) {
-    btnOaConfirmOk.addEventListener('click', async () => {
-      oaConfirmOverlay.classList.remove('visible');
-      await lancerImportOurAirports();
-    });
-  }
-
-  if (btnOaProgressClose) {
-    btnOaProgressClose.addEventListener('click', () => {
-      if (!btnOaProgressClose.disabled) oaProgressOverlay.classList.remove('visible');
-    });
-  }
-  if (oaProgressOverlay) {
-    oaProgressOverlay.addEventListener('click', (e) => {
-      if (e.target === oaProgressOverlay && !btnOaProgressClose.disabled) {
-        oaProgressOverlay.classList.remove('visible');
-      }
-    });
+  if (btnNavaidsProgressClose) btnNavaidsProgressClose.addEventListener('click', closeNavaidsProgress);
+  if (navaidsProgressOverlay) {
+    navaidsProgressOverlay.addEventListener('click', (e) => { if (e.target === navaidsProgressOverlay) closeNavaidsProgress(); });
   }
 
   // --- Bouton + Modales : Import données d'élévation (GLOBE all10g.zip) ---

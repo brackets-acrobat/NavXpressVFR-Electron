@@ -457,7 +457,7 @@ h1 {
     border-color: #00bcd4;
 }
 
-#top-buttons-row2 .btn-ourairports {
+#top-buttons-row2 .btn-navaids {
     flex: 1;
     min-width: 0;
     text-align: center;
@@ -467,7 +467,7 @@ h1 {
     color: #00bcd4;
 }
 
-#top-buttons-row2 .btn-ourairports:hover {
+#top-buttons-row2 .btn-navaids:hover {
     background-color: #00bcd4;
     color: #121212;
     border-color: #00bcd4;
@@ -3478,6 +3478,12 @@ tr:hover {
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 12px;
     margin-top: 2px;
+}
+
+.navaid-tooltip .nv-tt-range {
+    color: #9e9e9e;
+    font-size: 11px;
+    margin-top: 1px;
 }
 
 /* Bordure du header de la modale navaid : bleue */

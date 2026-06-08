@@ -122,8 +122,8 @@
                                 data-i18n="btnImportMsfs">🛫 Importer Aéroports MSFS 2024</button>
                             <button id="btn-import-elevation" class="btn-secondary btn-elevation"
                                 data-i18n="btnImportElevation">⛰️ Importer données d'élévation</button>
-                            <button id="btn-import-ourairports" class="btn-secondary btn-ourairports"
-                                data-i18n="btnImportOurAirports">🌐 Importer données OurAirports</button>
+                            <button id="btn-import-navaids" class="btn-secondary btn-navaids"
+                                data-i18n="btnImportNavaids">🛰️ Importer Navaids MSFS 2024</button>
                         </div>
 
                         <!-- Ligne de boutons : Carburant / Réservoir / Conversions / Profil /
@@ -738,18 +738,21 @@
     </div>
 
     <!-- Modale confirmation remplacement données OurAirports -->
-    <div id="oa-confirm-overlay" class="modal-overlay" style="z-index:10000;">
-        <div class="modal-popup" style="width:380px; border-color:#ffb300;">
-            <h3 data-i18n="oaConfirmOverwriteTitle"
-                style="margin:0 0 14px 0; color:#ffb300; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
-                Remplacer les données ?</h3>
-            <p data-i18n="oaConfirmOverwriteMsg"
-                style="color:#e0e0e0; font-size:14px; margin:0 0 22px 0; line-height:1.6;"></p>
+    <!-- Modale : vérifier que MSFS 2024 est lancé avant l'extraction des navaids -->
+    <div id="navaids-confirm-overlay" class="modal-overlay" style="z-index:10000;">
+        <div class="modal-popup" style="width:420px; border-color:#00bcd4;">
+            <h3 data-i18n="navaidsConfirmTitle"
+                style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Avez-vous lancé MSFS 2024 ?</h3>
+            <p data-i18n="navaidsConfirmMsg"
+                style="color:#e0e0e0; font-size:14px; margin:0 0 16px 0; line-height:1.6;"></p>
+            <p id="navaids-check-status"
+                style="font-size:13px; margin:0 0 18px 0; min-height:18px; text-align:center; color:#aaa;"></p>
             <div class="create-flight-actions">
-                <button id="btn-oa-confirm-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
-                <button id="btn-oa-confirm-ok" class="btn-primary"
-                    style="background:#ffb300; border-color:#ffb300; color:#121212;"
-                    data-i18n="oaConfirmOverwriteBtn">Remplacer</button>
+                <button id="btn-navaids-confirm-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
+                <button id="btn-navaids-confirm-ok" class="btn-primary"
+                    style="background:#00bcd4; border-color:#00bcd4; color:#121212;"
+                    data-i18n="btnMsfsCheck">Vérifier MSFS 2024</button>
             </div>
         </div>
     </div>
@@ -800,30 +803,29 @@
         </div>
     </div>
 
-    <!-- Modale progression import OurAirports -->
-    <div id="oa-progress-overlay" class="modal-overlay">
-        <div class="modal-popup" style="width:480px;">
-            <h3 data-i18n="oaProgressTitle"
+    <!-- Modale progression extraction navaids MSFS 2024 -->
+    <div id="navaids-progress-overlay" class="modal-overlay" style="z-index:10000;">
+        <div class="modal-popup" style="width:480px; border-color:#00bcd4;">
+            <h3 data-i18n="navaidsProgressTitle"
                 style="margin:0 0 6px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
-                Import OurAirports</h3>
-            <p id="oa-progress-subtitle" data-i18n="oaProgressSubtitle"
-                style="color:#aaa; font-size:12px; margin:0 0 14px 0;">Téléchargement des données aéronautiques…</p>
+                Extraction navaids MSFS 2024</h3>
+            <p id="navaids-progress-phase"
+                style="color:#aaa; font-size:12px; margin:0 0 14px 0;" data-i18n="msfsPhaseConnecting">Connexion au simulateur…</p>
 
-            <div id="oa-progress-bar-wrap"
+            <div id="navaids-progress-bar-wrap"
                 style="background:#0e0e0e; border:1px solid #2a2a2a; border-radius:6px; height:10px; overflow:hidden; margin-bottom:6px;">
-                <div id="oa-progress-bar-fill"
+                <div id="navaids-progress-bar-fill"
                     style="background:#00bcd4; height:100%; width:0%; transition:width 0.25s ease;"></div>
             </div>
-            <p id="oa-progress-count" style="color:#888; font-size:12px; margin:0 0 14px 0; text-align:right;">0 / 0</p>
+            <p id="navaids-progress-count" style="color:#888; font-size:12px; margin:0 0 14px 0; text-align:right;">0 / 0</p>
 
-            <ul id="oa-progress-list"
-                style="list-style:none; padding:0; margin:0 0 18px 0; max-height:240px; overflow-y:auto; font-family:'Consolas','Monaco',monospace; font-size:12px;">
-            </ul>
+            <div id="navaids-progress-stats"
+                style="color:#888; font-size:12px; margin:0 0 14px 0; min-height:18px; font-family:'Consolas','Monaco',monospace;"></div>
 
-            <div id="oa-progress-summary" style="color:#888; font-size:12px; margin:0 0 14px 0; min-height:18px;"></div>
+            <div id="navaids-progress-summary" style="color:#888; font-size:12px; margin:0 0 14px 0; min-height:18px;"></div>
 
             <div class="create-flight-actions">
-                <button id="btn-oa-progress-close" class="btn-primary" data-i18n="btnClose" disabled>Fermer</button>
+                <button id="btn-navaids-progress-close" class="btn-primary" data-i18n="btnClose" disabled>Fermer</button>
             </div>
         </div>
     </div>

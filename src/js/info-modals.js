@@ -1,3 +1,18 @@
+/*
+ * NavXpressVFR — Logiciel de navigation VFR pour Microsoft Flight Simulator
+ * Copyright (C) 2026 NavXpressVFR
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 // ============================================================
 // NavXpressVFR — info-modals.js
 // Modales d'information aéroport / navaid (clic marqueur)  (extrait de ui.js — Phase 1)
@@ -419,7 +434,8 @@ async function ouvrirInfoNavaid(id) {
     ['Ident', escapeHtml(n.ident || '—')],
     [currentLang === 'fr' ? 'Type' : 'Type', escapeHtml(n.type || '—')],
     [currentLang === 'fr' ? 'Fréquence' : 'Frequency', escapeHtml(formatNavaidFreqGlobal(n.type, n.frequency_khz))],
-    [currentLang === 'fr' ? 'Pays' : 'Country', escapeHtml(n.iso_country || '—')],
+    [currentLang === 'fr' ? 'Portée' : 'Range', Number.isFinite(parseFloat(n.range_nm)) ? `${parseFloat(n.range_nm)} NM` : '—'],
+    [currentLang === 'fr' ? 'Région' : 'Region', escapeHtml(n.iso_region || '—')],
     ['Latitude', Number.isFinite(lat) ? lat.toFixed(6) + '°' : '—'],
     ['Longitude', Number.isFinite(lon) ? lon.toFixed(6) + '°' : '—'],
     [currentLang === 'fr' ? 'Élévation' : 'Elevation', n.elevation_ft ? `${n.elevation_ft} ft` : '—'],
