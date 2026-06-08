@@ -5,85 +5,104 @@
 <h1 align="center">NavXpressVFR</h1>
 
 <p align="center">
-  <b>Préparation et suivi de navigation VFR en temps réel pour Microsoft Flight Simulator 2024.</b><br>
-  Application de bureau (Electron, Windows) · Bilingue 🇫🇷 / 🇬🇧
+  <b>Real-time VFR flight planning and tracking for Microsoft Flight Simulator 2024.</b><br>
+  Desktop application (Electron, Windows) · Bilingual 🇫🇷 / 🇬🇧 · GPL-3.0
 </p>
 
 ---
 
-## ✈️ Présentation
+## ✈️ Overview
 
-**NavXpressVFR** assiste le pilote virtuel à chaque étape d'un vol VFR : construction du plan de
-vol sur une carte interactive, calculs de navigation (cap magnétique, dérive, vitesse sol, temps,
-emport carburant), profil vertical du relief, puis **suivi en temps réel pendant le vol** grâce à
-la connexion **SimConnect** à MSFS 2024 — avec injection automatique du vent, alertes sonores de
-proximité et de déviation, et fonction **Direct To**.
+**NavXpressVFR** assists the virtual pilot through every stage of a VFR flight: building the flight
+plan on an interactive map, navigation computations (magnetic heading, drift, ground speed, time,
+fuel planning), terrain vertical profile, and then **real-time tracking during the flight** via the
+**SimConnect** connection to MSFS 2024 — with automatic wind injection, proximity and deviation
+audio alerts, and a **Direct To** function.
 
-L'application s'appuie sur de vraies données aéronautiques (aéroports, pistes, fréquences, navaids,
-espaces aériens) issues de **MSFS 2024**, **OurAirports** et **OpenAIP**, et sur le relief mondial
-**GLOBE** (NOAA) pour le profil vertical.
+The app relies on real aeronautical data — airports, runways, frequencies, navaids, airspaces —
+extracted **directly from MSFS 2024** via SimConnect, plus **OpenAIP** airspaces and the worldwide
+**GLOBE** (NOAA) terrain dataset for the vertical profile.
 
-## ✨ Fonctionnalités clés
+## ✨ Key features
 
-- 🗺️ **Carte interactive** (Leaflet) — 3 fonds (satellite / topo / OSM), calques espaces aériens,
-  aéroports et navaids, tracé du plan coloré par état de leg, édition par glisser-déposer.
-- 🧭 **Plan de vol & log de navigation** — création assistée, points de report, legs avec
-  distance, route, **cap magnétique**, **GS**, durée et altitude par leg.
-- ⛰️ **Profil vertical** — relief réel + altitude prévue le long de la route.
-- 📡 **Suivi temps réel MSFS** — état de connexion, vent injecté automatiquement, passage de leg
-  auto, **alertes sonores** (proximité waypoint, déviation, arrivée, tour de piste).
-- 🎯 **Direct To** — cap, distance et temps estimé vers n'importe quel waypoint.
-- ⛽ **Emport carburant** (roulage, trip, réserves, dégagement, VFR de nuit) et 🛢️ **minuteur de
-  changement de réservoir**.
-- 🔧 **Outils** — conversions d'unités, chronomètre & timer, rose des vents, déclinaison magnétique.
-- 📥 **Import / export** — plans Little Navmap (`.lnmpln`) et format natif `.navxpv`.
+- 🗺️ **Interactive map** (Leaflet) — multiple base layers (satellite / topo / OSM / CARTO), airspace,
+  airport and navaid layers, day/night mode, flight plan drawn and colored by leg state, drag-and-drop editing.
+- 🧭 **Flight plan & navigation log** — assisted creation, reporting points, legs with distance,
+  track, **magnetic heading**, **ground speed**, time and altitude per leg.
+- ⛰️ **Vertical profile** — real terrain elevation + planned altitude along the route.
+- 📡 **Real-time MSFS tracking** — connection state, automatic wind injection, auto leg switching,
+  **audio alerts** (waypoint proximity, deviation, arrival, traffic pattern), pause-state handling.
+- 🎯 **Direct To** — heading, distance and estimated time to any waypoint.
+- ⛽ **Fuel planning** (taxi, trip, reserves, alternate, night VFR) and 🛢️ **tank-switch timer**.
+- 🛰️ **MSFS 2024 data extraction** — build the worldwide **airports** and **navaids** databases
+  live from your own simulator (see below).
+- 🔧 **Tools** — unit conversions, stopwatch & timer, wind rose, magnetic declination.
+- 📥 **Import / export** — Little Navmap (`.lnmpln`) flight plans and native `.navxpv` format.
 
-> 📋 **Liste exhaustive + correspondance avec les modules du code : [FEATURES.md](FEATURES.md).**
+> 📋 Exhaustive feature list and mapping to code modules: **[FEATURES.md](FEATURES.md)** (French).
 
-## 🛰️ Sources de données
+## 🛰️ Data sources
 
-| Donnée | Source | Mise en place |
+| Data | Source | How |
 |---|---|---|
-| Aéroports (pistes, fréquences, hélipads) | **MSFS 2024** (extraction live SimConnect) | Bouton « Importer Aéroports MSFS 2024 » |
-| Aéroports & navaids (base mondiale) | **OurAirports** | Bouton « Importer données OurAirports » |
-| Espaces aériens | **OpenAIP** | Clé API à renseigner dans l'app |
-| Relief (profil vertical) | **GLOBE** 30″ (NOAA) | Bouton « Importer données d'élévation » (~307 Mo) |
-| Déclinaison magnétique | **WMM** (`geomagnetism`) | Intégré |
+| Airports (runways, frequencies, helipads) | **MSFS 2024** (live SimConnect extraction) | "Import MSFS 2024 Airports" button |
+| Navaids — VOR / VOR-DME / DME / TACAN / VORTAC / NDB (worldwide) | **MSFS 2024** (SimConnect airway traversal + bundled seed) | "Import MSFS 2024 Navaids" button |
+| Airspaces | **OpenAIP** | API key entered in the app |
+| Terrain (vertical profile) | **GLOBE** 30″ (NOAA) | "Import elevation data" button (~307 MB) |
+| Magnetic declination | **WMM** (`geomagnetism`) | Built-in |
 
-## 🚀 Démarrage (développement)
+### About navaid extraction
+SimConnect cannot *enumerate* navaids worldwide, so — like **Little Navmap** — NavXpressVFR rebuilds
+the database by **traversing the airway network** (airports → procedures → airways), then completes
+it for *disconnected* navaids using a bundled reference list of identifiers
+(`bundled-data/navaids-seed.csv.gz`). Every value (position, frequency, range, magvar…) comes from
+**your own MSFS 2024**; the seed is only used as a list of identifiers to query. This yields a
+near-worldwide navaid base (~7,500 navaids) with **range** and **elevation**, straight from FS2024.
 
-Prérequis : **Node.js**, **Windows**, et **MSFS 2024** (pour les fonctions temps réel).
+## 🚀 Getting started (development)
+
+Requirements: **Node.js**, **Windows**, and **MSFS 2024** (for the real-time and extraction features).
 
 ```bash
 npm install
 npm start
 ```
 
-## 📦 Build (exécutable portable Windows)
+## 📦 Build (Windows portable executable)
 
 ```bash
-npm run dist          # ou : npm run dist:portable
+npm run dist          # or: npm run dist:portable
 ```
-Le binaire portable est généré dans `dist/`.
+The portable binary is generated in `dist/`.
 
 ## ⚙️ Configuration
 
-- **Clé OpenAIP** (espaces aériens) : bouton « 🔑 Ajouter API OpenAIP » dans l'app (test + sauvegarde).
-- **Imports de données** : lancer les imports MSFS / OurAirports / élévation depuis l'interface.
-  Les données sont stockées sous `Documents/NavXpressVFR/`.
+- **OpenAIP key** (airspaces): "🔑 Add OpenAIP API" button in the app (test + save).
+- **Data imports**: run the MSFS airports / MSFS navaids / elevation imports from the UI
+  (MSFS 2024 must be running with a flight loaded for the SimConnect extractions).
+  Data is stored under `Documents/NavXpressVFR/`.
 
-## 🧱 Pile technique
+## 🧱 Tech stack
 
-- **Electron** (processus principal `main.js` + renderer `src/`)
-- **Leaflet** (carte), **node-simconnect** (MSFS), **geomagnetism** (déclinaison),
+- **Electron** (main process `main.js` + renderer `src/`)
+- **Leaflet** (map), **node-simconnect** (MSFS), **geomagnetism** (declination),
   **extract-zip** / **fs-extra** (imports)
-- Frontend en **modules `<script>` à scope global**, organisés par fonctionnalité
-  (`src/js/` + `src/js/features/`), orchestrés par `src/ui.js`.
+- Frontend built as **global-scope `<script>` modules**, organized by feature
+  (`src/js/` + `src/js/features/`), orchestrated by `src/ui.js`.
+
+## 🙏 Credits
+
+The MSFS 2024 navaid extraction method (airway traversal + disconnected-navaid reference list) is
+based on the work of **Alexander Barthel (albar965)** —
+[atools](https://github.com/albar965/atools) / [Little Navmap](https://github.com/albar965/littlenavmap)
+(GPL-3.0). The bundled seed file originates from atools. See **[CREDITS.md](CREDITS.md)** for full
+attributions.
 
 ## 📚 Documentation
 
-- [FEATURES.md](FEATURES.md) — fonctionnalités détaillées, architecture et ordre de chargement.
+- [FEATURES.md](FEATURES.md) — detailed features, architecture and load order (French).
+- [CREDITS.md](CREDITS.md) — third-party attributions.
 
-## 📄 Licence
+## 📄 License
 
-ISC.
+**GPL-3.0-or-later** — see [LICENSE](LICENSE).
