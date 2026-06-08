@@ -1563,7 +1563,6 @@ let _lastPauseFlags = null;
 function broadcastSimPause(flags) {
   if (flags === _lastPauseFlags) return;
   _lastPauseFlags = flags;
-  console.log('[SimConnect] Pause_EX1 flags =', flags);
   BrowserWindow.getAllWindows().forEach(w => {
     try { w.webContents.send('sim-pause', { flags }); } catch (_) {}
   });
