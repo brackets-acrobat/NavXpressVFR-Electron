@@ -13,7 +13,7 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-const { app, BrowserWindow, ipcMain, dialog, session } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, session, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -41,11 +41,26 @@ function getNavXpressDirs() {
   const root         = path.join(docs, 'NavXpressVFR');
   const apiDir       = path.join(root, 'API');
   const fpDir        = path.join(root, 'Flight plans');
-  const ourAirportsDir = path.join(root, 'ourairports data');
+  const dataDir      = path.join(root, 'data');
   const elevationDir = path.join(root, 'elevation');
   const logbookDir   = path.join(root, 'logbook');
-  return { root, apiDir, fpDir, ourAirportsDir, elevationDir, logbookDir };
+  return { root, apiDir, fpDir, dataDir, elevationDir, logbookDir };
 }
+
+// Ancien dossier (≤ 1.9.0) renommé en "data". Conservé pour la migration.
+const LEGACY_DATA_DIRNAME = 'ourairports data';
+
+// Fichiers OurAirports devenus inutiles depuis que les aéroports ET les navaids
+// proviennent exclusivement de MSFS 2024 (airports-msfs.jsonl + navaids.jsonl).
+// Supprimés du dossier "data" au démarrage.
+const OBSOLETE_DATA_FILES = [
+  'airports.jsonl',
+  'airport-comments.jsonl',
+  'airport-frequencies.jsonl',
+  'countries.jsonl',
+  'regions.jsonl',
+  'runways.jsonl',
+];
 
 function getApiKeyPath() {
   return path.join(getNavXpressDirs().apiDir, 'openaip.json');
@@ -58,10 +73,30 @@ function getOptionsPath() {
 }
 
 function ensureNavXpressDirs() {
-  const { root, apiDir, fpDir, ourAirportsDir, elevationDir, logbookDir } = getNavXpressDirs();
-  [root, apiDir, fpDir, ourAirportsDir, elevationDir, logbookDir].forEach(dir => {
+  const { root, apiDir, fpDir, dataDir, elevationDir, logbookDir } = getNavXpressDirs();
+
+  // Migration : ancien dossier "ourairports data" → "data" (préserve les bases
+  // déjà importées). On ne renomme que si "data" n'existe pas encore.
+  try {
+    const legacyDir = path.join(root, LEGACY_DATA_DIRNAME);
+    if (fs.existsSync(legacyDir) && !fs.existsSync(dataDir)) {
+      fs.renameSync(legacyDir, dataDir);
+    }
+  } catch (err) {
+    console.warn('[data] Migration du dossier impossible :', err.message);
+  }
+
+  [root, apiDir, fpDir, dataDir, elevationDir, logbookDir].forEach(dir => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   });
+
+  // Nettoyage des fichiers OurAirports devenus inutiles (cf. OBSOLETE_DATA_FILES).
+  for (const name of OBSOLETE_DATA_FILES) {
+    try {
+      const f = path.join(dataDir, name);
+      if (fs.existsSync(f)) fs.unlinkSync(f);
+    } catch (_) { /* non bloquant */ }
+  }
 }
 
 // --- ÉLÉVATION (dataset GLOBE 30 arc-sec, ~1 km) ---
@@ -255,6 +290,14 @@ function createWindow() {
   });
 
   mainWindow.setMenuBarVisibility(false);
+
+  // Liens externes (target="_blank" : fiches aéroport, modale À propos) → ouverts
+  // dans le navigateur par défaut, jamais dans une fenêtre Electron. On n'autorise
+  // que http(s) ; tout le reste est refusé.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+    return { action: 'deny' };
+  });
   // DevTools (console de debug) seulement en mode développement,
   // jamais dans la version packagée distribuée aux utilisateurs.
   if (!app.isPackaged) {
@@ -610,8 +653,8 @@ let _oaNavaidsByIdent = null;    // Map<id, full navaid object>  (par id pour é
 
 function loadOurAirportsNavaidsList() {
   if (_oaNavaidsList) return true;
-  const { ourAirportsDir } = getNavXpressDirs();
-  const jsonlPath = path.join(ourAirportsDir, 'navaids.jsonl');
+  const { dataDir } = getNavXpressDirs();
+  const jsonlPath = path.join(dataDir, 'navaids.jsonl');
   if (!fs.existsSync(jsonlPath)) {
     _oaNavaidsList = null;
     _oaNavaidsByIdent = null;
@@ -703,13 +746,13 @@ function loadOurAirportsListForMap() {
 // OurAirports (loadOurAirportsNavaidsList ↔ navaids.jsonl).
 // ============================================================
 function msfsAirportsAvailable() {
-  const { ourAirportsDir } = getNavXpressDirs();
-  return fs.existsSync(path.join(ourAirportsDir, MSFS_AIRPORTS_FILE));
+  const { dataDir } = getNavXpressDirs();
+  return fs.existsSync(path.join(dataDir, MSFS_AIRPORTS_FILE));
 }
 
 function buildFromMsfs() {
-  const { ourAirportsDir } = getNavXpressDirs();
-  const p = path.join(ourAirportsDir, MSFS_AIRPORTS_FILE);
+  const { dataDir } = getNavXpressDirs();
+  const p = path.join(dataDir, MSFS_AIRPORTS_FILE);
   const text = fs.readFileSync(p, 'utf-8');
   const lines = text.split('\n');
 
@@ -1776,7 +1819,7 @@ ipcMain.handle('msfs-verifier-lancement', async () => {
 
 // --- Extraction in-app de la base d'aéroports MSFS 2024 ---
 // Ouvre sa propre connexion SunRise (dédiée), énumère puis lit en détail tous
-// les aéroports, écrit Documents/NavXpressVFR/ourairports data/airports-msfs.jsonl,
+// les aéroports, écrit Documents/NavXpressVFR/data/airports-msfs.jsonl,
 // et relaie la progression au renderer via 'msfs-extract-progress'. Une fois le
 // fichier écrit, on invalide les index pour que les loaders se reconstruisent
 // depuis la base MSFS fraîche.
@@ -1788,7 +1831,7 @@ ipcMain.handle('extraire-aeroports-msfs', async (event, options) => {
   _msfsExtractRunning = true;
   const wc = event.sender;
   ensureNavXpressDirs();
-  const { ourAirportsDir } = getNavXpressDirs();
+  const { dataDir } = getNavXpressDirs();
   const limit = options && Number.isFinite(options.limit) ? options.limit : 0;
 
   const sendProgress = (p) => {
@@ -1797,7 +1840,7 @@ ipcMain.handle('extraire-aeroports-msfs', async (event, options) => {
 
   try {
     const summary = await runMsfsExtraction({
-      outDir: ourAirportsDir,
+      outDir: dataDir,
       window: 100,
       limit,
       appName: 'NavXpressVFR-Extract',
@@ -1833,7 +1876,7 @@ ipcMain.handle('extraire-navaids-msfs', async (event) => {
   _navaidsExtractRunning = true;
   const wc = event.sender;
   ensureNavXpressDirs();
-  const { ourAirportsDir } = getNavXpressDirs();
+  const { dataDir } = getNavXpressDirs();
 
   const sendProgress = (p) => {
     if (wc && !wc.isDestroyed()) wc.send('msfs-navaids-progress', p);
@@ -1841,7 +1884,7 @@ ipcMain.handle('extraire-navaids-msfs', async (event) => {
 
   try {
     const summary = await runNavaidsExtraction({
-      outDir: ourAirportsDir,
+      outDir: dataDir,
       window: 80,
       onProgress: sendProgress,
     });

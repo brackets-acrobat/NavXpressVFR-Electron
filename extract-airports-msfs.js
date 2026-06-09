@@ -17,7 +17,7 @@
  * Moteur d'extraction : base COMPLÈTE des aéroports MSFS 2024
  * ------------------------------------------------------------
  * Produit un fichier unique `airports-msfs.jsonl` (un aéroport
- * par ligne) dans  Documents/NavXpressVFR/ourairports data/.
+ * par ligne) dans  Documents/NavXpressVFR/data/.
  * Ce fichier REMPLACE les données d'aéroports d'OurAirports
  * (les navaids restent sur OurAirports).
  *
@@ -63,7 +63,7 @@ const REQUEST_TIMEOUT_MS = 20000;   // une requête détail abandonnée après 2
 const STALL_MS = 120000;            // aucune progression détail depuis 2 min → stop
 const GLOBAL_TIMEOUT_MS = 60 * 60 * 1000; // garde-fou ultime : 60 min
 
-const DEFAULT_OUT_DIR = path.join(os.homedir(), 'Documents', 'NavXpressVFR', 'ourairports data');
+const DEFAULT_OUT_DIR = path.join(os.homedir(), 'Documents', 'NavXpressVFR', 'data');
 const OUT_FILENAME = 'airports-msfs.jsonl';
 
 const M_TO_FT = 1 / 0.3048;
@@ -419,7 +419,7 @@ function buildRecord(entry, acc) {
 // Options :
 //   window     : nb de requêtes détail simultanées (déf. 100)
 //   limit      : n'extraire que N aéroports (0 = tout)
-//   outDir     : dossier de sortie (déf. Documents/NavXpressVFR/ourairports data)
+//   outDir     : dossier de sortie (déf. Documents/NavXpressVFR/data)
 //   appName    : nom de l'app SimConnect (déf. 'NavXpressVFR-Extract')
 //   onProgress : callback(progressEvent) — voir formes ci-dessous
 //

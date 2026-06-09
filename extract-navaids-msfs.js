@@ -40,7 +40,7 @@ const { open: scOpen, Protocol: SCProtocol, FacilityListType } = require('node-s
 
 const REQ_AIRPORTS = 7000;
 const DEF_APPROACH = 1100, DEF_WPT = 1200, DEF_VOR = 1300, DEF_NDB = 1400;
-const DEFAULT_OUT_DIR = path.join(os.homedir(), 'Documents', 'NavXpressVFR', 'ourairports data');
+const DEFAULT_OUT_DIR = path.join(os.homedir(), 'Documents', 'NavXpressVFR', 'data');
 const OUT_FILENAME = 'navaids.jsonl';
 // Fichier seed des navaids déconnectés (liste ident,region,type). Cherché dans
 // bundled-data/ (livré) puis dans le dossier NavXpressVFR de l'utilisateur (override).

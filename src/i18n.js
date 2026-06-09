@@ -342,6 +342,12 @@ const TRANSLATIONS = {
     btnOptionsTooltip: "Options",
     btnAboutTooltip: "À propos",
     aboutTitle: "À propos",
+    aboutTagline: "Assistant de vol VFR, outil de navigation à l'estime, libre et gratuit pour Microsoft Flight Simulator 2024.",
+    aboutLicense: "Ce logiciel est distribué sous licence GPL-3.0 ou ultérieure.",
+    aboutSource: "Le code source de cette application est disponible sur <a class=\"ap-info-link\" href=\"https://github.com/brackets-acrobat/NavXpressVFR-Electron\" target=\"_blank\" rel=\"noopener\">GitHub</a>.",
+    aboutCopyright: "Copyright 2026 Cyril MILANI.",
+    aboutCreditsFormat: "Le format lnmpln est issu du logiciel Little Navmap.",
+    aboutCreditsMethod: "L'extraction des navaids depuis MSFS 2024 (<code>extract-navaids-msfs.js</code>) s'inspire directement de la méthode du projet atools / Little Navmap d'Alexander Barthel.",
     optionsTitle: "Options",
     optAglWarning: "Alerte Moins de 500 ft AGL",
     optRouteDeviation: "Alerte de déviation de la route",
@@ -770,6 +776,12 @@ const TRANSLATIONS = {
     btnOptionsTooltip: "Options",
     btnAboutTooltip: "About",
     aboutTitle: "About",
+    aboutTagline: "VFR flight assistant — free and open-source dead-reckoning navigation tool for Microsoft Flight Simulator 2024.",
+    aboutLicense: "This software is distributed under the GPL-3.0 license or later.",
+    aboutSource: "The source code of this application is available on <a class=\"ap-info-link\" href=\"https://github.com/brackets-acrobat/NavXpressVFR-Electron\" target=\"_blank\" rel=\"noopener\">GitHub</a>.",
+    aboutCopyright: "Copyright 2026 Cyril MILANI.",
+    aboutCreditsFormat: "The lnmpln format comes from the Little Navmap software.",
+    aboutCreditsMethod: "Navaid extraction from MSFS 2024 (<code>extract-navaids-msfs.js</code>) is directly inspired by the method used in Alexander Barthel's atools / Little Navmap project.",
     optionsTitle: "Options",
     optAglWarning: "below 500 ft AGL alert",
     optRouteDeviation: "Route deviation alert",
@@ -903,13 +915,21 @@ function setLanguage(lang) {
 
 /**
  * Applique toutes les traductions sur les éléments du DOM via data-i18n
- * Supporte : textContent (data-i18n), placeholder (data-i18n-placeholder)
+ * Supporte : textContent (data-i18n), innerHTML (data-i18n-html),
+ * placeholder (data-i18n-placeholder), title (data-i18n-title)
  */
 function applyTranslations() {
   // Textes simples
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     el.textContent = t(key);
+  });
+
+  // Textes riches (HTML autorisé : <code>, <a>…). Réservé à des chaînes de
+  // traduction internes maîtrisées (jamais de saisie utilisateur).
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.getAttribute('data-i18n-html');
+    el.innerHTML = t(key);
   });
 
   // Placeholders

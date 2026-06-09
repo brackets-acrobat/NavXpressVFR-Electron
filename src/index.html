@@ -1180,11 +1180,25 @@
 
     <!-- Modale À propos (bouton "?" du header) -->
     <div id="about-overlay" class="modal-overlay">
-        <div id="about-popup" class="modal-popup" style="width:360px; text-align:center;">
+        <div id="about-popup" class="modal-popup" style="width:460px;">
             <h3 data-i18n="aboutTitle"
-                style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px; text-align:center;">
                 À propos</h3>
-            <p style="font-size:13px; line-height:1.6; margin:0;">Copyright Cyril MILANI 2026</p>
+            <div style="font-size:13px; line-height:1.6;">
+                <p style="margin:0 0 10px 0; text-align:center; font-weight:700; font-size:16px; color:#00bcd4;">NavXpressVFR</p>
+                <p style="margin:0 0 10px 0;" data-i18n="aboutTagline">Assistant de vol VFR, un outil de navigation à l'estime, libre et gratuit pour Microsoft Flight Simulator 2024.</p>
+                <p style="margin:0 0 10px 0;" data-i18n="aboutLicense">Ce logiciel est distribué sous licence GPL3 ou ultérieure.</p>
+                <p style="margin:0 0 10px 0;" data-i18n-html="aboutSource">Le code source de cette application est disponible sur <a class="ap-info-link" href="https://github.com/brackets-acrobat/NavXpressVFR-Electron" target="_blank" rel="noopener">GitHub</a>.</p>
+                <p style="margin:0 0 10px 0;" data-i18n="aboutCopyright">Copyright 2026 Cyril MILANI.</p>
+                <hr style="border:none; border-top:1px solid #3d3d3d; margin:12px 0;">
+                <p style="margin:0 0 6px 0; font-weight:700;">Little Navmap / atools — Alexander Barthel (albar965)</p>
+                <p style="margin:0 0 6px 0;" data-i18n="aboutCreditsFormat">Le format lnmpln est issu du logiciel Little Navmap.</p>
+                <p style="margin:0 0 8px 0;" data-i18n-html="aboutCreditsMethod">L'extraction des navaids depuis MSFS 2024 (<code>extract-navaids-msfs.js</code>) s'inspire directement de la méthode du projet atools / Little Navmap d'Alexander Barthel.</p>
+                <ul style="margin:0; padding-left:18px;">
+                    <li>atools : <a class="ap-info-link" href="https://github.com/albar965/atools" target="_blank" rel="noopener">https://github.com/albar965/atools</a></li>
+                    <li>Little Navmap : <a class="ap-info-link" href="https://github.com/albar965/littlenavmap" target="_blank" rel="noopener">https://github.com/albar965/littlenavmap</a></li>
+                </ul>
+            </div>
             <div class="create-flight-actions" style="margin-top:16px;">
                 <button id="btn-about-close" class="btn-primary" data-i18n="btnClose">Fermer</button>
             </div>
