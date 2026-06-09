@@ -89,6 +89,31 @@ contextBridge.exposeInMainWorld('api', {
         return () => ipcRenderer.removeListener('msfs-navaids-progress', listener);
     },
 
+    // MISES À JOUR AUTOMATIQUES (electron-updater)
+    // Main → renderer : étapes du cycle de mise à jour (bannière features/updater.js).
+    onUpdateAvailable: (callback) => {
+        const listener = (_event, data) => callback(data);
+        ipcRenderer.on('update-available', listener);
+        return () => ipcRenderer.removeListener('update-available', listener);
+    },
+    onUpdateProgress: (callback) => {
+        const listener = (_event, data) => callback(data);
+        ipcRenderer.on('update-progress', listener);
+        return () => ipcRenderer.removeListener('update-progress', listener);
+    },
+    onUpdateDownloaded: (callback) => {
+        const listener = (_event, data) => callback(data);
+        ipcRenderer.on('update-downloaded', listener);
+        return () => ipcRenderer.removeListener('update-downloaded', listener);
+    },
+    onUpdateError: (callback) => {
+        const listener = (_event, data) => callback(data);
+        ipcRenderer.on('update-error', listener);
+        return () => ipcRenderer.removeListener('update-error', listener);
+    },
+    // Renderer → main : « Redémarrer et installer ».
+    installUpdate: () => ipcRenderer.invoke('update-install'),
+
     // RECHERCHE AÉROPORT (base OurAirports locale)
     rechercherAeroportOA: (code) => ipcRenderer.invoke('rechercher-aeroport-oa', code),
 

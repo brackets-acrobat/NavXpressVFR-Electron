@@ -14,6 +14,7 @@
  */
 
 const { app, BrowserWindow, ipcMain, dialog, session, shell } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -1904,6 +1905,65 @@ ipcMain.handle('extraire-navaids-msfs', async (event) => {
 });
 
 // --- ENREGISTREMENT DE L'APP ---
+// ============================================================
+// MISES À JOUR AUTOMATIQUES (electron-updater)
+// ------------------------------------------------------------
+// Lit les Releases GitHub (config "publish" du package.json) : compare la version
+// installée à la dernière publiée, télécharge en arrière-plan, puis propose à
+// l'utilisateur de redémarrer pour installer. Les événements sont relayés au
+// renderer (canaux 'update-*') qui affiche une petite bannière (features/updater.js).
+//
+// N'a de sens qu'en version packagée (NSIS) : en développement, electron-updater
+// n'a pas de métadonnées à comparer → on court-circuite.
+// ============================================================
+function broadcastUpdate(channel, payload) {
+  BrowserWindow.getAllWindows().forEach(w => {
+    try { w.webContents.send(channel, payload); } catch (_) {}
+  });
+}
+
+function setupAutoUpdater() {
+  if (!app.isPackaged) {
+    console.log('[update] Désactivé en développement (app non packagée).');
+    return;
+  }
+
+  // Téléchargement auto (défaut), installation au prochain quit si l'utilisateur
+  // ne clique pas « Redémarrer maintenant ».
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('checking-for-update', () => console.log('[update] Vérification…'));
+  autoUpdater.on('update-not-available', () => console.log('[update] Aucune mise à jour.'));
+  autoUpdater.on('update-available', (info) => {
+    console.log('[update] Mise à jour disponible :', info && info.version);
+    broadcastUpdate('update-available', { version: info && info.version });
+  });
+  autoUpdater.on('download-progress', (p) => {
+    broadcastUpdate('update-progress', { percent: p && p.percent });
+  });
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('[update] Téléchargée, prête à installer :', info && info.version);
+    broadcastUpdate('update-downloaded', { version: info && info.version });
+  });
+  autoUpdater.on('error', (err) => {
+    console.warn('[update] Erreur :', err && err.message ? err.message : err);
+    broadcastUpdate('update-error', { message: err && err.message ? err.message : String(err) });
+  });
+
+  // Vérification au démarrage (le téléchargement suit automatiquement).
+  autoUpdater.checkForUpdates().catch(err => {
+    console.warn('[update] checkForUpdates a échoué :', err && err.message ? err.message : err);
+  });
+}
+
+// Déclenché par le renderer (bouton « Redémarrer et installer »).
+ipcMain.handle('update-install', () => {
+  try { autoUpdater.quitAndInstall(); } catch (err) {
+    console.warn('[update] quitAndInstall a échoué :', err && err.message ? err.message : err);
+  }
+});
+
 app.whenReady().then(() => {
   // Création des dossiers de travail au 1er lancement (Documents/NavXpressVFR + sous-dossiers)
   try {
@@ -1953,6 +2013,9 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+
+  // Vérifie les mises à jour (GitHub Releases) une fois la fenêtre créée.
+  setupAutoUpdater();
 });
 
 app.on('window-all-closed', () => {

@@ -129,4 +129,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Doit être appelé APRÈS initI18n (utilise t() / currentLang).
   initMetar();
 
+  // Bannière de mise à jour automatique (electron-updater). S'abonne aux
+  // événements update-* ; n'affiche rien tant qu'aucune MAJ n'est détectée.
+  // Doit être appelé APRÈS initI18n (utilise t()).
+  initUpdater();
+
 });

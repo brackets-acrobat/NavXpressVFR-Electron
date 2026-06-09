@@ -348,6 +348,13 @@ const TRANSLATIONS = {
     aboutCopyright: "Copyright 2026 Cyril MILANI.",
     aboutCreditsFormat: "Le format lnmpln est issu du logiciel Little Navmap.",
     aboutCreditsMethod: "L'extraction des navaids depuis MSFS 2024 (<code>extract-navaids-msfs.js</code>) s'inspire directement de la méthode du projet atools / Little Navmap d'Alexander Barthel.",
+
+    // Mises à jour automatiques (bannière)
+    updateAvailable: "Mise à jour disponible — téléchargement…",
+    updateReady: "Mise à jour prête à être installée.",
+    updateInstallBtn: "Redémarrer et installer",
+    updateCloseTooltip: "Plus tard",
+
     optionsTitle: "Options",
     optAglWarning: "Alerte Moins de 500 ft AGL",
     optRouteDeviation: "Alerte de déviation de la route",
@@ -782,6 +789,13 @@ const TRANSLATIONS = {
     aboutCopyright: "Copyright 2026 Cyril MILANI.",
     aboutCreditsFormat: "The lnmpln format comes from the Little Navmap software.",
     aboutCreditsMethod: "Navaid extraction from MSFS 2024 (<code>extract-navaids-msfs.js</code>) is directly inspired by the method used in Alexander Barthel's atools / Little Navmap project.",
+
+    // Automatic updates (banner)
+    updateAvailable: "Update available — downloading…",
+    updateReady: "Update ready to install.",
+    updateInstallBtn: "Restart and install",
+    updateCloseTooltip: "Later",
+
     optionsTitle: "Options",
     optAglWarning: "below 500 ft AGL alert",
     optRouteDeviation: "Route deviation alert",

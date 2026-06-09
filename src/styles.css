@@ -398,6 +398,71 @@ h1 {
     color: #00bcd4;
 }
 
+/* -------------------------------------------------- */
+/* Bannière de mise à jour automatique (updater.js)   */
+/* -------------------------------------------------- */
+.update-banner {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 420px;
+    background-color: #1a1a1a;
+    border: 1px solid #00bcd4;
+    border-radius: 8px;
+    padding: 12px 14px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+    font-size: 13px;
+    color: #e0e0e0;
+}
+
+.update-banner-text {
+    flex: 1;
+    line-height: 1.4;
+}
+
+.update-banner-btn {
+    flex: 0 0 auto;
+    background-color: #00bcd4;
+    color: #121212;
+    border: none;
+    border-radius: 4px;
+    padding: 7px 14px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.2s;
+}
+
+.update-banner-btn:hover {
+    background-color: #00e5ff;
+}
+
+.update-banner-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.update-banner-close {
+    flex: 0 0 auto;
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    transition: color 0.2s;
+}
+
+.update-banner-close:hover {
+    color: #e0e0e0;
+}
+
 .lang-separator {
     color: #444;
 }

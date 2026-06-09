@@ -1,6 +1,6 @@
 {
   "name": "navxpressvfr-electron",
-  "version": "1.9.1",
+  "version": "1.9.2",
   "description": "Logiciel de navigation VFR et tracking temps réel pour Flight Simulator",
   "main": "main.js",
   "author": "NavXpressVFR",
@@ -8,7 +8,7 @@
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder",
-    "dist:portable": "electron-builder --win portable",
+    "publish": "electron-builder --publish always",
     "probe:navaids": "node probe-navaids-msfs.js",
     "navaids:build": "node extract-navaids-msfs.js"
   },
@@ -21,6 +21,7 @@
   ],
   "dependencies": {
     "@electron/get": "^5.0.0",
+    "electron-updater": "^6.8.9",
     "extract-zip": "^2.0.1",
     "fs-extra": "^11.3.5",
     "geomagnetism": "^0.2.0",
@@ -64,15 +65,29 @@
     "win": {
       "target": [
         {
-          "target": "portable",
-          "arch": ["x64"]
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "logo_icone.png",
-      "artifactName": "${productName}-${version}-portable.exe"
+      "artifactName": "${productName}-${version}-Setup.exe"
     },
-    "portable": {
-      "artifactName": "${productName}-${version}-portable.exe"
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NavXpressVFR",
+      "artifactName": "${productName}-${version}-Setup.exe",
+      "uninstallDisplayName": "NavXpressVFR ${version}"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "brackets-acrobat",
+      "repo": "NavXpressVFR-Electron"
     }
   }
 }

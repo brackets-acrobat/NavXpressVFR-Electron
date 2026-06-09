@@ -1677,6 +1677,16 @@
         </div>
     </div>
 
+    <!-- Bannière de mise à jour (electron-updater). Masquée par défaut, pilotée
+         par js/features/updater.js via les événements update-* de window.api. -->
+    <div id="update-banner" class="update-banner" style="display:none;">
+        <span id="update-banner-text" class="update-banner-text"></span>
+        <button type="button" id="update-banner-action" class="update-banner-btn" style="display:none;"
+            data-i18n="updateInstallBtn">Redémarrer et installer</button>
+        <button type="button" id="update-banner-close" class="update-banner-close"
+            data-i18n-title="updateCloseTooltip" title="Plus tard" aria-label="Plus tard">×</button>
+    </div>
+
     <!-- i18n chargé AVANT tous les modules -->
     <script src="i18n.js"></script>
     <!-- Modules extraits de ui.js (Phase 1). L'ORDRE compte (scope global partagé) :
@@ -1727,6 +1737,7 @@
     <script src="js/features/logbook-bridge.js"></script>
     <script src="js/features/precision.js"></script>
     <script src="js/features/metar.js"></script>
+    <script src="js/features/updater.js"></script>
     <!-- Orchestrateur : DOMContentLoaded qui appelle les init* dans l'ordre — chargé en dernier -->
     <script src="ui.js"></script>
 </body>
