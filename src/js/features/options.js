@@ -240,10 +240,32 @@ function initOptions() {
     });
   }
 
+  // Modale "À propos" (bouton "?" du header)
+  const btnAbout = document.getElementById('btn-about');
+  const aboutOverlay = document.getElementById('about-overlay');
+  const btnAboutClose = document.getElementById('btn-about-close');
+
+  function _fermerAbout() {
+    if (aboutOverlay) aboutOverlay.classList.remove('visible');
+  }
+  if (btnAbout && aboutOverlay) {
+    btnAbout.addEventListener('click', () => aboutOverlay.classList.add('visible'));
+  }
+  if (btnAboutClose) btnAboutClose.addEventListener('click', _fermerAbout);
+  if (aboutOverlay) {
+    aboutOverlay.addEventListener('click', e => {
+      if (e.target === aboutOverlay) _fermerAbout();
+    });
+  }
+
   // Touche Escape → fermeture. La modale Marges s'empile au-dessus des Options :
   // on la ferme en priorité (et on s'arrête là pour ne pas fermer aussi Options).
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
+    if (aboutOverlay && aboutOverlay.classList.contains('visible')) {
+      _fermerAbout();
+      return;
+    }
     if (margesOverlay && margesOverlay.classList.contains('visible')) {
       _fermerMarges();
       return;

@@ -340,6 +340,8 @@ const TRANSLATIONS = {
     // Options (bouton header + modale)
     btnOptions: "⚙️",
     btnOptionsTooltip: "Options",
+    btnAboutTooltip: "À propos",
+    aboutTitle: "À propos",
     optionsTitle: "Options",
     optAglWarning: "Alerte Moins de 500 ft AGL",
     optRouteDeviation: "Alerte de déviation de la route",
@@ -766,6 +768,8 @@ const TRANSLATIONS = {
     // Options (header button + modal)
     btnOptions: "⚙️",
     btnOptionsTooltip: "Options",
+    btnAboutTooltip: "About",
+    aboutTitle: "About",
     optionsTitle: "Options",
     optAglWarning: "below 500 ft AGL alert",
     optRouteDeviation: "Route deviation alert",

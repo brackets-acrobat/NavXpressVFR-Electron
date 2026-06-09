@@ -37,6 +37,8 @@
                     </span>
                 </div>
                 <div class="header-right">
+                    <button type="button" class="btn-help" id="btn-about"
+                        data-i18n-title="btnAboutTooltip" title="À propos" aria-label="À propos">?</button>
                     <button type="button" class="btn-options" id="btn-options"
                         data-i18n="btnOptions" data-i18n-title="btnOptionsTooltip" title="Options">⚙️ Options</button>
                     <button type="button" class="status-badge" id="sim-status" title="" data-i18n="simDisconnected">MSFS
@@ -1172,6 +1174,19 @@
 
             <div class="create-flight-actions" style="margin-top:16px;">
                 <button id="btn-options-close" class="btn-primary" data-i18n="btnClose">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale À propos (bouton "?" du header) -->
+    <div id="about-overlay" class="modal-overlay">
+        <div id="about-popup" class="modal-popup" style="width:360px; text-align:center;">
+            <h3 data-i18n="aboutTitle"
+                style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                À propos</h3>
+            <p style="font-size:13px; line-height:1.6; margin:0;">Copyright Cyril MILANI 2026</p>
+            <div class="create-flight-actions" style="margin-top:16px;">
+                <button id="btn-about-close" class="btn-primary" data-i18n="btnClose">Fermer</button>
             </div>
         </div>
     </div>
