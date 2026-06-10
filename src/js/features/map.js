@@ -606,6 +606,45 @@ function initMap() {
             }
           });
         });
+
+        // --- Section « Points remarquables » (POI OSM via Overpass) ---
+        // Pilotée par poi-overpass.js (window.*). Le module peut être initialisé
+        // APRÈS ce dropdown : il appelle alors window._refreshLayersDropdown().
+        if (typeof window.getPoiThemeStates === 'function') {
+          const sep = L.DomUtil.create('div', 'layer-dropdown-sep', dropdown);
+          sep.textContent = currentLang === 'fr' ? 'Points remarquables' : 'Landmarks';
+
+          const btnLoad = L.DomUtil.create('button', 'btn-poi-load', dropdown);
+          btnLoad.textContent = currentLang === 'fr'
+            ? '✨ Charger les POI'
+            : '✨ Load the POI';
+          L.DomEvent.on(btnLoad, 'click', e => {
+            e.stopPropagation();
+            if (typeof window.chargerPOIRoute === 'function') window.chargerPOIRoute();
+          });
+
+          const states = window.getPoiThemeStates();
+          const themes = [
+            { id: 'eau', labelFr: 'Eau', labelEn: 'Water' },
+            { id: 'energie', labelFr: 'Énergie', labelEn: 'Energy' },
+            { id: 'transport', labelFr: 'Transport', labelEn: 'Transport' },
+            { id: 'patrimoine', labelFr: 'Patrimoine', labelEn: 'Landmarks' },
+          ];
+          themes.forEach(th => {
+            const row = L.DomUtil.create('label', 'layer-toggle-row', dropdown);
+            row.innerHTML = `
+              <span>${currentLang === 'fr' ? th.labelFr : th.labelEn}</span>
+              <input type="checkbox" class="toggle-switch" data-poi="${th.id}" ${states[th.id] ? 'checked' : ''}>
+            `;
+            const input = row.querySelector('input');
+            L.DomEvent.on(input, 'click', e => e.stopPropagation());
+            L.DomEvent.on(input, 'change', () => {
+              if (typeof window.setPoiThemeEnabled === 'function') {
+                window.setPoiThemeEnabled(th.id, input.checked);
+              }
+            });
+          });
+        }
       }
       rebuild();
       window._refreshLayersDropdown = rebuild;

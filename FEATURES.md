@@ -26,7 +26,8 @@ The frontend is split into `src/js/` modules (state/helpers) and `src/js/feature
 - **Measure tool**: first point on right-click → "Distance from this point", live blue line to the cursor, finalized on the 2nd left-click. Shows **true / magnetic track / distance NM** at the midpoint. Esc to cancel; "Clear measurement" in the context menu.
 - **Visual markers**: right-click → "Add a visual marker" → **name + description** modal. Placed as a **yellow circle (Ø ~10px) with a 2px red outline** (name + description in a hover tooltip). Click a marker → **editable** info modal (edit name/description → "Validate") with **confirmed deletion**. Unlimited count; **saved in the `.navxpv` plan**.
 - **Uncertainty circle**: floating button to the left of the Layers menu. On click, displays for **5 seconds** an **anthracite-grey disc (opacity 0.75) of 3 NM** placed randomly, with the **aircraft position guaranteed inside** (center drawn uniformly within a 3 NM disc around the aircraft). Button **disabled** until MSFS is connected with an aircraft position. **5 min cooldown** between draws: an early click shows a 5 s modal with the remaining time (mm:ss). No persistence.
-- *Modules:* `src/js/features/map.js` · `src/js/features/map-context-menu.js` · `src/js/features/map-measure.js` · `src/js/features/map-markers.js` · `src/js/features/uncertainty-circle.js` · `src/js/carte-segments.js` · `src/js/waypoint-labels.js`.
+- **Points of interest (OSM landmarks)**: a **manual button in the Layers dropdown** fetches **OpenStreetMap** landmarks within a **7.5 NM corridor** of the route via the **Overpass API** (called directly from the renderer; the `User-Agent` is rewritten in the main process to avoid the Overpass `406`, with several mirror endpoints as fallback). Rendered as the **same circle as a visual marker (yellow / red outline) plus a black center dot** to tell them apart; hover tooltip shows **name + type**. Categories are grouped into **4 toggleable themes** (Water / Energy / Transport / Landmarks), **persisted in `options.json`**. **Anti-saturation filtering**: minimum area 5 ha for lakes/reservoirs/quarries (from the element bounding box, since the public Overpass instance has no `area()`), height thresholds for antennas & chimneys (≥ 50 m), **proximity clustering** (interchanges & dams within 1.5 NM, wind turbines & chimneys within 2 NM with the **count shown** in the tooltip), motorway **rest/service areas excluded**, and **water towers** restricted to a tighter **3 NM** corridor. Loaded POI are **cached in the `.navxpv` plan** (re-viewable offline, no new request).
+- *Modules:* `src/js/features/map.js` · `src/js/features/map-context-menu.js` · `src/js/features/map-measure.js` · `src/js/features/map-markers.js` · `src/js/features/poi-overpass.js` · `src/js/features/uncertainty-circle.js` · `src/js/carte-segments.js` · `src/js/waypoint-labels.js` · `main.js` (Overpass `User-Agent` in `onBeforeSendHeaders`).
 
 ## 3. Flight plan creation & editing
 - **Create a plan** (Departure/Arrival modal with airport search).
@@ -104,7 +105,7 @@ The frontend is split into `src/js/` modules (state/helpers) and `src/js/feature
 
 ## 17. UI & cross-cutting
 - **Bilingual FR/EN** (toggle button, `localStorage` persistence) · non-blocking toasts · confirmation modals.
-- **Electron** desktop app (Windows), **portable** build.
+- **Electron** desktop app (Windows), **NSIS installer** (per-user, no admin) with **automatic updates** (electron-updater / GitHub releases).
 - *Modules:* `src/i18n.js` · `src/js/features/i18n-toggle.js` · `src/js/utils.js` (toasts) · `src/js/globals.js` · `src/ui.js` (orchestrator).
 
 ---

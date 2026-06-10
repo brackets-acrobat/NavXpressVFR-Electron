@@ -278,8 +278,15 @@ header {
 }
 
 @keyframes simPausePulse {
-    0%, 100% { opacity: 1; }
-    50%      { opacity: 0.45; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.45;
+    }
 }
 
 h1 {
@@ -751,8 +758,10 @@ h1 {
 }
 
 #metar-search-input {
-    flex: 0 0 auto;          /* largeur = ~6 caractères (attribut size="6") */
-    height: 40px;            /* même hauteur que le bouton */
+    flex: 0 0 auto;
+    /* largeur = ~6 caractères (attribut size="6") */
+    height: 40px;
+    /* même hauteur que le bouton */
     background-color: #0e0e0e;
     border: 1px solid #2a2a2a;
     border-radius: 4px;
@@ -774,7 +783,8 @@ h1 {
 #metar-search-form .btn-primary {
     flex: 0 0 auto;
     width: auto;
-    height: 40px;            /* même hauteur que le champ */
+    height: 40px;
+    /* même hauteur que le champ */
     padding: 0 20px;
 }
 
@@ -2743,6 +2753,44 @@ tr:hover {
     border-top: 1px solid #2a2a2a;
 }
 
+/* Section « Points remarquables » du dropdown Calques */
+.layer-dropdown-sep {
+    padding: 8px 14px 4px;
+    margin-top: 4px;
+    border-top: 1px solid #3a3a3a;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: #00bcd4;
+}
+
+.btn-poi-load {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+    border: none;
+    border-bottom: 1px solid #2a2a2a;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.btn-poi-load:hover {
+    background-color: #00bcd4;
+    color: #121212;
+}
+
+/* Marqueur de point remarquable : cercle non cliquable (tooltip seul) */
+.poi-marker {
+    cursor: default;
+}
+
 /* Interrupteur on/off — style cohérent avec le thème cyan */
 .toggle-switch {
     appearance: none;
@@ -3102,11 +3150,25 @@ tr:hover {
 }
 
 /* Sévérité du toucher (appliquée sur #landing-rate-vs) */
-#landing-rate-vs.lr-soft   { color: #4caf50; }
-#landing-rate-vs.lr-normal { color: #00bcd4; }
-#landing-rate-vs.lr-firm   { color: #ffc107; }
-#landing-rate-vs.lr-hard   { color: #ff9800; }
-#landing-rate-vs.lr-crash  { color: #f44336; }
+#landing-rate-vs.lr-soft {
+    color: #4caf50;
+}
+
+#landing-rate-vs.lr-normal {
+    color: #00bcd4;
+}
+
+#landing-rate-vs.lr-firm {
+    color: #ffc107;
+}
+
+#landing-rate-vs.lr-hard {
+    color: #ff9800;
+}
+
+#landing-rate-vs.lr-crash {
+    color: #f44336;
+}
 
 /* -------------------------------------------------- */
 /* Modale détails d'un aéroport                       */
@@ -3721,6 +3783,7 @@ tr:hover {
     background-color: #00bcd4;
     color: #121212;
 }
+
 .btn-map-night.active:hover {
     background-color: #00d4ed;
 }

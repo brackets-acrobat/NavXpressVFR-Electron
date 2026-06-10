@@ -137,6 +137,7 @@ function initFlightPlanIO() {
       marqueursCarte = [];
       supprimerSegmentsCarte();
       if (typeof window.effacerTousReperesVisuels === 'function') window.effacerTousReperesVisuels();
+      if (typeof window.effacerTousPOI === 'function') window.effacerTousPOI();
 
       // Détecter vol local (départ == arrivée) → triangle équilatéral ~10 nm
       const isVolLocal = (icaoDep === icaoArr) ||
@@ -226,6 +227,7 @@ function initFlightPlanIO() {
         marqueursCarte = [];
         supprimerSegmentsCarte();
         if (typeof window.effacerTousReperesVisuels === 'function') window.effacerTousReperesVisuels();
+      if (typeof window.effacerTousPOI === 'function') window.effacerTousPOI();
 
         for (let i = 0; i < waypointsXML.length; i++) {
           const wp = waypointsXML[i];
@@ -301,6 +303,7 @@ function initFlightPlanIO() {
         marqueursCarte = [];
         supprimerSegmentsCarte();
         if (typeof window.effacerTousReperesVisuels === 'function') window.effacerTousReperesVisuels();
+      if (typeof window.effacerTousPOI === 'function') window.effacerTousPOI();
         if (typeof window.effacerTousFlanquements === 'function') window.effacerTousFlanquements();
 
         // Re-peupler les waypoints
@@ -371,6 +374,11 @@ function initFlightPlanIO() {
           window.chargerFlanquements(data.flanquements);
         }
 
+        // Points remarquables OSM (cache du plan) — tracé direct, sans requête.
+        if (typeof window.chargerPOISnapshot === 'function') {
+          window.chargerPOISnapshot(data.pois);
+        }
+
         mettreAJourLogDeNav();
       } catch (err) {
         console.error('Erreur chargement .navxpv:', err);
@@ -428,6 +436,9 @@ function initFlightPlanIO() {
           lon: f.lon,
           rangeNM: f.rangeNM,
         })),
+        // Points remarquables OSM chargés le long de la route (cache « par plan »
+        // → reconsultables hors-ligne sans nouvelle requête Overpass).
+        pois: (typeof window.serialiserPOI === 'function' ? window.serialiserPOI() : []),
       };
 
       const result = await window.api.sauvegarderNavXpv(planData);

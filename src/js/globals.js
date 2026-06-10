@@ -71,6 +71,14 @@ let reperesVisuels = [];
 // Géré par flanquement.js ; lu par flightplan-io.js (save) ; vidé par reset.js.
 let flanquements = [];
 
+// --- Points remarquables OSM (chargés via Overpass le long de la route) ---
+// Cercles jaunes à point noir central, posés automatiquement à ≤ 5 NM de la
+// route. Chaque entrée : { lat, lon, name, theme, typeKey, _outer, _dot } où
+// _outer/_dot sont les L.circleMarker Leaflet (non sérialisés). Cache « par
+// plan » : sérialisés dans le .navxpv (flightplan-io.js, save/load), donc
+// reconsultables hors-ligne. Géré par poi-overpass.js ; vidé par reset.js.
+let poisRemarquables = [];
+
 // État connexion simulateur (hissé en Phase 2 — Lot C ; lu par sim, Direct To, toggle i18n)
 let _simState = 'disconnected';   // disconnected | connecting | connected
 

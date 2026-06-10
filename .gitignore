@@ -2,3 +2,9 @@ node_modules/
 dist/
 .env
 SimConnect.dll
+
+# Images de la montre analogique (feature abandonnée — conservées localement, non versionnées)
+src/img/montre01.png
+src/img/heures.png
+src/img/minutes.png
+src/img/secondes.png

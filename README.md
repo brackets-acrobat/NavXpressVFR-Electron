@@ -27,6 +27,9 @@ extracted **directly from MSFS 2024** via SimConnect, plus **OpenAIP** airspaces
 
 - 🗺️ **Interactive map** (Leaflet) — multiple base layers (satellite / topo / OSM / CARTO), airspace,
   airport and navaid layers, day/night mode, flight plan drawn and colored by leg state, drag-and-drop editing.
+- 📍 **Points of interest along the route** — load **OpenStreetMap landmarks** (castles, dams, power
+  plants, wind farms, viaducts, motorway interchanges, water towers, antennas…) within a **7.5 NM corridor**
+  of the flight plan, grouped into toggleable themes, with anti-saturation filtering and clustering; cached with the plan.
 - 🧭 **Flight plan & navigation log** — assisted creation, reporting points, legs with distance,
   track, **magnetic heading**, **ground speed**, time and altitude per leg.
 - ⛰️ **Vertical profile** — real terrain elevation + planned altitude along the route.
@@ -48,6 +51,7 @@ extracted **directly from MSFS 2024** via SimConnect, plus **OpenAIP** airspaces
 | Airports (runways, frequencies, helipads) | **MSFS 2024** (live SimConnect extraction) | "Import MSFS 2024 Airports" button |
 | Navaids — VOR / VOR-DME / DME / TACAN / VORTAC / NDB (worldwide) | **MSFS 2024** (SimConnect airway traversal + bundled seed) | "Import MSFS 2024 Navaids" button |
 | Airspaces | **OpenAIP** | API key entered in the app |
+| Points of interest (landmarks along the route) | **OpenStreetMap** (Overpass API) | "Load POI" button in the Layers menu |
 | Terrain (vertical profile) | **GLOBE** 30″ (NOAA) | "Import elevation data" button (~307 MB) |
 | Magnetic declination | **WMM** (`geomagnetism`) | Built-in |
 
@@ -68,12 +72,15 @@ npm install
 npm start
 ```
 
-## 📦 Build (Windows portable executable)
+## 📦 Build (Windows installer)
 
 ```bash
-npm run dist          # or: npm run dist:portable
+npm run dist          # build the NSIS installer locally
+npm run publish       # build + publish a GitHub release (enables auto-update)
 ```
-The portable binary is generated in `dist/`.
+The **NSIS installer** (`NavXpressVFR-<version>-Setup.exe`) is generated in `dist/`. It installs
+**per-user** (no admin rights), creates desktop / Start-menu shortcuts, lets the user pick the
+install directory, and supports **automatic updates** via **electron-updater** (GitHub releases).
 
 ## ⚙️ Configuration
 

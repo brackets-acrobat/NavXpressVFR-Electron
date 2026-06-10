@@ -44,6 +44,8 @@ function initI18nToggle() {
       if (typeof window._refreshSimPauseBadge === 'function') window._refreshSimPauseBadge();
       // Régénérer les tooltips aéroports (langue dans "Piste / Runway")
       if (typeof window._refreshAirports === 'function') window._refreshAirports();
+      // Régénérer les tooltips des points remarquables (type traduit)
+      if (typeof window._refreshPoiTooltips === 'function') window._refreshPoiTooltips();
     });
   }
 }

@@ -85,6 +85,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // effacerTousReperesVisuels (menu contextuel + flightplan-io + reset).
   initMapMarkers();
 
+  // Points remarquables OSM (Overpass) : expose window.chargerPOIRoute /
+  // chargerPOISnapshot / serialiserPOI / effacerTousPOI / setPoiThemeEnabled
+  // (menu Calques + flightplan-io + reset). Doit être appelé APRÈS initMap
+  // (couches Leaflet + dropdown Calques) — il régénère ce dropdown au besoin.
+  initPoiOverpass();
+
   // Cercle d'incertitude : bouton flottant carte (3 NM gris anthracite, 5 s).
   // Doit être appelé APRÈS initMap (le bouton est un contrôle Leaflet).
   initUncertaintyCircle();

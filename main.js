@@ -1992,17 +1992,36 @@ app.whenReady().then(() => {
     },
   });
 
-  // Intercepte les requêtes vers les tuiles OpenAIP pour injecter la clé API
+  // Intercepte certaines requêtes sortantes pour ajuster leurs en-têtes.
+  // (Electron n'autorise qu'UN listener onBeforeSendHeaders par session →
+  // on traite ici à la fois OpenAIP et Overpass.)
+  //  • Tuiles OpenAIP : injection de la clé API.
+  //  • Overpass (points remarquables) : le serveur Apache renvoie 406 sur le
+  //    User-Agent du moteur Electron ; on le remplace par un UA applicatif
+  //    accepté (même valeur que httpsGetFollow). Le renderer ne peut pas le
+  //    faire lui-même (User-Agent est un en-tête interdit côté fetch).
   session.defaultSession.webRequest.onBeforeSendHeaders(
-    { urls: ['https://*.api.tiles.openaip.net/*'] },
+    {
+      urls: [
+        'https://*.api.tiles.openaip.net/*',
+        'https://overpass-api.de/*',
+        'https://overpass.kumi.systems/*',
+        'https://maps.mail.ru/*',
+      ],
+    },
     (details, callback) => {
       try {
-        const filePath = getApiKeyPath();
-        if (fs.existsSync(filePath)) {
-          const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-          if (data.apiKey) {
-            details.requestHeaders['x-openaip-api-key'] = data.apiKey;
+        const url = details.url || '';
+        if (url.includes('api.tiles.openaip.net')) {
+          const filePath = getApiKeyPath();
+          if (fs.existsSync(filePath)) {
+            const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+            if (data.apiKey) {
+              details.requestHeaders['x-openaip-api-key'] = data.apiKey;
+            }
           }
+        } else {
+          details.requestHeaders['User-Agent'] = 'NavXpressVFR-Electron';
         }
       } catch (e) { /* silencieux */ }
       callback({ requestHeaders: details.requestHeaders });
