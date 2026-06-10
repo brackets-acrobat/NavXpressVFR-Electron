@@ -25,6 +25,14 @@
 document.addEventListener('DOMContentLoaded', async () => {
   console.log("UI NavXpressVFR chargée et prête.");
 
+  // Version du logiciel affichée à droite de la bannière (format « v 1.4.5 »).
+  const versionEl = document.getElementById('app-version');
+  if (versionEl && window.api && window.api.getAppVersion) {
+    window.api.getAppVersion()
+      .then(v => { if (v) versionEl.textContent = `v ${v}`; })
+      .catch(() => {});
+  }
+
   await chargerCleOpenAIP();
 
   // Charge window.appOptions depuis disque (defaults appliqués par options.js).

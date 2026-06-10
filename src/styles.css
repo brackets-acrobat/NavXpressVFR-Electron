@@ -307,6 +307,16 @@ h1 {
     display: block;
 }
 
+/* Version du logiciel, à droite de la bannière (petite police blanche) */
+.app-version {
+    font-size: 11px;
+    font-weight: 400;
+    color: #ffffff;
+    align-self: flex-end;
+    margin-bottom: 4px;
+    white-space: nowrap;
+}
+
 .status-badge {
     display: inline-block;
     padding: 5px 10px;
@@ -2043,6 +2053,12 @@ td {
 
 tr:hover {
     background-color: #222;
+}
+
+/* Plan de vol : centrer les valeurs sous les intitulés (en-têtes + cellules) */
+#nav-log-table th,
+#nav-log-table td {
+    text-align: center;
 }
 
 .empty-row {

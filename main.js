@@ -324,6 +324,9 @@ function createWindow() {
 
 // --- ÉCOUTEURS INTER-PROCESSUS (IPC) ---
 
+// 0. Version du logiciel (affichée dans le header du renderer).
+ipcMain.handle('get-app-version', () => app.getVersion());
+
 // 1. Calcul de la déclinaison magnétique avec Geomagnetism
 ipcMain.handle('calculer-declinaison', async (event, { lat, lon, alt }) => {
   try {

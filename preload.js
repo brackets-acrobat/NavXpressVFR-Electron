@@ -16,6 +16,11 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
+    // Version du logiciel (app.getVersion côté main) — affichée dans le header.
+    // Via IPC car le preload est sandboxé : un require('./package.json') y est
+    // interdit et ferait planter tout le preload (donc window.api entier).
+    getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+
     calculerDeclinaison: (lat, lon, alt) => ipcRenderer.invoke('calculer-declinaison', { lat, lon, alt }),
     onStatusSimConnect: (callback) => ipcRenderer.on('simconnect-status', (event, status) => callback(status)),
     onDonneesVol: (callback) => ipcRenderer.on('donnees-vol', (event, data) => callback(data)),

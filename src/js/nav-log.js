@@ -155,7 +155,11 @@ function mettreAJourLogDeNav() {
     } else if (isActive) {
       row.style.backgroundColor = '#4088DC';
       row.style.fontWeight = 'bold';
-      row.querySelectorAll('td').forEach(td => td.style.color = '#ffff00');
+      const tds = row.querySelectorAll('td');
+      tds.forEach(td => td.style.color = '#ffff00');
+      // Mettre en évidence (fond rouge) les colonnes Cap (index 7) et Durée (index 9) du leg actif
+      if (tds[7]) tds[7].style.backgroundColor = '#d32f2f';
+      if (tds[9]) tds[9].style.backgroundColor = '#d32f2f';
     }
 
     // Bouton + dans la 3ème cellule (entre Depuis et Vers)
