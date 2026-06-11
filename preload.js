@@ -132,6 +132,10 @@ contextBridge.exposeInMainWorld('api', {
     // AÉROPORTS DANS UNE BOUNDING BOX (pour affichage sur la carte)
     aeroportsDansBbox: (bbox) => ipcRenderer.invoke('aeroports-bbox', bbox),
 
+    // AÉROPORTS LES PLUS PROCHES (atterrissage d'urgence) — { lat, lon, limit }
+    // → liste triée par distance, chacun avec la longueur de piste max (length_ft).
+    aeroportsProches: (payload) => ipcRenderer.invoke('aeroports-proches', payload),
+
     // DÉTAILS COMPLETS d'un aéroport (airport + runways + frequencies + comments)
     detailsAeroport: (ident) => ipcRenderer.invoke('details-aeroport', ident),
 

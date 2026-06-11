@@ -168,6 +168,21 @@ function ouvrirModaleEditLeg(legIndex) {
     }
   });
 
+  // Aéroports fixes (départ du leg 1, arrivée du dernier leg) : édition COMPLÈTE
+  // autorisée (nom + coordonnées), comme un point tournant. On force seulement
+  // l'affichage permanent de la case "tour de piste" pour pouvoir ajouter/retirer
+  // un toucher sans relancer une recherche. Les modifs du départ / de l'arrivée
+  // sont répercutées sur les champs ICAO de la boîte Informations à la validation.
+  function _toucherAeroportToujoursVisible(side, isAirport, wp) {
+    if (!isAirport) return;
+    const patternRow = document.getElementById(`edit-leg-${side}-pattern-row`);
+    const patternCb = document.getElementById(`edit-leg-${side}-pattern-cb`);
+    if (patternRow) patternRow.style.display = 'block';
+    if (patternCb) patternCb.checked = !!wp.pattern;
+  }
+  _toucherAeroportToujoursVisible('dep', legIndex === 1, ptA);
+  _toucherAeroportToujoursVisible('arr', legIndex === flightPlan.length - 1, ptB);
+
   document.getElementById('edit-leg-error').textContent = '';
 
   // Affiche/cache les boutons "Coller les coordonnées de la carte" (départ +
@@ -177,9 +192,14 @@ function ouvrirModaleEditLeg(legIndex) {
   // Stocker l'index courant pour la validation
   window._editLegIndex = legIndex;
   document.getElementById('edit-leg-overlay').style.display = 'flex';
-  // Focus l'input Départ (sélectionne le contenu pour faciliter le remplacement)
+  // Focus le premier côté éditable (le départ du leg 1 est verrouillé → on vise
+  // l'arrivée). On ne focus pas un champ en lecture seule.
   setTimeout(() => {
-    const el = document.getElementById('edit-leg-dep-name');
+    const depEl = document.getElementById('edit-leg-dep-name');
+    const arrEl = document.getElementById('edit-leg-arr-name');
+    const el = (depEl && !depEl.hasAttribute('readonly')) ? depEl
+      : (arrEl && !arrEl.hasAttribute('readonly')) ? arrEl
+      : null;
     if (el) { el.focus(); el.select(); }
   }, 50);
 }

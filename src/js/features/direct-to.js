@@ -293,6 +293,15 @@ function initDirectTo() {
     // Nouveau DT plan → on retire un éventuel marqueur point carte précédent
     _supprimerMarqueurPointDt();
 
+    // Annule proprement un éventuel Direct To EXTERNE en cours (aéroport hors
+    // plan, point carte ou atterrissage d'urgence). Sans ça, sim.js — qui donne
+    // la priorité au mode 'ext' — continuerait de guider vers l'ancienne cible
+    // externe et le plan ne reviendrait pas à la normale (annonce d'urgence
+    // incluse). Symétrique de ce que fait _activerDirectToExterne.
+    _directToExternalActive = false;
+    _directToExternalTarget = null;
+    _directToReturnLegIndex = null;
+
     // Etat
     _directToActive = true;
     _directToOrigin = { lat: _lastAircraftPos.lat, lon: _lastAircraftPos.lon };
@@ -349,6 +358,8 @@ function initDirectTo() {
       code: target.code,
       name: target.name,
       pattern: !!target.pattern,
+      // Atterrissage d'urgence : sim.js joue urgence_xx.wav à l'arrivée.
+      emergency: !!target.emergency,
     };
     _directToReturnLegIndex = activeLegIndex;
     _directToOrigin = { lat: _lastAircraftPos.lat, lon: _lastAircraftPos.lon };
@@ -440,6 +451,23 @@ function initDirectTo() {
     _activerDirectToPoint(lat, lon);
   }
   window.demanderDirectToPoint = _demanderDirectToPoint;
+
+  // --- Entrée publique : Direct To « atterrissage d'urgence » vers un aéroport ---
+  // Réutilise tout le mécanisme du Direct To externe (guidage, modale info,
+  // avertissements de déviation), avec emergency:true → annonce vocale d'urgence
+  // à l'arrivée (sim.js). target = { lat, lon, code, name }.
+  function _activerDirectToUrgence(target) {
+    if (!target || !_lastAircraftPos) return;
+    _activerDirectToExterne({
+      lat: target.lat,
+      lon: target.lon,
+      code: target.code,
+      name: target.name || target.code,
+      pattern: false,
+      emergency: true,
+    });
+  }
+  window.activerDirectToUrgence = _activerDirectToUrgence;
 
   // --- Modale 2 : info cap + temps + auto-close 10 s ---
   let _dtInfoTimer = null;

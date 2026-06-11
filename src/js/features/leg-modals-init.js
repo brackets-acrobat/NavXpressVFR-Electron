@@ -162,6 +162,16 @@ function initLegModals() {
     flightPlan[legIndex - 1] = { ...flightPlan[legIndex - 1], ...newDep };
     flightPlan[legIndex] = { ...flightPlan[legIndex], ...newArr };
 
+    // Répercuter le départ / l'arrivée sur les champs ICAO de la boîte
+    // Informations (peuplés depuis flightPlan[0].ident / dernier.ident). On
+    // resynchronise les deux à chaque validation, quel que soit le leg édité.
+    if (flightPlan.length >= 1) {
+      const inputDep = document.getElementById('input-icao-dep');
+      const inputArr = document.getElementById('input-icao-arr');
+      if (inputDep) inputDep.value = flightPlan[0].ident || '';
+      if (inputArr) inputArr.value = flightPlan[flightPlan.length - 1].ident || '';
+    }
+
     fermerModaleEditLeg();
 
     // Recalculer et redessiner toute la carte

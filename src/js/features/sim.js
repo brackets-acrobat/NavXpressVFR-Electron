@@ -171,6 +171,13 @@ function initSim() {
     fr: new Audio('sounds/touch_fr.wav'),
     en: new Audio('sounds/touch_en.wav'),
   };
+  // Annonce vocale d'atterrissage d'urgence (Direct To urgence, arrivée à 1,5 NM).
+  const _urgenceSounds = {
+    fr: new Audio('sounds/urgence_fr.wav'),
+    en: new Audio('sounds/urgence_en.wav'),
+  };
+  _urgenceSounds.fr.preload = 'auto';
+  _urgenceSounds.en.preload = 'auto';
   // Pré-chargement (au cas où le 1er play soit en différé)
   _wpSounds.fr.preload = 'auto';
   _wpSounds.en.preload = 'auto';
@@ -236,13 +243,23 @@ function initSim() {
     return Math.asin(Math.sin(d_AP) * Math.sin(θ_AP - θ_AB)) * R_NM;
   }
 
+  // Un atterrissage d'urgence (Direct To externe avec emergency:true) est
+  // PRIORITAIRE sur tout le reste : tant qu'il est actif, seules l'annonce
+  // d'urgence et l'alerte de déviation peuvent sonner — jamais touch / waypoint
+  // / cuckoo (utile notamment si l'aéroport visé fait partie du plan de vol).
+  function _urgenceActive() {
+    return !!(_directToExternalActive && _directToExternalTarget && _directToExternalTarget.emergency);
+  }
+
   // _jouerSon(audioEl) → déplacé vers js/sounds.js (partagé sim/tank)
   // Chaque fonction respecte son toggle Options : désactivé → silence.
   function _jouerSonWaypoint() {
+    if (_urgenceActive()) return;
     if (window.appOptions && window.appOptions.waypointAnnounceEnabled === false) return;
     _jouerSon(_wpSounds[currentLang] || _wpSounds.fr);
   }
   function _jouerSonArrivee() {
+    if (_urgenceActive()) return;
     if (window.appOptions && window.appOptions.finalArrivalEnabled === false) return;
     _jouerSon(_arrivalSound);
   }
@@ -250,8 +267,13 @@ function initSim() {
     _jouerSon(_devSounds[currentLang] || _devSounds.fr);
   }
   function _jouerSonTouch() {
+    if (_urgenceActive()) return;
     if (window.appOptions && window.appOptions.touchAnnounceEnabled === false) return;
     _jouerSon(_touchSounds[currentLang] || _touchSounds.fr);
+  }
+  // Annonce d'urgence : toujours jouée (pas de toggle — c'est une urgence).
+  function _jouerSonUrgence() {
+    _jouerSon(_urgenceSounds[currentLang] || _urgenceSounds.fr);
   }
 
   // calcLegInfo() → déplacé vers js/nav-core.js (partagé fuel/Direct To)
@@ -382,9 +404,11 @@ function initSim() {
       // les cas. Le replay à la réactivation d'un toggle est géré séparément
       // par le listener 'app-option-changed' plus bas.
       if (mode === 'ext') {
-        // Direct To externe : son "touch" si pattern, sinon son waypoint
+        // Direct To externe : urgence > pattern > waypoint.
         // (jamais le cuckoo : il est réservé à la dernière étape du plan)
-        if (arr.pattern) {
+        if (arr.emergency) {
+          _jouerSonUrgence();
+        } else if (arr.pattern) {
           _jouerSonTouch();
         } else {
           _jouerSonWaypoint();

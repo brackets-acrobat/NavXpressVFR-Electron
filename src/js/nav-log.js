@@ -48,10 +48,13 @@ function mettreAJourLogDeNav() {
   const vitVent = parseFloat(document.getElementById('input-wind-speed').value) || 0;
 
   // Cas : un seul point (départ uniquement)
-  // Helper : nom du waypoint avec indicateur "Tour de piste" si applicable
-  function _renderWpName(wp) {
+  // Helper : nom du waypoint avec indicateur "Tour de piste" si applicable.
+  // showPattern=false → on n'affiche jamais le carré (utilisé pour la colonne
+  // "Depuis" : le point y est répété depuis la colonne "Vers" du leg précédent,
+  // l'indicateur ne doit apparaître que dans "Vers").
+  function _renderWpName(wp, showPattern = true) {
     const name = escapeHtml(wp.name || '');
-    if (wp.pattern) {
+    if (showPattern && wp.pattern) {
       return `${name} <span class="pattern-indicator" title="${escapeHtml(t('patternTooltip'))}"></span>`;
     }
     return name;
@@ -136,7 +139,7 @@ function mettreAJourLogDeNav() {
     // Construire le HTML d'abord
     row.innerHTML = `
       <td><b>${i}</b></td>
-      <td>${_renderWpName(ptA)}</td>
+      <td>${_renderWpName(ptA, i === 1)}</td>
       <td></td>
       <td>${_renderWpName(ptB)}</td>
       <td><span class="alt-val">${altLeg}</span> <button class="btn-edit-alt" onclick="window.ouvrirModaleAltitude(${i})" title="${currentLang === 'fr' ? 'Modifier l\'altitude' : 'Edit altitude'}">✏️</button></td>
@@ -207,13 +210,14 @@ function mettreAJourLogDeNav() {
     });
     row.querySelector('td:nth-last-child(2)').appendChild(checkbox);
 
-    // Bouton éditer leg — désactivé si le leg touche un aéroport fixe (1er ou dernier point)
-    const toucheAeroport = (i === 1) || (i === flightPlan.length - 1);
+    // Bouton éditer leg. Le crayon est toujours affiché et actif : la modale
+    // d'édition verrouille d'elle-même en "toucher seul" le côté qui touche un
+    // aéroport fixe (départ du leg 1 / arrivée du dernier leg) et laisse l'autre
+    // côté (point tournant) en édition complète.
     const btnEdit = document.createElement('button');
     btnEdit.className = 'btn-edit-leg';
     btnEdit.textContent = '✏️';
     btnEdit.title = currentLang === 'fr' ? 'Éditer ce leg' : 'Edit this leg';
-    btnEdit.disabled = toucheAeroport;
     btnEdit.addEventListener('click', () => ouvrirModaleEditLeg(i));
     row.querySelector('td:last-child').appendChild(btnEdit);
 

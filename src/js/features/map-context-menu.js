@@ -38,11 +38,38 @@ const MAP_CONTEXT_MENU_ITEMS = [
   {
     id: 'flanquement-vor',
     labelKey: 'mapCtxFlanquement',
-    // Ne s'affiche que sur clic droit d'un VOR (contexte navaid présent).
-    visible: () => !!(_mapCtxContext && _mapCtxContext.navaid),
+    // Ne s'affiche que sur clic droit d'un VOR (famille VOR / VOR-DME / VORTAC :
+    // stations qui émettent des radiaux). Le menu navaid s'ouvre désormais pour
+    // tous les navaids, d'où le filtre de type explicite ici.
+    visible: () => !!(_mapCtxContext && _mapCtxContext.navaid
+      && /^VOR/.test(_mapCtxContext.navaid.type || '')),
     action: (latlng, context) => {
       if (context && context.navaid && typeof window.ouvrirModaleFlanquement === 'function') {
         window.ouvrirModaleFlanquement(context.navaid);
+      }
+    },
+  },
+  {
+    id: 'range-circle-navaid',
+    labelKey: 'mapCtxRangeCircleNavaid',
+    // Clic droit sur un navaid dont la portée publiée (rangeNm) est connue.
+    visible: () => !!(_mapCtxContext && _mapCtxContext.navaid
+      && Number.isFinite(_mapCtxContext.navaid.rangeNm)
+      && _mapCtxContext.navaid.rangeNm > 0),
+    action: (latlng, context) => {
+      if (context && context.navaid && typeof window.tracerCerclePorteeNavaid === 'function') {
+        window.tracerCerclePorteeNavaid(context.navaid);
+      }
+    },
+  },
+  {
+    id: 'range-circle-clear',
+    labelKey: 'mapCtxRangeCircleClear',
+    // Ne s'affiche que si au moins un cercle (manuel ou navaid) est présent.
+    visible: () => (typeof window.aDesCerclesPortee === 'function') && window.aDesCerclesPortee(),
+    action: () => {
+      if (typeof window.effacerTousCerclesPortee === 'function') {
+        window.effacerTousCerclesPortee();
       }
     },
   },
@@ -89,6 +116,15 @@ const MAP_CONTEXT_MENU_ITEMS = [
     action: (latlng) => {
       if (typeof window.ouvrirModaleCoordsPoint === 'function') {
         window.ouvrirModaleCoordsPoint(latlng);
+      }
+    },
+  },
+  {
+    id: 'range-circle',
+    labelKey: 'mapCtxRangeCircle',
+    action: (latlng) => {
+      if (typeof window.ouvrirModaleCerclePortee === 'function') {
+        window.ouvrirModaleCerclePortee(latlng);
       }
     },
   },

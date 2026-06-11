@@ -85,6 +85,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initDirectTo();
 
+  // Atterrissage d'urgence : bouton ✈ rouge + modale 3 aéroports les plus
+  // proches. Doit suivre initDirectTo (utilise window.activerDirectToUrgence).
+  initEmergency();
+
   // initMapMeasure expose window.demarrerMesure / effacerMesure / aUneMesure
   // (utilisées par les items du menu contextuel).
   initMapMeasure();
@@ -102,6 +106,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Cercle d'incertitude : bouton flottant carte (3 NM gris anthracite, 5 s).
   // Doit être appelé APRÈS initMap (le bouton est un contrôle Leaflet).
   initUncertaintyCircle();
+
+  // Cercle de portée : clic droit carte → modale rayon NM → cercle + point
+  // central magenta. Expose window.ouvrirModaleCerclePortee (menu contextuel) et
+  // window.effacerTousCerclesPortee (reset). Doit suivre initMap.
+  initRangeCircle();
 
   // Bouton 🔍 « Rechercher » en bas à gauche de la carte. Doit être appelé
   // APRÈS initMap (contrôle Leaflet) — utilise window.api.rechercheModale.

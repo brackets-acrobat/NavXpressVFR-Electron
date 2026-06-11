@@ -1018,6 +1018,51 @@ ipcMain.handle('aeroports-bbox', async (event, bbox) => {
   return { ok: true, airports: out };
 });
 
+// 9ter. Renvoie les N aéroports DOTÉS D'UNE PISTE les plus proches d'une
+//    position (atterrissage d'urgence). Chaque entrée porte la longueur de la
+//    piste la plus longue (length_ft, déjà précalculée dans a.runway par
+//    _oaMainRunway). Les hélistations / hydrobases sans piste sont exclues.
+ipcMain.handle('aeroports-proches', async (event, payload) => {
+  const lat = payload && Number(payload.lat);
+  const lon = payload && Number(payload.lon);
+  const limit = (payload && Number(payload.limit)) || 3;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return { ok: false, reason: 'no-pos' };
+  }
+  if (!_oaAirportsList) {
+    const ok = loadOurAirportsListForMap();
+    if (!ok) return { ok: false, reason: 'no-data' };
+  }
+
+  // Distance grand-cercle (NM) — haversine local.
+  const R_NM = 3440.065;
+  const toRad = d => d * Math.PI / 180;
+  function distNM(la, lo) {
+    const dLat = toRad(la - lat);
+    const dLon = toRad(lo - lon);
+    const a = Math.sin(dLat / 2) ** 2
+      + Math.cos(toRad(lat)) * Math.cos(toRad(la)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R_NM * Math.asin(Math.min(1, Math.sqrt(a)));
+  }
+
+  const cands = [];
+  for (const a of _oaAirportsList) {
+    if (!a.runway || !(a.runway.length_ft > 0)) continue; // piste réelle requise
+    if (!Number.isFinite(a.lat) || !Number.isFinite(a.lon)) continue;
+    cands.push({
+      ident: a.ident,
+      code: a.code || a.ident,
+      name: a.name || a.ident,
+      lat: a.lat,
+      lon: a.lon,
+      length_ft: Math.round(a.runway.length_ft),
+      distance: distNM(a.lat, a.lon),
+    });
+  }
+  cands.sort((x, y) => x.distance - y.distance);
+  return { ok: true, airports: cands.slice(0, Math.max(1, limit)) };
+});
+
 // 10. Renvoie tous les navaids dans une bounding box.
 ipcMain.handle('navaids-bbox', async (event, bbox) => {
   if (!bbox) return { ok: false, reason: 'no-bbox' };

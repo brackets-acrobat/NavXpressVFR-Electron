@@ -38,7 +38,7 @@ const TRANSLATIONS = {
     pauseStateGeneric: "Simulateur en pause",
 
     // Config section
-    flightConfig: "Configuration du Vol",
+    flightConfig: "Informations",
     icaoDep: "ICAO Dép.",
     icaoArr: "ICAO Arr.",
     icaoPlaceholderDep: "LFQM",
@@ -432,6 +432,15 @@ const TRANSLATIONS = {
     dtAirportFoundFmt: (code, name, dist) => `${code} — ${name} — ${dist} NM`,
     dtAirportConfirmTitle: "Confirmer Direct To",
     dtAirportConfirmTextFmt: (code, dist) => `Direct To vers ${code} — ${dist} NM. Confirmer ?`,
+    // Atterrissage d'urgence
+    emergencyBtnTooltip: "Atterrissage d'urgence",
+    emergencyBtnTooltipDisabled: "Atterrissage d'urgence — disponible en vol",
+    emergencyModalTitle: "✈ Atterrissage d'urgence",
+    emergencyModalHint: "Sélectionnez l'aéroport de déroutement :",
+    emergencyNotConnected: "Connectez-vous à MSFS — position avion requise",
+    emergencyNoAirports: "Aucun aéroport avec piste à proximité",
+    emergencyNoSelection: "Aucun aéroport sélectionné",
+    emergencyMetricsFmt: (dist, cap, time, ft) => `${dist} NM · cap ${cap}° · ${time} · piste ${ft} ft`,
     // Menu contextuel carte + Direct To vers point carte
     mapCtxDirectTo: "Direct To",
     mapCtxMeasureFrom: "Distance à partir de ce point",
@@ -441,6 +450,14 @@ const TRANSLATIONS = {
     coordsPointTitle: "Coordonnées du point",
     coordsCopyTooltip: "Copier les coordonnées",
     coordsCopied: "Copié !",
+    // Cercle de portée (clic droit → "Cercle de portée")
+    mapCtxRangeCircle: "Cercle de portée",
+    mapCtxRangeCircleNavaid: "Cercle de portée navaid",
+    mapCtxRangeCircleClear: "Effacer tous les cercles de portée",
+    rangeCircleTitle: "Cercle de portée",
+    rangeCircleHint: "Saisissez le rayon du cercle :",
+    rangeCircleRadiusLabel: "Rayon (NM)",
+    rangeCircleInvalid: "Rayon invalide (nombre supérieur à 0).",
     pasteCoords: "Coller les coordonnées de la carte",
     dtPointName: "Point sur la carte",
     dtPointConfirmTextFmt: (dist) => `Effectuer un Direct To sur ce point (${dist} NM) ?`,
@@ -505,7 +522,7 @@ const TRANSLATIONS = {
     pauseStateGeneric: "Simulator paused",
 
     // Config section
-    flightConfig: "Flight Configuration",
+    flightConfig: "Informations",
     icaoDep: "Dep. ICAO",
     icaoArr: "Arr. ICAO",
     icaoPlaceholderDep: "KLAX",
@@ -899,6 +916,15 @@ const TRANSLATIONS = {
     dtAirportFoundFmt: (code, name, dist) => `${code} — ${name} — ${dist} NM`,
     dtAirportConfirmTitle: "Confirm Direct To",
     dtAirportConfirmTextFmt: (code, dist) => `Direct To ${code} — ${dist} NM. Confirm?`,
+    // Emergency landing
+    emergencyBtnTooltip: "Emergency landing",
+    emergencyBtnTooltipDisabled: "Emergency landing — available in flight",
+    emergencyModalTitle: "✈ Emergency landing",
+    emergencyModalHint: "Select the diversion airport:",
+    emergencyNotConnected: "Connect to MSFS — aircraft position required",
+    emergencyNoAirports: "No airport with a runway nearby",
+    emergencyNoSelection: "No airport selected",
+    emergencyMetricsFmt: (dist, cap, time, ft) => `${dist} NM · hdg ${cap}° · ${time} · runway ${ft} ft`,
     // Map context menu + Direct To to map point
     mapCtxDirectTo: "Direct To",
     mapCtxMeasureFrom: "Distance from this point",
@@ -908,6 +934,14 @@ const TRANSLATIONS = {
     coordsPointTitle: "Point coordinates",
     coordsCopyTooltip: "Copy coordinates",
     coordsCopied: "Copied!",
+    // Range circle (right-click → "Range circle")
+    mapCtxRangeCircle: "Range circle",
+    mapCtxRangeCircleNavaid: "Navaid range circle",
+    mapCtxRangeCircleClear: "Clear all range circles",
+    rangeCircleTitle: "Range circle",
+    rangeCircleHint: "Enter the circle radius:",
+    rangeCircleRadiusLabel: "Radius (NM)",
+    rangeCircleInvalid: "Invalid radius (number greater than 0).",
     pasteCoords: "Paste coordinates from map",
     dtPointName: "Map point",
     dtPointConfirmTextFmt: (dist) => `Direct To this point (${dist} NM)?`,

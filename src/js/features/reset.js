@@ -39,6 +39,7 @@ function initReset() {
     if (typeof window.effacerTousReperesVisuels === 'function') window.effacerTousReperesVisuels();
     if (typeof window.effacerTousFlanquements === 'function') window.effacerTousFlanquements();
     if (typeof window.effacerTousPOI === 'function') window.effacerTousPOI();
+    if (typeof window.effacerTousCerclesPortee === 'function') window.effacerTousCerclesPortee();
     actualiserAffichageDeclinaison();
     mettreAJourLogDeNav();
   }

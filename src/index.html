@@ -165,6 +165,11 @@
                             <button id="btn-metar-search" class="btn-secondary btn-metar-search" type="button"
                                 data-i18n="btnMetarSearch" data-i18n-title="metarSearchTooltip"
                                 title="Rechercher METAR">🔍 METAR</button>
+                            <!-- Atterrissage d'urgence : avion rouge (actif en vol uniquement) -->
+                            <button id="btn-emergency" class="btn-emergency" type="button" disabled
+                                data-i18n-title="emergencyBtnTooltip" title="Atterrissage d'urgence">
+                                <span class="emergency-icon" aria-hidden="true">✈</span>
+                            </button>
                         </div>
 
                         <!-- Boîte Chronomètre + boîte METAR, côte à côte (largeurs égales 50/50). -->
@@ -370,26 +375,28 @@
                 </div>
                 <button id="btn-edit-leg-dep-paste" class="btn-paste-coords" type="button" data-i18n="pasteCoords"
                     style="display:none;">Coller les coordonnées de la carte</button>
-                <div class="insert-wp-coord-row">
-                    <div class="input-group" style="flex:1;">
-                        <label data-i18n="latitude">Latitude</label>
-                        <input type="text" id="edit-leg-dep-lat" inputmode="decimal" placeholder="47.200000">
+                <div id="edit-leg-dep-coords">
+                    <div class="insert-wp-coord-row">
+                        <div class="input-group" style="flex:1;">
+                            <label data-i18n="latitude">Latitude</label>
+                            <input type="text" id="edit-leg-dep-lat" inputmode="decimal" placeholder="47.200000">
+                        </div>
+                        <div class="insert-wp-radio-group">
+                            <label class="radio-label"><input type="radio" name="edit-dep-lat-dir" value="N" checked>
+                                N</label>
+                            <label class="radio-label"><input type="radio" name="edit-dep-lat-dir" value="S"> S</label>
+                        </div>
                     </div>
-                    <div class="insert-wp-radio-group">
-                        <label class="radio-label"><input type="radio" name="edit-dep-lat-dir" value="N" checked>
-                            N</label>
-                        <label class="radio-label"><input type="radio" name="edit-dep-lat-dir" value="S"> S</label>
-                    </div>
-                </div>
-                <div class="insert-wp-coord-row" style="margin-top:6px;">
-                    <div class="input-group" style="flex:1;">
-                        <label data-i18n="longitude">Longitude</label>
-                        <input type="text" id="edit-leg-dep-lon" inputmode="decimal" placeholder="6.080000">
-                    </div>
-                    <div class="insert-wp-radio-group">
-                        <label class="radio-label"><input type="radio" name="edit-dep-lon-dir" value="E" checked>
-                            E</label>
-                        <label class="radio-label"><input type="radio" name="edit-dep-lon-dir" value="W"> W</label>
+                    <div class="insert-wp-coord-row" style="margin-top:6px;">
+                        <div class="input-group" style="flex:1;">
+                            <label data-i18n="longitude">Longitude</label>
+                            <input type="text" id="edit-leg-dep-lon" inputmode="decimal" placeholder="6.080000">
+                        </div>
+                        <div class="insert-wp-radio-group">
+                            <label class="radio-label"><input type="radio" name="edit-dep-lon-dir" value="E" checked>
+                                E</label>
+                            <label class="radio-label"><input type="radio" name="edit-dep-lon-dir" value="W"> W</label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -414,26 +421,28 @@
                 </div>
                 <button id="btn-edit-leg-arr-paste" class="btn-paste-coords" type="button" data-i18n="pasteCoords"
                     style="display:none;">Coller les coordonnées de la carte</button>
-                <div class="insert-wp-coord-row">
-                    <div class="input-group" style="flex:1;">
-                        <label data-i18n="latitude">Latitude</label>
-                        <input type="text" id="edit-leg-arr-lat" inputmode="decimal" placeholder="47.200000">
+                <div id="edit-leg-arr-coords">
+                    <div class="insert-wp-coord-row">
+                        <div class="input-group" style="flex:1;">
+                            <label data-i18n="latitude">Latitude</label>
+                            <input type="text" id="edit-leg-arr-lat" inputmode="decimal" placeholder="47.200000">
+                        </div>
+                        <div class="insert-wp-radio-group">
+                            <label class="radio-label"><input type="radio" name="edit-arr-lat-dir" value="N" checked>
+                                N</label>
+                            <label class="radio-label"><input type="radio" name="edit-arr-lat-dir" value="S"> S</label>
+                        </div>
                     </div>
-                    <div class="insert-wp-radio-group">
-                        <label class="radio-label"><input type="radio" name="edit-arr-lat-dir" value="N" checked>
-                            N</label>
-                        <label class="radio-label"><input type="radio" name="edit-arr-lat-dir" value="S"> S</label>
-                    </div>
-                </div>
-                <div class="insert-wp-coord-row" style="margin-top:6px;">
-                    <div class="input-group" style="flex:1;">
-                        <label data-i18n="longitude">Longitude</label>
-                        <input type="text" id="edit-leg-arr-lon" inputmode="decimal" placeholder="6.080000">
-                    </div>
-                    <div class="insert-wp-radio-group">
-                        <label class="radio-label"><input type="radio" name="edit-arr-lon-dir" value="E" checked>
-                            E</label>
-                        <label class="radio-label"><input type="radio" name="edit-arr-lon-dir" value="W"> W</label>
+                    <div class="insert-wp-coord-row" style="margin-top:6px;">
+                        <div class="input-group" style="flex:1;">
+                            <label data-i18n="longitude">Longitude</label>
+                            <input type="text" id="edit-leg-arr-lon" inputmode="decimal" placeholder="6.080000">
+                        </div>
+                        <div class="insert-wp-radio-group">
+                            <label class="radio-label"><input type="radio" name="edit-arr-lon-dir" value="E" checked>
+                                E</label>
+                            <label class="radio-label"><input type="radio" name="edit-arr-lon-dir" value="W"> W</label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -835,16 +844,15 @@
 
     <!-- Modale : confirmer le re-téléchargement des données d'élévation -->
     <div id="elev-confirm-overlay" class="modal-overlay" style="z-index:10000;">
-        <div class="modal-popup" style="width:400px; border-color:#ffb300;">
+        <div class="modal-popup" style="width:400px;">
             <h3 data-i18n="elevConfirmTitle"
-                style="margin:0 0 14px 0; color:#ffb300; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
                 Re-télécharger les données ?</h3>
             <p data-i18n="elevConfirmMsg"
                 style="color:#e0e0e0; font-size:14px; margin:0 0 22px 0; line-height:1.6;"></p>
             <div class="create-flight-actions">
                 <button id="btn-elev-confirm-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
                 <button id="btn-elev-confirm-ok" class="btn-primary"
-                    style="background:#ffb300; border-color:#ffb300; color:#121212;"
                     data-i18n="elevConfirmBtn">Re-télécharger</button>
             </div>
         </div>
@@ -1440,6 +1448,46 @@
         </div>
     </div>
 
+    <!-- Modale Atterrissage d'urgence — choix parmi les 3 aéroports les plus proches -->
+    <div id="emergency-overlay" class="modal-overlay">
+        <div class="modal-popup" style="width:520px;">
+            <h3 data-i18n="emergencyModalTitle"
+                style="margin:0 0 6px 0; color:#d32f2f; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                ✈ Atterrissage d'urgence</h3>
+            <p data-i18n="emergencyModalHint" style="color:#888; font-size:12px; margin:0 0 14px 0;">
+                Sélectionnez l'aéroport de déroutement :</p>
+            <div id="emergency-list" class="emergency-list"></div>
+            <div id="emergency-error" class="field-error"></div>
+            <div class="create-flight-actions">
+                <button id="btn-emergency-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
+                <button id="btn-emergency-validate" class="btn-primary" data-i18n="btnValidate" disabled
+                    style="background:#d32f2f; border-color:#d32f2f;">Valider</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Cercle de portée — saisie du rayon en NM (clic droit carte) -->
+    <div id="range-circle-overlay" class="modal-overlay">
+        <div class="modal-popup" style="width:380px;">
+            <h3 data-i18n="rangeCircleTitle"
+                style="margin:0 0 6px 0; color:#FF00FF; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Cercle de portée</h3>
+            <p data-i18n="rangeCircleHint" style="color:#888; font-size:12px; margin:0 0 14px 0;">
+                Saisissez le rayon du cercle :</p>
+            <div class="input-group">
+                <label for="range-circle-radius" data-i18n="rangeCircleRadiusLabel">Rayon (NM)</label>
+                <input type="text" id="range-circle-radius" inputmode="decimal" maxlength="6"
+                    autocomplete="off" spellcheck="false" placeholder="10">
+            </div>
+            <div id="range-circle-error" class="field-error"></div>
+            <div class="create-flight-actions">
+                <button id="btn-range-circle-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
+                <button id="btn-range-circle-validate" class="btn-primary" data-i18n="btnValidate"
+                    style="background:#FF00FF; border-color:#FF00FF;">Valider</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modale "Ajouter un repère visuel" — nom + description -->
     <div id="repere-add-overlay" class="modal-overlay">
         <div class="modal-popup" style="width:420px;">
@@ -1719,10 +1767,12 @@
     <script src="js/features/fuel.js"></script>
     <script src="js/features/validation.js"></script>
     <script src="js/features/direct-to.js"></script>
+    <script src="js/features/emergency.js"></script>
     <script src="js/features/map-measure.js"></script>
     <script src="js/features/map-markers.js"></script>
     <script src="js/features/poi-overpass.js"></script>
     <script src="js/features/uncertainty-circle.js"></script>
+    <script src="js/features/range-circle.js"></script>
     <script src="js/features/agl-warning.js"></script>
     <script src="js/features/map-search.js"></script>
     <script src="js/features/map-coords.js"></script>
