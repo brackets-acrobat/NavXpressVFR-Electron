@@ -1360,6 +1360,29 @@ ipcMain.handle('recherche-modale', async (event, payload) => {
 // ============================================================
 let _logbookEngine = null;
 let _logbookEnabled = true;
+// Dernier datetime LOCAL du simulateur au format « AAAA-MM-JJTHH:MM:SS »
+// (horloge murale simulée), tenu à jour par le groupe SC_TIME. Transmis au
+// moteur de carnet pour horodater TOUS les événements (décollage, atterrissage,
+// Direct To, etc.) à la date/heure SIMULÉES et NON celles du PC.
+let _lastSimLocal = null;
+
+// Construit « AAAA-MM-JJTHH:MM:SS » à partir des SimVars LOCAL YEAR/MONTH/DAY
+// et LOCAL TIME (secondes depuis minuit). Retourne null si les valeurs sont
+// invalides (date/heure non encore reçues du simulateur).
+function _buildSimLocal(year, month, day, localSec) {
+  if (![year, month, day, localSec].every(Number.isFinite)) return null;
+  const y = Math.round(year);
+  const mo = Math.round(month);
+  const d = Math.round(day);
+  if (y < 1 || mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  let s = Math.floor(localSec) % 86400;
+  if (s < 0) s += 86400;
+  const hh = Math.floor(s / 3600);
+  const mi = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  const p = (n) => String(n).padStart(2, '0');
+  return `${y}-${p(mo)}-${p(d)}T${p(hh)}:${p(mi)}:${p(ss)}`;
+}
 
 // Identité de l'appareil courant — lue UNE fois à la connexion SimConnect
 // (SimVars CATEGORY / ATC TYPE / ATC MODEL / TITLE en période ONCE). Le moteur
@@ -1694,9 +1717,14 @@ ipcMain.handle('simconnect-connecter', async () => {
 
     // --- Groupe TIME (horloges sim) — 1 update par seconde ---
     // ZULU TIME / LOCAL TIME = secondes écoulées depuis minuit (UTC / locale).
+    // LOCAL YEAR / MONTH / DAY = date locale du simulateur (pour horodater le
+    // carnet de vol à la date/heure SIMULÉES, pas celles du PC).
     // Ordre de définition = ordre de lecture dans simObjectData.
-    handle.addToDataDefinition(SC_TIME_DEF_ID, 'ZULU TIME',  'seconds', SCDataType.FLOAT64);
-    handle.addToDataDefinition(SC_TIME_DEF_ID, 'LOCAL TIME', 'seconds', SCDataType.FLOAT64);
+    handle.addToDataDefinition(SC_TIME_DEF_ID, 'ZULU TIME',           'seconds', SCDataType.FLOAT64);
+    handle.addToDataDefinition(SC_TIME_DEF_ID, 'LOCAL TIME',          'seconds', SCDataType.FLOAT64);
+    handle.addToDataDefinition(SC_TIME_DEF_ID, 'LOCAL YEAR',          'number',  SCDataType.FLOAT64);
+    handle.addToDataDefinition(SC_TIME_DEF_ID, 'LOCAL MONTH OF YEAR', 'number',  SCDataType.FLOAT64);
+    handle.addToDataDefinition(SC_TIME_DEF_ID, 'LOCAL DAY OF MONTH',  'number',  SCDataType.FLOAT64);
     handle.requestDataOnSimObject(
       SC_TIME_REQ_ID,
       SC_TIME_DEF_ID,
@@ -1736,6 +1764,7 @@ ipcMain.handle('simconnect-connecter', async () => {
             _logbookEngine.feedTracking({
               onGround, eng1, eng2, lat, lon,
               groundSpeedKt: gs, altAglFt: altAgl, parkingBrake: parkBrake,
+              simLocal: _lastSimLocal,
             });
             // Synchronise le sampling SimConnect avec la décision du moteur.
             _setLandingSamplingSC(handle, _logbookEngine.shouldSampleLanding());
@@ -1745,9 +1774,17 @@ ipcMain.handle('simconnect-connecter', async () => {
           const gForce = data.data.readFloat64();
           if (_logbookEngine) _logbookEngine.feedLandingFrame(vsFpm, gForce);
         } else if (data.requestID === SC_TIME_REQ_ID) {
-          // Lecture dans l'ordre EXACT de la définition : ZULU puis LOCAL.
+          // Lecture dans l'ordre EXACT de la définition :
+          // ZULU, LOCAL, LOCAL YEAR, LOCAL MONTH, LOCAL DAY.
           const zulu  = data.data.readFloat64();
           const local = data.data.readFloat64();
+          const lYear  = data.data.readFloat64();
+          const lMonth = data.data.readFloat64();
+          const lDay   = data.data.readFloat64();
+          // Construit le datetime LOCAL du simulateur « AAAA-MM-JJTHH:MM:SS »
+          // (horloge murale simulée) pour horodater le carnet à la date/heure
+          // simulées et NON celles du PC.
+          _lastSimLocal = _buildSimLocal(lYear, lMonth, lDay, local);
           broadcastSimTime({ zulu, local });
         } else if (data.requestID === SC_AIRCRAFT_REQ_ID) {
           // Lecture dans l'ordre EXACT de la définition (tailles de chaîne

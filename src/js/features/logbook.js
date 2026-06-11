@@ -115,6 +115,38 @@ function initLogbook() {
     return new Date(ms).toLocaleTimeString(_loc(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
+  // --- Date & heure LOCALES du simulateur ------------------------------
+  // sim = chaîne « AAAA-MM-JJTHH:MM:SS » = horloge MURALE du simulateur (date +
+  // heure simulées, météo/éphémérides comprises). On la parse SANS objet Date
+  // (pas de conversion de fuseau du PC) et on formate selon la langue, suivi de
+  // « (Loc.) ». Les vols enregistrés AVANT cette version n'ont pas ce champ :
+  // on retombe alors sur le timestamp PC (sans « (Loc.) »).
+  function _parseSim(sim) {
+    if (typeof sim !== 'string') return null;
+    const m = sim.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/);
+    if (!m) return null;
+    return { y: m[1], mo: m[2], d: m[3], hh: m[4], mi: m[5], ss: m[6] };
+  }
+
+  function _simDateStr(p) {
+    // FR : JJ/MM/AAAA — EN : MM/JJ/AAAA
+    return currentLang === 'en' ? `${p.mo}/${p.d}/${p.y}` : `${p.d}/${p.mo}/${p.y}`;
+  }
+
+  // Date + heure simulées + « (Loc.) ». Fallback : ancien format PC.
+  function _fmtSimDateTime(sim, isoFallback) {
+    const p = _parseSim(sim);
+    if (!p) return _fmtDateTime(isoFallback);
+    return `${_simDateStr(p)} ${p.hh}:${p.mi}:${p.ss} (Loc.)`;
+  }
+
+  // Heure simulée seule + « (Loc.) ». Fallback : heure PC du timestamp.
+  function _fmtSimTime(sim, isoFallback) {
+    const p = _parseSim(sim);
+    if (!p) return _fmtTime(isoFallback);
+    return `${p.hh}:${p.mi}:${p.ss} (Loc.)`;
+  }
+
   // Durée en minutes → « 1 h 23 » / « 1h 23 » ou « 45 min ».
   function _fmtDuration(min) {
     if (!Number.isFinite(min)) return '—';
@@ -132,6 +164,9 @@ function initLogbook() {
   function _rowHtml(f, idx) {
     const dep = f.departure || {};
     const arr = f.arrival || null;
+    // Date RÉELLE du vol (timestamp PC) : la liste est triée et affichée selon
+    // l'ordre chronologique réel des vols effectués. Seul le RAPPORT (détail)
+    // affiche les dates/heures simulées.
     const dateIso = dep.takeoffUtc || dep.offBlockUtc || f.id;
     const aircraft = (f.aircraft && f.aircraft.title) ? f.aircraft.title : '—';
     const depIcao = dep.icao || '—';
@@ -204,8 +239,8 @@ function initLogbook() {
     html += _section(_lbl('secDep'), buildKVTable([
       [_lbl('icao'), `<span class="lb-icao">${esc(dep.icao) || '—'}</span>`],
       [_lbl('name'), esc(dep.name) || '—'],
-      [_lbl('offBlock'), esc(_fmtDateTime(dep.offBlockUtc))],
-      [_lbl('takeoff'), esc(_fmtDateTime(dep.takeoffUtc))],
+      [_lbl('offBlock'), esc(_fmtSimDateTime(dep.offBlockSim, dep.offBlockUtc))],
+      [_lbl('takeoff'), esc(_fmtSimDateTime(dep.takeoffSim, dep.takeoffUtc))],
     ]));
 
     // Arrivée
@@ -213,8 +248,8 @@ function initLogbook() {
       html += _section(_lbl('secArr'), buildKVTable([
         [_lbl('icao'), `<span class="lb-icao">${esc(arr.icao) || '—'}</span>`],
         [_lbl('name'), esc(arr.name) || '—'],
-        [_lbl('landing'), esc(_fmtDateTime(arr.landingUtc))],
-        [_lbl('onBlock'), esc(_fmtDateTime(arr.onBlockUtc))],
+        [_lbl('landing'), esc(_fmtSimDateTime(arr.landingSim, arr.landingUtc))],
+        [_lbl('onBlock'), esc(_fmtSimDateTime(arr.onBlockSim, arr.onBlockUtc))],
       ]));
     } else {
       html += _section(_lbl('secArr'), `<div class="lb-muted">${esc(_lbl('noArrival'))}</div>`);
@@ -246,7 +281,7 @@ function initLogbook() {
     if (tng.length) {
       const items = tng.map((tg, i) =>
         `<li>#${i + 1} — ${esc(tg.verticalSpeedFpm)} ft/min · ${esc(tg.gForceMax)} G `
-        + `<span class="lb-muted">· ${esc(_fmtTime(tg.ts))}</span></li>`).join('');
+        + `<span class="lb-muted">· ${esc(_fmtSimTime(tg.sim, tg.ts))}</span></li>`).join('');
       html += _section(_lbl('secTng'), `<ul class="lb-list">${items}</ul>`);
     }
 
@@ -276,7 +311,7 @@ function initLogbook() {
         } else {
           label = esc(d.kind);
         }
-        return `<li>${label} <span class="lb-muted">· ${esc(_fmtTime(d.ts))}</span></li>`;
+        return `<li>${label} <span class="lb-muted">· ${esc(_fmtSimTime(d.sim, d.ts))}</span></li>`;
       }).join('');
       html += _section(_lbl('secDt'), `<ul class="lb-list">${items}</ul>`);
     }

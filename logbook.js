@@ -187,6 +187,13 @@ class LogbookEngine {
     this._landingFirstTs = 0;
     this._pendingTouchdown = null;
 
+    // Datetime LOCAL du simulateur « AAAA-MM-JJTHH:MM:SS », alimenté par
+    // feedTracking(). Sert à horodater TOUS les événements du carnet à la
+    // date/heure du simulateur (et non du PC). _landingFirstSim = datetime sim
+    // figé au 1er contact de l'atterrissage courant.
+    this._lastSimLocal = null;
+    this._landingFirstSim = null;
+
     // Confirmation de fin de vol (≥2 conditions parmi vitesse≈0 / moteur
     // éteint / frein de parking) :
     //   _endConfirmActive   : une demande est en cours (modale ouverte côté
@@ -239,7 +246,7 @@ class LogbookEngine {
   recordDirectTo(event) {
     if (!this._currentFlight) return;
     if (!event || !event.kind) return;
-    const entry = { ts: new Date().toISOString(), kind: event.kind };
+    const entry = { ts: new Date().toISOString(), sim: this._lastSimLocal, kind: event.kind };
     if (event.kind === 'plan') {
       entry.targetIndex = Number.isFinite(event.targetIndex) ? event.targetIndex : null;
       entry.name = event.name ? String(event.name) : '';
@@ -271,6 +278,10 @@ class LogbookEngine {
       return;
     }
     if (!frame) return;
+
+    // Datetime local du simulateur (poussé par main.js). Tenu à jour en continu
+    // pour horodater les événements à la date/heure du sim plutôt que du PC.
+    if (frame.simLocal) this._lastSimLocal = frame.simLocal;
 
     const now = Date.now();
     const onGround = !!frame.onGround;
@@ -321,7 +332,9 @@ class LogbookEngine {
               lat: dep.lat,
               lon: dep.lon,
               offBlockUtc: new Date().toISOString(),
+              offBlockSim: this._lastSimLocal,
               takeoffUtc: null,
+              takeoffSim: null,
             },
             arrival: null,
             totals: null,
@@ -345,6 +358,7 @@ class LogbookEngine {
         if (!onGround && this._lastOnGround) {
           if (this._currentFlight) {
             this._currentFlight.departure.takeoffUtc = new Date().toISOString();
+            this._currentFlight.departure.takeoffSim = this._lastSimLocal;
             // Snapshot figé du plan : on copie le tableau actuel — toute modif
             // ultérieure du plan côté renderer n'affectera plus ce vol.
             this._currentFlight.route = this._currentPlan.map(wp => ({ ...wp }));
@@ -538,6 +552,7 @@ class LogbookEngine {
 
     const result = {
       ts: new Date(now).toISOString(),
+      sim: this._lastSimLocal,   // datetime local sim du toucher
       verticalSpeedFpm: Math.round(vsMin),
       gForceMax: Math.round(gMax * 100) / 100,
       bufferSize: snapshot.length,
@@ -547,6 +562,7 @@ class LogbookEngine {
     // seront ignorés) et l'heure du toucher.
     this._pendingTouchdown = result;
     this._landingFirstTs = now;
+    this._landingFirstSim = this._lastSimLocal;
     this._lastContactTs = now;
 
     // Nouvel événement d'atterrissage → ré-arme la confirmation de fin de vol
@@ -628,7 +644,9 @@ class LogbookEngine {
       lon: arr.lon,
       // landingUtc = 1er contact de l'atterrissage final (rebonds exclus).
       landingUtc: new Date(this._landingFirstTs).toISOString(),
+      landingSim: this._landingFirstSim,
       onBlockUtc: new Date().toISOString(),
+      onBlockSim: this._lastSimLocal,
     };
 
     // L'avion s'est immobilisé : le 1er contact en attente était l'atterrissage
