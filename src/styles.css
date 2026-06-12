@@ -3044,9 +3044,13 @@ tr:hover {
     overflow: hidden;
 }
 
-/* La modale détails est nettement plus étroite (données clé/valeur). */
+/* La modale détails est en paysage (mise en page façon Plan-G). Elle grandit
+   en hauteur selon son contenu (route multi-lignes) — pas de scroll interne :
+   on neutralise le max-height/overflow hérités de la règle partagée ci-dessus. */
 #logbook-detail-popup {
-    width: 520px;
+    width: 880px;
+    max-height: none;
+    overflow: visible;
 }
 
 .logbook-h3 {
@@ -3129,42 +3133,239 @@ tr:hover {
     font-size: 13px;
 }
 
-/* Corps scrollable de la modale détails */
+/* Corps de la modale détails : pas de scroll, la fenêtre grandit avec le contenu. */
 #logbook-detail-body {
-    overflow-y: auto;
-    padding-right: 6px;
+    overflow: visible;
 }
 
-.lb-detail-section {
-    margin-bottom: 16px;
+/* ===== Détail du vol — mise en page paysage (façon Plan-G) ============= */
+.lb-pg {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-size: 13px;
+    color: #e0e0e0;
 }
 
-.lb-detail-section>h4 {
+.lb-pg-row {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+/* Champ « encadré » lecture seule : libellé cyan au-dessus, valeur en boîte. */
+.lb-pg-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.lb-pg-field>label {
+    font-size: 11px;
+    color: #00bcd4;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.lb-pg-val {
+    background: #141414;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+    padding: 5px 9px;
+    min-height: 17px;
+    color: #e0e0e0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lb-pg-val.lb-icao {
+    font-family: 'Consolas', 'Monaco', monospace;
+    letter-spacing: 0.5px;
+}
+
+/* Ligne d'en-tête : Vol N° · Date · Précision répartis également. */
+.lb-pg-head>.lb-pg-field {
+    flex: 1;
+}
+
+/* Champ pleine largeur (Avion, Route). */
+.lb-pg-wide {
+    flex: 1;
+}
+
+.lb-pg-wide>.lb-pg-val {
+    white-space: normal;
+}
+
+/* Déroulé du vol : grille 4 colonnes × 2 lignes (départ puis arrivée).
+   L3 : De · Freins Off · Décollage · Temps de vol
+   L4 : Vers · Atterrissage · Freins On · Temps block */
+.lb-pg-grid4 {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px 14px;
+}
+
+/* Route : valeur (flèches) + petit bouton carte à droite, même hauteur. */
+.lb-pg-route-line {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+/* La route s'écrit sur plusieurs lignes si nécessaire (pas de troncature). */
+.lb-pg-route-line>.lb-pg-val {
+    flex: 1;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+}
+
+.lb-map-btn {
+    flex-shrink: 0;
+    align-self: flex-start;
+    background: #262626;
+    color: #00bcd4;
+    border: 1px solid #00bcd4;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.lb-map-btn:hover {
+    background: #00bcd4;
+    color: #121212;
+}
+
+/* Zone basse : deux panneaux côte à côte (Touchers | Atterrissage final). */
+.lb-pg-bottom {
+    gap: 16px;
+}
+
+.lb-pg-panel {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    padding: 8px 10px 4px;
+    background: #161616;
+}
+
+.lb-pg-panel>h4 {
     margin: 0 0 6px 0;
     color: #00bcd4;
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.4px;
+}
+
+.lb-pg-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.lb-pg-table th {
+    color: #888;
+    text-align: left;
+    font-weight: 600;
+    padding: 3px 6px;
     border-bottom: 1px solid #2a2a2a;
-    padding-bottom: 4px;
-}
-
-/* Sections clé/valeur (Appareil, Départ, Arrivée, Temps, Atterrissage final) :
-   libellé à gauche, valeur alignée complètement à droite de la modale.
-   Les rubriques Route et Touch-and-go ne sont pas des tables → non concernées. */
-.lb-detail-section .ap-info-table th {
     white-space: nowrap;
-    vertical-align: top;
 }
 
-.lb-detail-section .ap-info-table td {
-    text-align: right;
+.lb-pg-table td {
+    padding: 3px 6px;
+    border-bottom: 1px solid #1f1f1f;
+    color: #e0e0e0;
+    white-space: nowrap;
+}
+
+/* Section Direct To (conservée, affichée seulement si présente). */
+.lb-pg-dt>h4 {
+    margin: 0 0 6px 0;
+    color: #00bcd4;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+/* Carte du tracé (modale Leaflet dédiée). */
+#logbook-route-map-popup {
+    position: relative;
+    width: 820px;
+    max-width: 94vw;
+    display: flex;
+    flex-direction: column;
+}
+
+#logbook-route-map {
+    width: 100%;
+    height: 50vh;
+    min-height: 320px;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+/* Profil vertical du vol (relief + altitude avion) sous la carte du tracé. */
+#logbook-vert-profile {
+    width: 100%;
+    margin-top: 10px;
+    position: relative;
+    /* ancre le tooltip flottant (.lb-vp-tooltip) */
+}
+
+/* Zones de survol invisibles le long de la ligne avion (tooltip AMSL/AGL). */
+.lb-vp-hit {
+    cursor: crosshair;
+}
+
+/* Tooltip flottant du profil (suit le curseur, même esprit que le tooltip KIAS). */
+.lb-vp-tooltip {
+    position: absolute;
+    pointer-events: none;
+    display: none;
+    transform: translate(-50%, -100%);
+    background: #1f1f1f;
+    border: 1px solid #555;
+    color: #e0e0e0;
+    font-size: 11px;
+    line-height: 1.3;
+    padding: 3px 7px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 5;
+}
+
+#logbook-vert-profile svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #141414;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+}
+
+#logbook-vert-profile .lb-vp-empty {
+    padding: 14px;
+    text-align: center;
+    color: #888;
+    font-size: 12px;
+    background: #141414;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
 }
 
 /* Rubrique Route : tous les legs sur une seule ligne, séparés par des flèches. */
 .lb-route {
     font-size: 13px;
-    line-height: 1.9;
+    line-height: 1.7;
     color: #e0e0e0;
 }
 

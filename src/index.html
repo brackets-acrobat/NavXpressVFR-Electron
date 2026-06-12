@@ -1279,12 +1279,22 @@
         </div>
     </div>
 
-    <!-- Modale Détails d'un vol (tous les champs de flights.jsonl) -->
+    <!-- Modale Détails d'un vol (mise en page paysage façon Plan-G) -->
     <div id="logbook-detail-overlay" class="modal-overlay">
         <div id="logbook-detail-popup" class="modal-popup">
             <button id="btn-logbook-detail-close" class="airport-info-close" aria-label="Fermer">×</button>
             <h3 class="logbook-h3" data-i18n="lbDetailTitle">Détails du vol</h3>
             <div id="logbook-detail-body"></div>
+        </div>
+    </div>
+
+    <!-- Modale Carte du tracé du vol (Leaflet, plan de vol seul) -->
+    <div id="logbook-route-map-overlay" class="modal-overlay">
+        <div id="logbook-route-map-popup" class="modal-popup">
+            <button id="btn-logbook-route-map-close" class="airport-info-close" aria-label="Fermer">×</button>
+            <h3 class="logbook-h3" data-i18n="lbRouteMapTitle">Tracé du vol</h3>
+            <div id="logbook-route-map"></div>
+            <div id="logbook-vert-profile"></div>
         </div>
     </div>
 

@@ -200,6 +200,14 @@ function initSim() {
   let _deviationLastAlertTime = 0;   // timestamp ms de la dernière alerte (pour rappel toutes les 2 min)
   const DEVIATION_REMIND_MS = 2 * 60 * 1000; // 2 minutes
 
+  // Grâce après passage d'un waypoint : à l'entrée dans le rayon d'arrivée, le
+  // leg bascule sur le suivant. Si ce leg a un cap nettement différent, le
+  // cross-track au nouveau leg est immédiatement grand → fausse alerte de
+  // déviation pendant que l'avion vire pour s'établir. On suspend donc les
+  // alertes de déviation pendant cette fenêtre, le temps que le virage se fasse.
+  const LEG_SWITCH_GRACE_MS = 20 * 1000; // 20 s
+  let _legGraceUntil = 0;            // timestamp ms : grâce active tant que now < cette valeur
+
   function _distanceNM(lat1, lon1, lat2, lon2) {
     const R_NM = 3440.065;
     const toRad = d => d * Math.PI / 180;
@@ -371,7 +379,10 @@ function initSim() {
         (distance < _waypointRadiusNM()) ||
         nearExtArrived;
 
-      if (inPatternZone) {
+      // Fenêtre de grâce post-bascule de leg (le temps de virer/s'établir).
+      const inGracePeriod = (_legGraceUntil > 0 && Date.now() < _legGraceUntil);
+
+      if (inPatternZone || inGracePeriod) {
         if (_deviationOutside) {
           _deviationOutside = false;
           _deviationLastAlertTime = 0;
@@ -426,6 +437,10 @@ function initSim() {
       }
       _lastSoundLegIndex = sessionId;
       _lastSoundSession = true;
+      // On vient d'entrer dans le cercle d'un waypoint → le leg va basculer.
+      // Arme la grâce pour suspendre les alertes de déviation le temps du virage
+      // vers le nouveau leg (évite la fausse alerte immédiate en mode difficile).
+      _legGraceUntil = Date.now() + LEG_SWITCH_GRACE_MS;
 
       if (mode === 'ext') {
         // Arrivée à l'aéroport / point hors plan : on sort du mode externe.

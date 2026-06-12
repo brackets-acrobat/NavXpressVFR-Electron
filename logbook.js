@@ -83,6 +83,11 @@ const LANDING_SAMPLE_EXIT_FT  = 700;
 // Taille du rolling buffer (frames SIM_FRAME stockées avant figeage au touchdown).
 const ROLLING_BUFFER_SIZE = 5;
 
+// Intervalle d'échantillonnage de la position pour le tracé EFFECTIF (route
+// réellement volée + profil vertical). Capturé uniquement en IN_FLIGHT, et
+// stocké dans flight.track (lat/lon/AGL/relief). 10 s = compromis taille/finesse.
+const TRACK_SAMPLE_INTERVAL_MS = 10_000;
+
 // --- Buffer tournant ----------------------------------------------------
 // Implémentation FIFO simple : on garde au max N éléments, push() évince
 // le plus ancien. snapshot() renvoie une copie indépendante (le buffer
@@ -123,6 +128,46 @@ function getClosestAirport(lat, lon) {
   };
 }
 
+// --- Nommage des fichiers de vol individuels ----------------------------
+// Depuis la 1.12, chaque vol est écrit dans SON fichier (au lieu d'une ligne
+// dans flights.jsonl), nommé « NNNN_DEP-ARR.json » :
+//   - NNNN  = numéro de séquence unique, incrémenté à chaque vol (4 chiffres
+//             mini, zéro-paddé pour un tri alphabétique = chronologique) ;
+//   - DEP   = ICAO de départ assaini ;
+//   - ARR   = ICAO d'arrivée assaini.
+// Ces helpers sont partagés avec main.js (migration de l'ancien flights.jsonl).
+
+// Assainit un code ICAO pour un nom de fichier (majuscules, alphanum. seul).
+function sanitizeIcao(code) {
+  const s = String(code == null ? '' : code).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return s || 'UNKN';
+}
+
+// Numéro de séquence zéro-paddé (4 chiffres mini ; au-delà, longueur naturelle).
+function padSeq(n) {
+  return String(n).padStart(4, '0');
+}
+
+// Nom de fichier d'un vol : NNNN_DEP-ARR.json.
+function logbookFileName(seq, depIcao, arrIcao) {
+  return `${padSeq(seq)}_${sanitizeIcao(depIcao)}-${sanitizeIcao(arrIcao)}.json`;
+}
+
+// Plus grand numéro de séquence déjà présent dans le dossier (0 si aucun).
+// Sert à attribuer le prochain numéro sans état persistant séparé.
+function maxLogbookSeq(dir) {
+  let max = 0;
+  try {
+    for (const name of fs.readdirSync(dir)) {
+      const m = /^(\d+)_.*\.json$/i.exec(name);
+      if (!m) continue;
+      const n = parseInt(m[1], 10);
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+  } catch (_) { /* dossier absent → 0 */ }
+  return max;
+}
+
 // ------------------------------------------------------------------------
 // LogbookEngine — instance unique tenue par main.js
 // ------------------------------------------------------------------------
@@ -154,6 +199,11 @@ class LogbookEngine {
       : () => null;
     this._getAircraftInfo = typeof opts.getAircraftInfo === 'function'
       ? opts.getAircraftInfo
+      : () => null;
+    // Élévation du terrain (ft) à (lat, lon) pour le profil vertical. null si
+    // dataset relief absent → le profil retombe sur une référence sol à 0.
+    this._elevationAt = typeof opts.elevationAt === 'function'
+      ? opts.elevationAt
       : () => null;
 
     // État machine + buffer landing
@@ -193,6 +243,13 @@ class LogbookEngine {
     // figé au 1er contact de l'atterrissage courant.
     this._lastSimLocal = null;
     this._landingFirstSim = null;
+
+    // Dernière position connue (mise à jour à chaque feedTracking). Sert à
+    // stamper la position des touchers et à échantillonner le tracé effectif.
+    this._lastLat = null;
+    this._lastLon = null;
+    // Horodatage (ms) du dernier point de tracé échantillonné (0 = jamais).
+    this._lastTrackSampleTs = 0;
 
     // Confirmation de fin de vol (≥2 conditions parmi vitesse≈0 / moteur
     // éteint / frein de parking) :
@@ -292,7 +349,13 @@ class LogbookEngine {
     const lon = Number.isFinite(frame.lon) ? frame.lon : null;
     const altAgl = Number.isFinite(frame.altAglFt) ? frame.altAglFt : null;
     const gsKt = Number.isFinite(frame.groundSpeedKt) ? frame.groundSpeedKt : null;
+    const kiasKt = Number.isFinite(frame.kiasKt) ? frame.kiasKt : null;
+    const amslFt = Number.isFinite(frame.amslFt) ? frame.amslFt : null;
     const parkingBrake = !!frame.parkingBrake;
+
+    // Mémorise la dernière position connue (touchers + tracé effectif).
+    if (lat !== null) this._lastLat = lat;
+    if (lon !== null) this._lastLon = lon;
 
     // 1) Hystérésis du sampling rapide : ON sous 500, OFF au-dessus de 700.
     //    Désactivé d'office hors IN_FLIGHT (au sol, on ne mesure pas un impact).
@@ -347,6 +410,9 @@ class LogbookEngine {
             touchAndGoLandings: [],
             route: [],
             directTo: [],
+            // Tracé EFFECTIF : positions échantillonnées en vol (toutes les 10 s).
+            // Chaque point : {ts, sim, lat, lon, aglFt, groundElevFt}.
+            track: [],
           };
           this._transition(STATES.OFF_BLOCK);
         }
@@ -363,6 +429,8 @@ class LogbookEngine {
             // ultérieure du plan côté renderer n'affectera plus ce vol.
             this._currentFlight.route = this._currentPlan.map(wp => ({ ...wp }));
           }
+          // Force l'échantillonnage immédiat d'un 1er point de tracé au décollage.
+          this._lastTrackSampleTs = 0;
           this._transition(STATES.IN_FLIGHT);
         }
         // Cas limite : moteur coupé avant même de décoller → retour OFF_TRACK
@@ -447,6 +515,26 @@ class LogbookEngine {
         this._transition(STATES.OFF_TRACK);
         break;
       }
+    }
+
+    // 2bis) Échantillonnage du tracé EFFECTIF (toutes les 10 s, uniquement en vol).
+    //       On capture lat/lon/AGL + relief (closure élévation) pour tracer la
+    //       route réellement volée et le profil vertical dans la carte du vol.
+    if (this._state === STATES.IN_FLIGHT && this._currentFlight
+        && lat !== null && lon !== null
+        && (now - this._lastTrackSampleTs) >= TRACK_SAMPLE_INTERVAL_MS) {
+      this._lastTrackSampleTs = now;
+      const ge = this._elevationAt(lat, lon);
+      this._currentFlight.track.push({
+        ts: new Date(now).toISOString(),
+        sim: this._lastSimLocal,
+        lat: Math.round(lat * 1e6) / 1e6,
+        lon: Math.round(lon * 1e6) / 1e6,
+        aglFt: (altAgl !== null) ? Math.round(altAgl) : null,
+        groundElevFt: Number.isFinite(ge) ? Math.round(ge) : null,
+        kiasKt: (kiasKt !== null) ? Math.round(kiasKt) : null,
+        amslFt: (amslFt !== null) ? Math.round(amslFt) : null,
+      });
     }
 
     // 3) Mémorisation des entrées pour la détection de fronts au prochain tick
@@ -556,6 +644,9 @@ class LogbookEngine {
       verticalSpeedFpm: Math.round(vsMin),
       gForceMax: Math.round(gMax * 100) / 100,
       bufferSize: snapshot.length,
+      // Position du toucher (pour le marqueur violet sur la carte du tracé).
+      lat: Number.isFinite(this._lastLat) ? Math.round(this._lastLat * 1e6) / 1e6 : null,
+      lon: Number.isFinite(this._lastLon) ? Math.round(this._lastLon * 1e6) / 1e6 : null,
     };
 
     // 1er contact de l'événement : on retient sa mesure (les rebonds suivants
@@ -701,22 +792,27 @@ class LogbookEngine {
     this._transition(STATES.OFF_TRACK);
   }
 
-  // Append au fichier flights.jsonl (un vol = une ligne). Création du
-  // dossier si absent. Erreurs loggées + remontées (rejet de la promesse).
+  // Écrit le vol dans SON fichier individuel « NNNN_DEP-ARR.json » (numéro de
+  // séquence = max présent dans le dossier + 1). Création du dossier si absent.
+  // Le numéro attribué est aussi stocké dans le vol (champ `seq`). JSON indenté
+  // pour rester lisible/exploitable à la main. Erreurs loggées + remontées.
   async _writeFlight(flight) {
     try {
       if (!fs.existsSync(this._logbookDir)) {
         fs.mkdirSync(this._logbookDir, { recursive: true });
       }
-      const filePath = path.join(this._logbookDir, 'flights.jsonl');
-      const line = JSON.stringify(flight) + '\n';
-      await fs.promises.appendFile(filePath, line, 'utf-8');
-      console.log('[Logbook] Vol enregistré :', flight.id,
-        flight.departure.icao, '→', flight.arrival ? flight.arrival.icao : '?',
+      const seq = maxLogbookSeq(this._logbookDir) + 1;
+      flight.seq = seq;
+      const depIcao = flight.departure ? flight.departure.icao : '';
+      const arrIcao = flight.arrival ? flight.arrival.icao : '';
+      const fileName = logbookFileName(seq, depIcao, arrIcao);
+      const filePath = path.join(this._logbookDir, fileName);
+      await fs.promises.writeFile(filePath, JSON.stringify(flight, null, 2), 'utf-8');
+      console.log('[Logbook] Vol enregistré :', fileName,
         '(' + flight.totals.flightMinutes + ' min vol)');
       return true;
     } catch (err) {
-      console.error('[Logbook] Erreur écriture flights.jsonl :', err);
+      console.error('[Logbook] Erreur écriture du fichier de vol :', err);
       throw err;
     }
   }
@@ -730,6 +826,10 @@ function createLogbook(opts) {
 module.exports = {
   createLogbook,
   getClosestAirport,
+  // Nommage des fichiers de vol individuels (partagé avec la migration main.js)
+  logbookFileName,
+  maxLogbookSeq,
+  sanitizeIcao,
   STATES,
   // Exportés pour testabilité / introspection éventuelle
   RollingBuffer,

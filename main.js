@@ -34,7 +34,7 @@ const { runExtraction: runMsfsExtraction } = require('./extract-airports-msfs');
 const { runExtraction: runNavaidsExtraction } = require('./extract-navaids-msfs');
 
 // Carnet de vol automatisé (machine à états + analyseur d'atterrissage)
-const { createLogbook } = require('./logbook');
+const { createLogbook, logbookFileName, maxLogbookSeq } = require('./logbook');
 
 // --- CHEMINS DE STOCKAGE ---
 function getNavXpressDirs() {
@@ -97,6 +97,41 @@ function ensureNavXpressDirs() {
       const f = path.join(dataDir, name);
       if (fs.existsSync(f)) fs.unlinkSync(f);
     } catch (_) { /* non bloquant */ }
+  }
+
+  // Migration : ancien carnet flights.jsonl (un vol/ligne) → fichiers individuels.
+  migrateLogbookToIndividualFiles(logbookDir);
+}
+
+// Éclate l'ancien logbook/flights.jsonl en fichiers individuels « NNNN_DEP-ARR.json »
+// (cf. logbookFileName), puis archive le .jsonl en .bak pour ne pas le re-migrer.
+// Idempotent : no-op si flights.jsonl est absent (déjà migré ou jamais créé).
+// La numérotation reprend après le plus grand numéro déjà présent dans le dossier.
+function migrateLogbookToIndividualFiles(logbookDir) {
+  try {
+    const jsonlPath = path.join(logbookDir, 'flights.jsonl');
+    if (!fs.existsSync(jsonlPath)) return;
+    const text = fs.readFileSync(jsonlPath, 'utf-8');
+    let seq = maxLogbookSeq(logbookDir);
+    let migrated = 0;
+    for (const line of text.split('\n')) {
+      if (!line.trim()) continue;
+      let flight;
+      try { flight = JSON.parse(line); } catch (_) { continue; }
+      seq += 1;
+      flight.seq = seq;
+      const depIcao = flight.departure ? flight.departure.icao : '';
+      const arrIcao = flight.arrival ? flight.arrival.icao : '';
+      const fileName = logbookFileName(seq, depIcao, arrIcao);
+      fs.writeFileSync(path.join(logbookDir, fileName), JSON.stringify(flight, null, 2), 'utf-8');
+      migrated += 1;
+    }
+    // Archive l'original (sauvegarde + évite la re-migration au prochain démarrage).
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    fs.renameSync(jsonlPath, path.join(logbookDir, `flights.jsonl.migrated-${stamp}.bak`));
+    console.log(`[Logbook] Migration : ${migrated} vol(s) éclaté(s) en fichiers individuels.`);
+  } catch (err) {
+    console.error('[Logbook] Migration KO :', err);
   }
 }
 
@@ -1418,19 +1453,22 @@ function broadcastLogbookConfirmCancel(payload) {
   });
 }
 
-// Lit Documents/NavXpressVFR/logbook/flights.jsonl en mémoire (utilisé
-// par une future modale Historique). Renvoie [] si le fichier est absent.
+// Lit tous les fichiers de vol individuels « NNNN_DEP-ARR.json » du dossier
+// Documents/NavXpressVFR/logbook/ (utilisé par la modale Carnet de vol). Le tri
+// est fait côté renderer. Renvoie [] si aucun vol. Les fichiers corrompus et
+// les .bak (anciens flights.jsonl archivés) sont ignorés.
 ipcMain.handle('logbook-historique', async () => {
   try {
     ensureNavXpressDirs();
     const { logbookDir } = getNavXpressDirs();
-    const filePath = path.join(logbookDir, 'flights.jsonl');
-    if (!fs.existsSync(filePath)) return { ok: true, flights: [] };
-    const text = fs.readFileSync(filePath, 'utf-8');
+    if (!fs.existsSync(logbookDir)) return { ok: true, flights: [] };
     const flights = [];
-    for (const line of text.split('\n')) {
-      if (!line) continue;
-      try { flights.push(JSON.parse(line)); } catch (_) { /* ligne corrompue ignorée */ }
+    for (const name of fs.readdirSync(logbookDir)) {
+      if (!/^\d+_.*\.json$/i.test(name)) continue;
+      try {
+        const text = fs.readFileSync(path.join(logbookDir, name), 'utf-8');
+        flights.push(JSON.parse(text));
+      } catch (_) { /* fichier corrompu ignoré */ }
     }
     return { ok: true, flights };
   } catch (err) {
@@ -1675,6 +1713,8 @@ ipcMain.handle('simconnect-connecter', async () => {
     handle.addToDataDefinition(SC_TRACK_DEF_ID, 'GROUND VELOCITY',         'knots',          SCDataType.FLOAT64);
     handle.addToDataDefinition(SC_TRACK_DEF_ID, 'PLANE ALT ABOVE GROUND',  'feet',           SCDataType.FLOAT64);
     handle.addToDataDefinition(SC_TRACK_DEF_ID, 'BRAKE PARKING POSITION',  'Bool',           SCDataType.INT32);
+    handle.addToDataDefinition(SC_TRACK_DEF_ID, 'AIRSPEED INDICATED',      'knots',          SCDataType.FLOAT64);
+    handle.addToDataDefinition(SC_TRACK_DEF_ID, 'PLANE ALTITUDE',          'feet',           SCDataType.FLOAT64);
     handle.requestDataOnSimObject(
       SC_TRACK_REQ_ID,
       SC_TRACK_DEF_ID,
@@ -1758,13 +1798,15 @@ ipcMain.handle('simconnect-connecter', async () => {
           const gs       = data.data.readFloat64();
           const altAgl   = data.data.readFloat64();
           const parkBrake = data.data.readInt32() !== 0;
+          const kias     = data.data.readFloat64();
+          const amsl     = data.data.readFloat64();
           // Verrou « mode difficile » : diffusé indépendamment du carnet de vol.
           broadcastFlightAirborne(!onGround);
           if (_logbookEngine) {
             _logbookEngine.feedTracking({
               onGround, eng1, eng2, lat, lon,
               groundSpeedKt: gs, altAglFt: altAgl, parkingBrake: parkBrake,
-              simLocal: _lastSimLocal,
+              kiasKt: kias, amslFt: amsl, simLocal: _lastSimLocal,
             });
             // Synchronise le sampling SimConnect avec la décision du moteur.
             _setLandingSamplingSC(handle, _logbookEngine.shouldSampleLanding());
@@ -2067,6 +2109,12 @@ app.whenReady().then(() => {
     getAircraftInfo: () => _aircraftInfo,
     // Résolution départ/arrivée par ICAO du plan (1er / dernier waypoint).
     resolveAirport: resolveAirportByCode,
+    // Élévation du terrain (ft) à (lat, lon) pour le profil vertical du tracé.
+    // lireElevation renvoie des mètres (ou null si dataset relief absent).
+    elevationAt: (lat, lon) => {
+      const m = lireElevation(lat, lon);
+      return Number.isFinite(m) ? m * 3.28084 : null;
+    },
     emit: (channel, payload) => {
       if (channel === 'logbook-state')        broadcastLogbookState(payload);
       else if (channel === 'landing-result')  broadcastLandingResult(payload);
