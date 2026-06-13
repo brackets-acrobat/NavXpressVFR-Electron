@@ -358,7 +358,7 @@ function initDirectTo() {
       code: target.code,
       name: target.name,
       pattern: !!target.pattern,
-      // Atterrissage d'urgence : sim.js joue urgence_xx.wav à l'arrivée.
+      // Atterrissage d'urgence : sim.js joue urgence_xx.mp3 à l'arrivée.
       emergency: !!target.emergency,
     };
     _directToReturnLegIndex = activeLegIndex;

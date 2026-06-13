@@ -31,6 +31,15 @@
   const _soundQueue = [];
   let _soundPlaying = false;
 
+  // Volume global (0..1) appliqué sur chaque audio juste avant lecture, lu en
+  // direct depuis les options → un changement de glissière s'applique au
+  // prochain son sans recharger.
+  function _applyVolume(audioEl) {
+    const v = (window.appOptions && typeof window.appOptions.soundVolume === 'number')
+      ? window.appOptions.soundVolume : 1;
+    audioEl.volume = Math.max(0, Math.min(1, v));
+  }
+
   function _jouerSon(audioEl) {
     if (!audioEl) return;
     _soundQueue.push(audioEl);
@@ -61,6 +70,7 @@
 
     try {
       audioEl.currentTime = 0;
+      _applyVolume(audioEl); // volume global (0..1,5), lu en direct à chaque lecture
       const p = audioEl.play();
       if (p && typeof p.catch === 'function') {
         p.catch(err => {

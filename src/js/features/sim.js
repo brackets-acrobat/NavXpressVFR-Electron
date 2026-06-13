@@ -137,7 +137,7 @@ function initSim() {
   // Alerte sonore de proximité waypoint
   //   Reçoit la position de l'avion toutes les 5 s depuis MSFS,
   //   calcule la distance au point d'arrivée du leg actif et
-  //   joue waypoint_fr.wav / waypoint_en.wav dans le rayon waypoint
+  //   joue waypoint_fr.mp3 / waypoint_en.mp3 dans le rayon waypoint
   //   (1,5 NM mode normal / 1,0 NM mode difficile).
   // ----------------------------------------------------------
   // Rayons de proximité — deux jeux de valeurs selon le mode de navigation
@@ -159,22 +159,22 @@ function initSim() {
   const PATTERN_RADIUS_NM = 2;
   // Précharge des fichiers audio (situés dans src/sounds/)
   const _wpSounds = {
-    fr: new Audio('sounds/waypoint_fr.wav'),
-    en: new Audio('sounds/waypoint_en.wav'),
+    fr: new Audio('sounds/waypoint_fr.mp3'),
+    en: new Audio('sounds/waypoint_en.mp3'),
   };
-  const _arrivalSound = new Audio('sounds/cuckoo.wav'); // joué à l'arrivée finale (langue-agnostique)
+  const _arrivalSound = new Audio('sounds/cuckoo.mp3'); // joué à l'arrivée finale (langue-agnostique)
   const _devSounds = {
-    fr: new Audio('sounds/deviation_fr.wav'),
-    en: new Audio('sounds/deviation_en.wav'),
+    fr: new Audio('sounds/deviation_fr.mp3'),
+    en: new Audio('sounds/deviation_en.mp3'),
   };
   const _touchSounds = {
-    fr: new Audio('sounds/touch_fr.wav'),
-    en: new Audio('sounds/touch_en.wav'),
+    fr: new Audio('sounds/touch_fr.mp3'),
+    en: new Audio('sounds/touch_en.mp3'),
   };
   // Annonce vocale d'atterrissage d'urgence (Direct To urgence, arrivée à 1,5 NM).
   const _urgenceSounds = {
-    fr: new Audio('sounds/urgence_fr.wav'),
-    en: new Audio('sounds/urgence_en.wav'),
+    fr: new Audio('sounds/urgence_fr.mp3'),
+    en: new Audio('sounds/urgence_en.mp3'),
   };
   _urgenceSounds.fr.preload = 'auto';
   _urgenceSounds.en.preload = 'auto';

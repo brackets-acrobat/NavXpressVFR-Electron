@@ -41,6 +41,9 @@ const DEFAULT_OPTIONS = {
   finalArrivalEnabled: true,
   logbookEnabled: true,
   precisionEnabled: true,
+  // Volume global des sons (0..1). Appliqué par sounds.js sur chaque audio
+  // juste avant lecture. Défaut 1 → comportement inchangé.
+  soundVolume: 1,
   // Mode de navigation : false = normal (marges actuelles), true = difficile
   // (marges réduites). Lu par sim.js : couloir de déviation 1,2→0,7 NM et rayon
   // waypoint/toucher/bascule de leg 1,5→1,0 NM. Défaut false → comportement inchangé.
@@ -165,6 +168,39 @@ function initOptions() {
     });
   }
 
+  // Glissière "Volume des sons" (0..100 % → soundVolume 0..1).
+  const sliderVolume = document.getElementById('opt-sound-volume');
+  const sliderVolumeVal = document.getElementById('opt-sound-volume-val');
+  function _syncVolumeUI() {
+    if (!sliderVolume) return;
+    const cur = (typeof window.appOptions.soundVolume === 'number') ? window.appOptions.soundVolume : 1;
+    const pct = Math.round(cur * 100);
+    sliderVolume.value = String(pct);
+    if (sliderVolumeVal) sliderVolumeVal.textContent = pct + ' %';
+  }
+  // Élément d'aperçu réutilisé (un seul → évite d'accumuler des nœuds Web Audio
+  // côté sounds.js quand on déplace souvent la glissière).
+  let _previewAudio = null;
+  if (sliderVolume) {
+    _syncVolumeUI();
+    // input : maj live de la valeur en mémoire + affichage (PAS d'écriture disque
+    // à chaque pixel — sounds.js lit window.appOptions.soundVolume en direct).
+    sliderVolume.addEventListener('input', () => {
+      const pct = parseInt(sliderVolume.value, 10) || 0;
+      window.appOptions.soundVolume = pct / 100;
+      if (sliderVolumeVal) sliderVolumeVal.textContent = pct + ' %';
+    });
+    // change (relâchement) : persistance + aperçu sonore au nouveau volume.
+    sliderVolume.addEventListener('change', () => {
+      const pct = parseInt(sliderVolume.value, 10) || 0;
+      setAppOption('soundVolume', pct / 100);
+      if (typeof _jouerSon === 'function') {
+        if (!_previewAudio) _previewAudio = new Audio('sounds/waypoint_en.mp3');
+        _jouerSon(_previewAudio);
+      }
+    });
+  }
+
   // Toggle "Navigation en mode difficile".
   // NB : la checkbox est verrouillée (disabled) en vol — voir le listener
   // onFlightAirborne plus bas (impossible de changer de mode une fois décollé).
@@ -223,6 +259,7 @@ function initOptions() {
     if (cbLogbook) cbLogbook.checked = !!window.appOptions.logbookEnabled;
     if (cbPrecision) cbPrecision.checked = !!window.appOptions.precisionEnabled;
     if (cbHardNav) cbHardNav.checked = !!window.appOptions.hardNavigationMode;
+    _syncVolumeUI();
     optionsOverlay.classList.add('visible');
   }
 

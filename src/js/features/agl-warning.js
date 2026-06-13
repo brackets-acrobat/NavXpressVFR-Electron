@@ -55,8 +55,8 @@ function initAglWarning() {
   const RELEVANT_TYPES = new Set(['large_airport', 'medium_airport', 'small_airport']);
 
   const _sounds = {
-    fr: new Audio('sounds/500agl_fr.wav'),
-    en: new Audio('sounds/500agl_en.wav'),
+    fr: new Audio('sounds/500agl_fr.mp3'),
+    en: new Audio('sounds/500agl_en.mp3'),
   };
   _sounds.fr.preload = 'auto';
   _sounds.en.preload = 'auto';

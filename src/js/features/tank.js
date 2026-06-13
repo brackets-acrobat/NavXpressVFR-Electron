@@ -35,8 +35,8 @@ function initTank() {
 
   // Préchargement des sons de changement de réservoir
   const _tankSounds = {
-    fr: new Audio('sounds/change_res_fr.wav'),
-    en: new Audio('sounds/change_res_en.wav'),
+    fr: new Audio('sounds/change_res_fr.mp3'),
+    en: new Audio('sounds/change_res_en.mp3'),
   };
   _tankSounds.fr.preload = 'auto';
   _tankSounds.en.preload = 'auto';

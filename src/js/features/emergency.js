@@ -19,7 +19,7 @@
 // aéroports (dotés d'une piste) les plus proches de l'avion. Le choix validé
 // déclenche un Direct To « urgence » (window.activerDirectToUrgence, défini par
 // direct-to.js) → guidage + avertissements de déviation + annonce vocale
-// urgence_xx.wav à l'arrivée (sim.js).
+// urgence_xx.mp3 à l'arrivée (sim.js).
 // Doit être appelé APRÈS initDirectTo (utilise window.activerDirectToUrgence).
 // ============================================================
 

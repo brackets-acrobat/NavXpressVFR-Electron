@@ -1164,6 +1164,13 @@
                     <span data-i18n="optFinalArrival">Son d'arrivée finale (cuckoo)</span>
                     <input type="checkbox" class="toggle-switch" id="opt-final-arrival">
                 </label>
+                <div class="layer-toggle-row" style="align-items:center;">
+                    <span data-i18n="optSoundVolume">Volume des sons</span>
+                    <span style="display:flex; align-items:center; gap:8px;">
+                        <input type="range" id="opt-sound-volume" min="0" max="100" step="5" style="width:120px;">
+                        <span id="opt-sound-volume-val" style="min-width:40px; text-align:right; color:#00bcd4;">100 %</span>
+                    </span>
+                </div>
                 <label class="layer-toggle-row" for="opt-logbook-enabled">
                     <span data-i18n="optLogbook">Logbook automatique</span>
                     <input type="checkbox" class="toggle-switch" id="opt-logbook-enabled">
