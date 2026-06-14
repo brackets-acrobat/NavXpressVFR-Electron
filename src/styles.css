@@ -202,6 +202,25 @@ body {
     line-height: 1;
 }
 
+/* Vitesse sol : à gauche de la rose, symétrique du panneau vent.
+   Même couleur / taille / police que les valeurs cap et vent. */
+#ground-speed-panel {
+    position: absolute;
+    /* Centré dans l'espace libre à gauche de la rose :
+       milieu de [bord gauche du contenu (16px) ; bord gauche de la rose (50% − 90px)]
+       = 25% − 37px. */
+    left: calc(25% - 37px);
+    top: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: #00bcd4;
+    font-size: 24px;
+    font-weight: bold;
+    font-family: 'Consolas', 'Monaco', monospace;
+    line-height: 1;
+    white-space: nowrap;
+}
+
 #wind-rose-source {
     color: #666;
     font-size: 10px;

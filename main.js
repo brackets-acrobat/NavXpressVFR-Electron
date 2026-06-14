@@ -1705,6 +1705,14 @@ ipcMain.handle('simconnect-connecter', async () => {
       'feet',
       SCDataType.FLOAT64
     );
+    // Vitesse sol (knots) — affichée à gauche de la rose des vents,
+    // rafraîchie côté renderer toutes les 10 s.
+    handle.addToDataDefinition(
+      SC_POS_DEF_ID,
+      'GROUND VELOCITY',
+      'knots',
+      SCDataType.FLOAT64
+    );
 
     // Souscription : 1 update toutes les 5 secondes pour la position
     handle.requestDataOnSimObject(
@@ -1802,7 +1810,8 @@ ipcMain.handle('simconnect-connecter', async () => {
           const lat = data.data.readFloat64();
           const lon = data.data.readFloat64();
           const altAgl = data.data.readFloat64();
-          broadcastPosition({ lat, lon, altAgl });
+          const groundSpeedKt = data.data.readFloat64();
+          broadcastPosition({ lat, lon, altAgl, groundSpeedKt });
         } else if (data.requestID === SC_TRACK_REQ_ID) {
           // Lecture exactement dans l'ordre de la définition ci-dessus
           const onGround = data.data.readInt32() !== 0;

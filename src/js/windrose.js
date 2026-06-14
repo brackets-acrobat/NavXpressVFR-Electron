@@ -57,3 +57,46 @@ function updateWindRose(dir, speed, source) {
     }
   }
 }
+
+// -------------------------------------------------------
+// Vitesse sol (GS) — affichée à gauche de la rose des vents.
+// La valeur arrive avec le flux 'donnees-position' (~5 s) ; on ne
+// rafraîchit l'affichage que toutes les 10 s (échantillonnage de la
+// dernière valeur reçue). Format : « GS : xx kt ».
+// -------------------------------------------------------
+let _lastGroundSpeedKt = null;
+
+function _renderGroundSpeed() {
+  const el = document.getElementById('ground-speed-value');
+  if (!el) return;
+  el.textContent = Number.isFinite(_lastGroundSpeedKt)
+    ? Math.round(Math.max(0, _lastGroundSpeedKt)).toString()
+    : '--';
+}
+
+function initGroundSpeed() {
+  if (!window.api) return;
+
+  // Mémorise la dernière vitesse sol reçue (sans toucher l'affichage).
+  if (typeof window.api.onDonneesPosition === 'function') {
+    window.api.onDonneesPosition((pos) => {
+      if (pos && Number.isFinite(pos.groundSpeedKt)) {
+        _lastGroundSpeedKt = pos.groundSpeedKt;
+      }
+    });
+  }
+
+  // À la déconnexion : plus de données → on repasse à « -- ».
+  if (typeof window.api.onStatusSimConnect === 'function') {
+    window.api.onStatusSimConnect((status) => {
+      if (status && status.state === 'disconnected') {
+        _lastGroundSpeedKt = null;
+        _renderGroundSpeed();
+      }
+    });
+  }
+
+  // Rafraîchissement de l'affichage toutes les 10 secondes.
+  _renderGroundSpeed();
+  setInterval(_renderGroundSpeed, 10000);
+}

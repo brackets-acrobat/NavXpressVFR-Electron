@@ -64,6 +64,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   initValidation();
   initSim();
 
+  // Vitesse sol (GS) à gauche de la rose des vents : s'abonne à onDonneesPosition,
+  // rafraîchit l'affichage toutes les 10 s.
+  initGroundSpeed();
+
   // Horloges du simulateur (UTC + locale) dans le header : s'abonne à onSimTime.
   initSimClock();
 
