@@ -396,10 +396,28 @@ function initFlightPlanIO() {
         return;
       }
 
+      // Nom de fichier suggéré : « ICAO départ - ICAO arrivée » (espace-tiret-
+      // espace). On prend les codes ICAO saisis ; à défaut, l'ident du 1er /
+      // dernier waypoint. Le main ajoute l'extension .navxpv et assainit.
+      const _icaoOuIdent = (inputId, wp) => {
+        const el = document.getElementById(inputId);
+        const v = el && el.value ? el.value.trim() : '';
+        if (v) return v;
+        return (wp && (wp.ident || wp.name) || '').trim();
+      };
+      const _depIcao = _icaoOuIdent('input-icao-dep', flightPlan[0]);
+      const _arrIcao = _icaoOuIdent('input-icao-arr', flightPlan[flightPlan.length - 1]);
+      let suggestedName = '';
+      if (_depIcao && _arrIcao) suggestedName = `${_depIcao} - ${_arrIcao}`;
+      else if (_depIcao) suggestedName = _depIcao;
+      else if (_arrIcao) suggestedName = _arrIcao;
+
       const planData = {
         format: 'navxpv',
         version: 1,
         savedAt: new Date().toISOString(),
+        // Nom de fichier proposé dans la boîte d'enregistrement (sans extension).
+        suggestedName,
         config: {
           trueAirspeed: parseFloat(document.getElementById('input-vp').value) || 90,
           windDirection: parseFloat(document.getElementById('input-wind-dir').value) || 0,

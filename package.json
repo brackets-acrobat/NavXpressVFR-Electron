@@ -1,6 +1,6 @@
 {
   "name": "navxpressvfr-electron",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "Logiciel de navigation VFR et tracking temps réel pour Flight Simulator",
   "main": "main.js",
   "author": "NavXpressVFR",
@@ -21,6 +21,7 @@
   ],
   "dependencies": {
     "@electron/get": "^5.0.0",
+    "docx": "^9.7.1",
     "electron-updater": "^6.8.9",
     "extract-zip": "^2.0.1",
     "fs-extra": "^11.3.5",

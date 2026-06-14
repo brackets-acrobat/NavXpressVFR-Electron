@@ -92,6 +92,7 @@ const TRANSLATIONS = {
     vertProfileNoData: "Relief indisponible (données GLOBE introuvables dans Documents/NavXpressVFR/elevation).",
     vertProfileTerrain: "Relief",
     vertProfilePlanned: "Alt. prévue",
+    vertProfileGround: "Sol",
     profileToggleTooltip: "Afficher / Masquer le profil vertical",
     departure: "DÉPART",
 
@@ -578,6 +579,7 @@ const TRANSLATIONS = {
     vertProfileNoData: "Terrain unavailable (GLOBE data not found in Documents/NavXpressVFR/elevation).",
     vertProfileTerrain: "Terrain",
     vertProfilePlanned: "Planned alt.",
+    vertProfileGround: "Ground",
     profileToggleTooltip: "Show / Hide the vertical profile",
     departure: "DEPARTURE",
 

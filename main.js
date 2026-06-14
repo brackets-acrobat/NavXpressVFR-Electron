@@ -523,15 +523,27 @@ ipcMain.handle('sauvegarder-navxpv', async (event, planData) => {
   ensureNavXpressDirs();
   const { fpDir } = getNavXpressDirs();
   const win = BrowserWindow.fromWebContents(event.sender);
+
+  // Nom suggéré « ICAO départ - ICAO arrivée.navxpv ». On assainit le nom de
+  // base (caractères interdits dans un nom de fichier Windows) et on retombe
+  // sur 'flightplan' si rien d'exploitable.
+  let baseName = (planData && typeof planData.suggestedName === 'string')
+    ? planData.suggestedName.replace(/[<>:"/\\|?*\x00-\x1F]/g, '').trim()
+    : '';
+  if (!baseName) baseName = 'flightplan';
+
   const result = await dialog.showSaveDialog(win, {
     title: "Sauvegarder le plan de vol (.navxpv)",
-    defaultPath: path.join(fpDir, 'flightplan.navxpv'),
+    defaultPath: path.join(fpDir, `${baseName}.navxpv`),
     filters: [{ name: 'Plan de vol NavXpressVFR', extensions: ['navxpv'] }]
   });
 
   if (result.canceled || !result.filePath) return { ok: false, canceled: true };
 
   try {
+    // suggestedName n'est qu'une aide à l'enregistrement → ne pas l'écrire dans
+    // le fichier sauvegardé.
+    if (planData && typeof planData === 'object') delete planData.suggestedName;
     // planData est un objet JS reçu du renderer — on le sérialise ici en JSON
     const json = JSON.stringify(planData, null, 2);
     fs.writeFileSync(result.filePath, json, 'utf-8');
@@ -1032,6 +1044,19 @@ ipcMain.handle('details-aeroport', async (event, ident) => {
 
 // 9. Renvoie tous les aéroports (large/medium/small) dans une bounding box.
 //    bbox = { south, west, north, east } en degrés décimaux.
+// Teste si une longitude stockée en [-180,180] est visible dans la plage
+// horizontale [west, east] de la carte. Robuste au défilement infini : `west`
+// et `east` peuvent sortir de [-180,180] (autre « copie » du monde) et/ou
+// franchir l'antiméridien (forme west>east). On raisonne en delta angulaire
+// depuis `west`, modulo 360.
+function _lonDansPlage(lon, west, east) {
+  let width = east - west;
+  if (width < 0) width += 360;       // bbox renvoyée sous forme « west>east »
+  if (width >= 360) return true;     // monde entier visible
+  const delta = (((lon - west) % 360) + 360) % 360; // 0..360 vers l'est
+  return delta <= width;
+}
+
 ipcMain.handle('aeroports-bbox', async (event, bbox) => {
   if (!bbox) return { ok: false, reason: 'no-bbox' };
   if (!_oaAirportsList) {
@@ -1039,15 +1064,10 @@ ipcMain.handle('aeroports-bbox', async (event, bbox) => {
     if (!ok) return { ok: false, reason: 'no-data' };
   }
   const { south, west, north, east } = bbox;
-  const crossDateline = west > east; // bbox traverse l'antiméridien
   const out = [];
   for (const a of _oaAirportsList) {
     if (a.lat < south || a.lat > north) continue;
-    if (crossDateline) {
-      if (a.lon < west && a.lon > east) continue;
-    } else {
-      if (a.lon < west || a.lon > east) continue;
-    }
+    if (!_lonDansPlage(a.lon, west, east)) continue;
     out.push(a);
   }
   return { ok: true, airports: out };
@@ -1106,15 +1126,10 @@ ipcMain.handle('navaids-bbox', async (event, bbox) => {
     if (!ok) return { ok: false, reason: 'no-data' };
   }
   const { south, west, north, east } = bbox;
-  const crossDateline = west > east;
   const out = [];
   for (const n of _oaNavaidsList) {
     if (n.lat < south || n.lat > north) continue;
-    if (crossDateline) {
-      if (n.lon < west && n.lon > east) continue;
-    } else {
-      if (n.lon < west || n.lon > east) continue;
-    }
+    if (!_lonDansPlage(n.lon, west, east)) continue;
     out.push(n);
   }
   return { ok: true, navaids: out };

@@ -26,7 +26,10 @@
 // et non Asie/Europe/Atlantique). Les longitudes STOCKÉES dans flightPlan
 // restent normalisées dans [-180, 180] (la donnée n'est pas modifiée).
 // -------------------------------------------------------
-function _unwrapLons(points) {
+// Déroulage de base : chaque point ramené à moins de 180° du précédent, en
+// ancrant le PREMIER point sur sa longitude canonique [-180,180]. Une route
+// qui ne franchit pas l'antiméridien reste donc entièrement dans [-180,180].
+function _unwrapLonsBase(points) {
   const out = [];
   let prev = null;
   for (const p of points) {
@@ -40,6 +43,53 @@ function _unwrapLons(points) {
   }
   return out;
 }
+
+// Décalage global (multiple de 360) à appliquer aux longitudes d'affichage de
+// la route pour qu'elle soit dessinée sur la « copie » du monde actuellement
+// visible. NÉCESSAIRE uniquement quand la route franchit l'antiméridien : sinon
+// `worldCopyJump` ramène le centre dans [-180,180] où la route canonique est
+// déjà visible, et on renvoie 0 (→ comportement strictement identique à avant).
+// Pour une route franchissant la ligne, ses vertices > 180° resteraient sinon
+// dessinés sur une copie voisine, donc invisibles (Leaflet ne rabat pas les
+// polylignes sur la copie visible). On recentre alors la route près du centre
+// courant de la carte. Dernier décalage appliqué mémorisé pour le redraw au pan.
+let _lastAppliedRouteShift = 0;
+function _fullPlanDisplayShift() {
+  if (typeof map === 'undefined' || !map || typeof map.getCenter !== 'function') return 0;
+  if (!Array.isArray(flightPlan) || flightPlan.length < 2) return 0;
+  const base = _unwrapLonsBase(flightPlan);
+  let min = Infinity, max = -Infinity;
+  for (const l of base) { if (l < min) min = l; if (l > max) max = l; }
+  if (min >= -180 && max <= 180) return 0; // ne franchit pas l'antiméridien
+  const mid = (min + max) / 2;
+  const centerLng = map.getCenter().lng;
+  return Math.round((centerLng - mid) / 360) * 360;
+}
+
+// Déroulage d'affichage = base + décalage vers la copie visible (0 si route
+// normale). Toutes les fonctions d'affichage (segments, marqueurs, fitBounds)
+// passent par ici, donc restent cohérentes entre elles.
+function _unwrapLons(points) {
+  const base = _unwrapLonsBase(points);
+  const shift = _fullPlanDisplayShift();
+  return shift ? base.map(l => l + shift) : base;
+}
+
+// Redessine la géométrie de la route si la copie du monde visible a changé
+// (pan par-delà l'antiméridien). Appelé sur `moveend` depuis map.js. Pour une
+// route normale, le décalage vaut toujours 0 → aucun redraw, aucun surcoût.
+function _reanchorRouteIfNeeded() {
+  if (typeof map === 'undefined' || !map) return;
+  if (!Array.isArray(flightPlan) || flightPlan.length < 2) return;
+  const shift = _fullPlanDisplayShift();
+  if (shift === _lastAppliedRouteShift) return; // copie inchangée
+  marqueursCarte.forEach(m => { try { map.removeLayer(m); } catch (_) { } });
+  marqueursCarte = [];
+  flightPlan.forEach((p, idx) => tracerPointVisuel(p, idx));
+  redessinerSegments();
+  if (typeof updateAllWaypointLabels === 'function') updateAllWaypointLabels();
+}
+if (typeof window !== 'undefined') window._reanchorRouteIfNeeded = _reanchorRouteIfNeeded;
 
 // Longitude d'affichage (déroulée) du point d'index idx de flightPlan.
 function _displayLon(idx) {
@@ -124,6 +174,11 @@ function redessinerSegments() {
 
     segmentsCarte.push(seg);
   }
+
+  // Mémorise la copie du monde sur laquelle la route vient d'être dessinée,
+  // pour que le redraw au pan (_reanchorRouteIfNeeded) ne se déclenche qu'au
+  // changement effectif de copie.
+  _lastAppliedRouteShift = _fullPlanDisplayShift();
 }
 
 // -------------------------------------------------------

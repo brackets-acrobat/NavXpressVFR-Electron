@@ -22,7 +22,14 @@
 function initMap() {
   // --- 1. Initialisation de la carte Leaflet ---
   try {
-    map = L.map('map-container', { zoomControl: true }).setView([46.5, 2.5], 6);
+    // worldCopyJump : la carte défile toujours à l'infini (tuiles répétées),
+    // mais au relâchement du pan le centre interne est ramené dans [-180,180].
+    // Conséquence : tous les overlays posés à leur longitude réelle (repères
+    // visuels, POI, cercle de portée, cible Direct To, route…) redeviennent
+    // visibles après franchissement de l'antiméridien, au lieu de rester sur la
+    // copie « d'origine » du monde. Complémentaire du décalage lonVersVue()
+    // appliqué aux aéroports/navaids (redessinés à chaque déplacement).
+    map = L.map('map-container', { zoomControl: true, worldCopyJump: true }).setView([46.5, 2.5], 6);
 
     // --- Couches de fond ---
     const layerSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -282,6 +289,15 @@ function initMap() {
       `;
     }
 
+    // Décale une longitude stockée en [-180,180] vers la « copie » du monde
+    // actuellement visible (défilement infini de Leaflet). `west` = bord ouest
+    // courant de la carte (peut sortir de [-180,180]). Sans ce décalage, un
+    // marqueur serait dessiné sur la copie d'origine et resterait invisible dès
+    // qu'on franchit l'antiméridien. Même formule de delta que côté main.
+    function lonVersVue(lon, west) {
+      return west + ((((lon - west) % 360) + 360) % 360);
+    }
+
     async function refreshAirportsOnMap() {
       if (!map) return;
       // Aéroports, hélistations et hydrobases partagent la même requête bbox
@@ -335,7 +351,7 @@ function initMap() {
         // Chaque type respecte son propre toggle
         const enabled = isHeli ? heliportsEnabled : isSeaplane ? seaplanesEnabled : airportsEnabled;
         if (!enabled) continue;
-        const marker = L.marker([a.lat, a.lon], {
+        const marker = L.marker([a.lat, lonVersVue(a.lon, bbox.west)], {
           icon: makeAirportIcon(a),
           interactive: true,
           keyboard: false,
@@ -505,7 +521,7 @@ function initMap() {
 
       navaidsLayer.clearLayers();
       for (const n of res.navaids) {
-        const marker = L.marker([n.lat, n.lon], {
+        const marker = L.marker([n.lat, lonVersVue(n.lon, bbox.west)], {
           icon: makeNavaidIcon(n),
           interactive: true,
           keyboard: false,
@@ -550,6 +566,13 @@ function initMap() {
 
     // Bascule labels permanents / hover des waypoints à chaque changement de zoom
     map.on('zoomend', updateAllWaypointLabels);
+
+    // Antiméridien + worldCopyJump : si la route franchit la ligne de changement
+    // de date, la redessiner sur la copie du monde visible quand l'utilisateur
+    // pan d'une copie à l'autre. No-op pour les routes normales (cf. carte-segments).
+    map.on('moveend', () => {
+      if (typeof window._reanchorRouteIfNeeded === 'function') window._reanchorRouteIfNeeded();
+    });
 
     // --- Bouton déroulant des CALQUES (Espaces aériens / Aéroports / Navaids) ---
     // Placé à gauche du dropdown des fonds de carte (grâce au row-reverse CSS sur topright)

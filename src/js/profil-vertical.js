@@ -23,6 +23,7 @@
 // Profil vertical : relief GLOBE + altitude prévue le long du plan de vol
 // -------------------------------------------------------
 let _lastProfilVertical = null; // dernier résultat (pour re-rendu au resize)
+let _vpRender = null;           // géométrie du dernier rendu (pour le survol relief)
 
 async function mettreAJourProfilVertical() {
   const host = document.getElementById('vertical-profile-graph');
@@ -51,7 +52,14 @@ async function mettreAJourProfilVertical() {
   }
 
   _lastProfilVertical = res;
+  _renderProfilInto(host, res);
+}
+
+// Rend le SVG dans le hôte puis (ré)attache le survol du relief. Centralisé car
+// appelé au rafraîchissement ET au resize (innerHTML écrase le tooltip).
+function _renderProfilInto(host, res) {
   host.innerHTML = renderProfileSVG(res);
+  _attachProfileHover(host);
 }
 
 // Construit le SVG du profil (terrain rempli + altitude prévue + noms waypoints).
@@ -74,6 +82,9 @@ function renderProfileSVG(res) {
 
   const X = d => m.l + (d / totalNM) * iw;
   const Y = ft => m.t + ih - (Math.max(0, ft) / yMax) * ih;
+
+  // Géométrie mémorisée pour le tooltip « altitude sol » au survol du relief.
+  _vpRender = { W, H, m, iw, ih, yMax, totalNM, dist, terr };
 
   // Aire du relief (du sol jusqu'à la courbe terrain)
   let area = `M ${X(dist[0]).toFixed(1)} ${Y(0).toFixed(1)}`;
@@ -131,13 +142,81 @@ function grid_legend(W, m) {
     + `<text x="${lx + 88}" y="${y + 3}" font-size="9" fill="#999">${escapeHtml(t('vertProfilePlanned'))}</text>`;
 }
 
+// Altitude du relief (ft) interpolée linéairement à la distance d (NM), à partir
+// des points (dist[], terr[]) du dernier rendu.
+function _terrainAtDist(d) {
+  if (!_vpRender) return null;
+  const { dist, terr } = _vpRender;
+  if (!dist || !terr || dist.length === 0) return null;
+  const n = dist.length;
+  if (d <= dist[0]) return terr[0];
+  if (d >= dist[n - 1]) return terr[n - 1];
+  for (let i = 1; i < n; i++) {
+    if (d <= dist[i]) {
+      const span = (dist[i] - dist[i - 1]) || 1;
+      const f = (d - dist[i - 1]) / span;
+      return terr[i - 1] + (terr[i] - terr[i - 1]) * f;
+    }
+  }
+  return terr[n - 1];
+}
+
+// (Ré)attache le tooltip « altitude sol » : il apparaît quand le curseur survole
+// la zone verte du relief (sous le sommet du relief, dans la zone de tracé).
+function _attachProfileHover(host) {
+  if (!host || !_vpRender) return;
+  const svg = host.querySelector('svg');
+  if (!svg) return;
+
+  host.style.position = 'relative';
+
+  // Tooltip recréé à chaque rendu (innerHTML a écrasé l'éventuel précédent).
+  const tip = document.createElement('div');
+  tip.className = 'vp-terrain-tooltip';
+  tip.style.cssText = 'position:absolute;display:none;pointer-events:none;z-index:5;'
+    + 'background:#1a1a1a;border:1px solid #7d9b53;color:#cfe0b4;font-size:11px;'
+    + 'padding:2px 6px;border-radius:4px;white-space:nowrap;transform:translate(-50%,-130%);';
+  host.appendChild(tip);
+
+  const { W, H, m, iw, ih, yMax, totalNM } = _vpRender;
+  const Yof = ft => m.t + ih - (Math.max(0, ft) / yMax) * ih;
+
+  function onMove(ev) {
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    // Coordonnées dans le repère du viewBox (W×H)
+    const sx = (ev.clientX - rect.left) * (W / rect.width);
+    const sy = (ev.clientY - rect.top) * (H / rect.height);
+    if (sx < m.l || sx > W - m.r) { tip.style.display = 'none'; return; }
+
+    let d = ((sx - m.l) / iw) * totalNM;
+    if (d < 0) d = 0; else if (d > totalNM) d = totalNM;
+    const elev = _terrainAtDist(d);
+    if (elev == null) { tip.style.display = 'none'; return; }
+
+    const terrainTopY = Yof(elev);
+    const bottomY = m.t + ih;
+    // Uniquement sur la zone verte : entre le sommet du relief et le bas du tracé.
+    if (sy < terrainTopY - 1 || sy > bottomY + 1) { tip.style.display = 'none'; return; }
+
+    tip.textContent = `${t('vertProfileGround')} ${Math.round(elev)} ft`;
+    tip.style.left = ((sx / W) * rect.width) + 'px';
+    tip.style.top = ((terrainTopY / H) * rect.height) + 'px';
+    tip.style.display = 'block';
+  }
+  function onLeave() { tip.style.display = 'none'; }
+
+  svg.addEventListener('mousemove', onMove);
+  svg.addEventListener('mouseleave', onLeave);
+}
+
 // Re-rendu (depuis le cache) quand la largeur de la fenêtre change
 let _vpResizeTO = null;
 window.addEventListener('resize', () => {
   clearTimeout(_vpResizeTO);
   _vpResizeTO = setTimeout(() => {
     const host = document.getElementById('vertical-profile-graph');
-    if (host && _lastProfilVertical) host.innerHTML = renderProfileSVG(_lastProfilVertical);
+    if (host && _lastProfilVertical) _renderProfilInto(host, _lastProfilVertical);
   }, 200);
 });
 
