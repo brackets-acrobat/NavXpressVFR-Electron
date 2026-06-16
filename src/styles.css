@@ -131,6 +131,17 @@ body {
     text-align: center;
 }
 
+#vertical-profile-graph .vp-summary {
+    color: #bbb;
+    font-size: 11px;
+    padding: 2px 2px 5px;
+}
+
+#vertical-profile-graph .vp-summary-warn {
+    color: #ff7b72;
+    font-weight: 600;
+}
+
 #right-panel {
     flex: 0 0 40%;
     min-width: 480px;

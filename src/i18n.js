@@ -93,6 +93,11 @@ const TRANSLATIONS = {
     vertProfileTerrain: "Relief",
     vertProfilePlanned: "Alt. prévue",
     vertProfileGround: "Sol",
+    vertProfilePlannedFull: "Altitude prévue",
+    vertProfileSafe: "Alt. sécu",
+    vertProfileSafeFull: "Altitude de sécurité",
+    vertProfileSummit: "Sommet route",
+    vertProfileMinMargin: "Marge mini",
     profileToggleTooltip: "Afficher / Masquer le profil vertical",
     departure: "DÉPART",
 
@@ -606,6 +611,11 @@ const TRANSLATIONS = {
     vertProfileTerrain: "Terrain",
     vertProfilePlanned: "Planned alt.",
     vertProfileGround: "Ground",
+    vertProfilePlannedFull: "Planned altitude",
+    vertProfileSafe: "Safe alt.",
+    vertProfileSafeFull: "Safe altitude",
+    vertProfileSummit: "Route summit",
+    vertProfileMinMargin: "Min. clearance",
     profileToggleTooltip: "Show / Hide the vertical profile",
     departure: "DEPARTURE",
 

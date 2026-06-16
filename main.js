@@ -405,9 +405,17 @@ ipcMain.handle('profil-vertical', async (event, payload) => {
   let stepKm = 1.0;
   if (totalKm / stepKm > MAX_SAMPLES) stepKm = totalKm / MAX_SAMPLES;
 
-  const dist = [], terrain = [], planned = [], waypoints = [];
+  // --- Altitude minimale de sécurité (par leg) ---
+  // Relief de référence = MAX du relief sous l'axe du leg. Marge ajoutée selon la
+  // rugosité : plaine +1000 ft, montagne +1500 ft (montagne = amplitude max−min > 1500 ft).
+  const MARGIN_PLAIN_FT = 1000;
+  const MARGIN_MOUNTAIN_FT = 1500;
+  const MOUNTAIN_AMPL_FT = 1500;
+
+  const dist = [], terrain = [], planned = [], waypoints = [], legs = [];
   let cumNM = 0;
   let gotData = false; // au moins une tuile GLOBE a pu être lue
+  let summitFt = -Infinity, summitD = 0; // point culminant sous l'axe sur toute la route
   waypoints.push({ d: 0, name: (wps[0].name || '') });
 
   for (let i = 1; i < wps.length; i++) {
@@ -415,18 +423,46 @@ ipcMain.handle('profil-vertical', async (event, payload) => {
     const legNM = legDist[i];
     const altFt = (legAlt[i] != null ? legAlt[i] : ALT_FALLBACK);
     const nSeg = Math.max(1, Math.round((legNM * 1.852) / stepKm));
+    let legMax = -Infinity, legMin = Infinity; // relief (ft) sous l'axe sur ce leg
     // s commence à 0 sur le 1er leg (inclut le point de départ), sinon à 1
     // pour ne pas dupliquer le waypoint partagé entre deux legs.
     for (let s = (i === 1 ? 0 : 1); s <= nSeg; s++) {
       const f = s / nSeg;
       const lat = a.lat + (b.lat - a.lat) * f;
       const lon = a.lon + (b.lon - a.lon) * f;
-      let e = lireElevation(lat, lon);
-      if (e == null) e = 0; else gotData = true;
-      dist.push(cumNM + legNM * f);
-      terrain.push(e * M2FT);
+      const eRaw = lireElevation(lat, lon); // m ou null
+      if (eRaw != null) gotData = true;
+      const terrFt = (eRaw == null ? 0 : eRaw) * M2FT;
+      const d = cumNM + legNM * f;
+      dist.push(d);
+      terrain.push(terrFt);
       planned.push(altFt);
+      if (terrFt > legMax) legMax = terrFt;
+      if (terrFt < legMin) legMin = terrFt;
+      if (terrFt > summitFt) { summitFt = terrFt; summitD = d; }
     }
+    // Classification + altitude de sécurité du leg (relief sous l'axe)
+    const terrMaxFt = (legMax === -Infinity ? 0 : legMax);
+    const amplitudeFt = (legMax === -Infinity ? 0 : legMax - legMin);
+    const mountain = amplitudeFt > MOUNTAIN_AMPL_FT;
+    const marginFt = mountain ? MARGIN_MOUNTAIN_FT : MARGIN_PLAIN_FT;
+    // Altitude de sécurité arrondie à la centaine de pieds SUPÉRIEURE (ex. 1723 → 1800).
+    const safeAltFt = Math.ceil((terrMaxFt + marginFt) / 100) * 100;
+    legs.push({
+      i,
+      dStart: cumNM,
+      dEnd: cumNM + legNM,
+      name0: (a.name || ''),
+      name1: (b.name || ''),
+      terrMaxFt: Math.round(terrMaxFt),
+      amplitudeFt: Math.round(amplitudeFt),
+      mountain,
+      marginFt,
+      safeAltFt,
+      plannedFt: Math.round(altFt),
+      breach: altFt < safeAltFt,            // alt. prévue sous l'alt. de sécurité
+      clearanceFt: Math.round(altFt - terrMaxFt), // marge réelle au-dessus du relief
+    });
     cumNM += legNM;
     waypoints.push({ d: cumNM, name: (b.name || '') });
   }
@@ -434,7 +470,21 @@ ipcMain.handle('profil-vertical', async (event, payload) => {
   // Aucune tuile lisible → relief indisponible (dossier elevation absent)
   if (!gotData) return { ok: false, reason: 'no-data', dist: [], terrain: [], planned: [], waypoints: [] };
 
-  return { ok: true, totalNM, dist, terrain, planned, waypoints };
+  // Récapitulatif : sommet de la route + marge mini réelle au-dessus du relief.
+  let minMargin = null;
+  for (const lg of legs) {
+    if (minMargin == null || lg.clearanceFt < minMargin.clearanceFt) {
+      minMargin = { clearanceFt: lg.clearanceFt, name0: lg.name0, name1: lg.name1, breach: lg.breach };
+    }
+  }
+  const summary = {
+    summitFt: Math.round(summitFt === -Infinity ? 0 : summitFt),
+    summitD,
+    minMargin,
+    anyBreach: legs.some(lg => lg.breach),
+  };
+
+  return { ok: true, totalNM, dist, terrain, planned, waypoints, legs, summary };
 });
 
 // 1ter. Données d'élévation déjà présentes ?
