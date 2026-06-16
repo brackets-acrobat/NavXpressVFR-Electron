@@ -1946,6 +1946,81 @@ h1 {
     display: block;
 }
 
+/* Tour de piste — modale (listes de boutons radio) + étiquettes de branches */
+.tp-radio-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 160px;
+    overflow-y: auto;
+    padding: 2px 0;
+}
+
+.tp-radio-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #ddd;
+}
+
+.tp-radio-row input {
+    accent-color: #FF00FF;
+    flex: 0 0 auto;
+}
+
+/* Étiquette de branche posée sur la carte (divIcon). className remplace la
+   classe Leaflet par défaut → pas de cadre blanc. Point d'ancrage 0×0 ;
+   le texte est centré + tourné via .tp-branch-label-text. */
+.tp-branch-label {
+    background: none;
+    border: none;
+}
+
+.tp-branch-label-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: center center;
+    color: #ff0000;
+    font-size: 24px;
+    font-weight: 700;
+    white-space: nowrap;
+    pointer-events: none;
+    text-shadow: none;
+    -webkit-text-stroke: 2px #fff;
+    paint-order: stroke fill;
+}
+
+/* Altitude du tour de piste affichée au centre du rectangle, alignée sur les
+   grands côtés (rouge, 18 px). */
+.tp-alt-label-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: center center;
+    color: #ff0000;
+    font-size: 20px;
+    font-weight: 700;
+    white-space: nowrap;
+    pointer-events: none;
+    /* Contour blanc 1 px SANS éclaircir le rouge : le trait (2 px, centré sur le
+       bord) est peint d'abord, puis le remplissage rouge par-dessus → il ne
+       reste que ~1 px de blanc à l'extérieur, rouge plein préservé. */
+    -webkit-text-stroke: 2px #fff;
+    paint-order: stroke fill;
+}
+
+/* Pointe de flèche (sens du tour de piste) posée au milieu d'une branche. */
+.tp-branch-arrow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: center center;
+    pointer-events: none;
+}
+
 /* Champ déclinaison : lecture seule, cyan */
 .input-decl {
     max-width: 6ch;

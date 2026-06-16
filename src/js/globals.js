@@ -79,6 +79,13 @@ let flanquements = [];
 // reconsultables hors-ligne. Géré par poi-overpass.js ; vidé par reset.js.
 let poisRemarquables = [];
 
+// --- Tours de piste (clic droit sur un aéroport → "Tracer un tour de piste") ---
+// Circuits tracés en ligne magenta sur la carte. Chaque entrée conserve les
+// paramètres saisis (piste/QFU, sens, longueurs, altitude) + objets Leaflet
+// (_layers, non sérialisés). Conservés pour l'étape 2 (annonces vocales).
+// Géré par traffic-pattern.js ; vidé par reset.js.
+let toursDePiste = [];
+
 // État connexion simulateur (hissé en Phase 2 — Lot C ; lu par sim, Direct To, toggle i18n)
 let _simState = 'disconnected';   // disconnected | connecting | connected
 

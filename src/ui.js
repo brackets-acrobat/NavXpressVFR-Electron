@@ -116,6 +116,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // window.effacerTousCerclesPortee (reset). Doit suivre initMap.
   initRangeCircle();
 
+  // Tour de piste : clic droit sur un aéroport → modale (piste/sens/longueurs/
+  // altitude) → tracé magenta + caps des branches. Expose
+  // window.demanderTourDePiste (menu contextuel) et window.effacerTousToursDePiste
+  // (reset). Doit suivre initMap.
+  initTrafficPattern();
+
+  // Annonces vocales du tour de piste (étape 2 : "vent arrière"). S'abonne à
+  // onDonneesPosition et lit le global `toursDePiste`. Doit suivre initTrafficPattern.
+  initTrafficPatternVoice();
+
   // Bouton 🔍 « Rechercher » en bas à gauche de la carte. Doit être appelé
   // APRÈS initMap (contrôle Leaflet) — utilise window.api.rechercheModale.
   initMapSearch();

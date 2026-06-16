@@ -38,6 +38,7 @@ const DEFAULT_OPTIONS = {
   routeDeviationEnabled: true,
   waypointAnnounceEnabled: true,
   touchAnnounceEnabled: true,
+  downwindAnnounceEnabled: true,
   finalArrivalEnabled: true,
   logbookEnabled: true,
   precisionEnabled: true,
@@ -136,6 +137,15 @@ function initOptions() {
     cbTouchAnnounce.checked = !!window.appOptions.touchAnnounceEnabled;
     cbTouchAnnounce.addEventListener('change', () => {
       setAppOption('touchAnnounceEnabled', cbTouchAnnounce.checked);
+    });
+  }
+
+  // Toggle "Annonce de vent arrière (tour de piste)"
+  const cbDownwindAnnounce = document.getElementById('opt-downwind-announce');
+  if (cbDownwindAnnounce) {
+    cbDownwindAnnounce.checked = !!window.appOptions.downwindAnnounceEnabled;
+    cbDownwindAnnounce.addEventListener('change', () => {
+      setAppOption('downwindAnnounceEnabled', cbDownwindAnnounce.checked);
     });
   }
 
@@ -255,6 +265,7 @@ function initOptions() {
     if (cbRouteDeviation) cbRouteDeviation.checked = !!window.appOptions.routeDeviationEnabled;
     if (cbWaypointAnnounce) cbWaypointAnnounce.checked = !!window.appOptions.waypointAnnounceEnabled;
     if (cbTouchAnnounce) cbTouchAnnounce.checked = !!window.appOptions.touchAnnounceEnabled;
+    if (cbDownwindAnnounce) cbDownwindAnnounce.checked = !!window.appOptions.downwindAnnounceEnabled;
     if (cbFinalArrival) cbFinalArrival.checked = !!window.appOptions.finalArrivalEnabled;
     if (cbLogbook) cbLogbook.checked = !!window.appOptions.logbookEnabled;
     if (cbPrecision) cbPrecision.checked = !!window.appOptions.precisionEnabled;

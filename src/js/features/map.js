@@ -365,6 +365,21 @@ function initMap() {
         });
         // Click → ouvrir la modale d'informations détaillées
         marker.on('click', () => ouvrirInfoAeroport(a.ident));
+        // Clic droit → menu contextuel avec le contexte { airport }. L'item
+        // "Tracer un tour de piste" décide de sa visibilité (cf. map-context-menu).
+        // On stoppe la propagation pour ne pas aussi ouvrir le menu carte générique.
+        marker.on('contextmenu', (e) => {
+          if (e.originalEvent) {
+            e.originalEvent.preventDefault();
+            e.originalEvent.stopPropagation();
+          }
+          L.DomEvent.stopPropagation(e);
+          const ox = (e.originalEvent && e.originalEvent.pageX) || 0;
+          const oy = (e.originalEvent && e.originalEvent.pageY) || 0;
+          if (typeof window.ouvrirMenuContextuelCarte === 'function') {
+            window.ouvrirMenuContextuelCarte(e.latlng, ox, oy, { airport: a });
+          }
+        });
         marker.addTo(isHeli ? heliportsLayer : isSeaplane ? seaplanesLayer : airportsLayer);
       }
     }

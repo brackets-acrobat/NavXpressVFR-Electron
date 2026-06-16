@@ -138,6 +138,7 @@ function initFlightPlanIO() {
       supprimerSegmentsCarte();
       if (typeof window.effacerTousReperesVisuels === 'function') window.effacerTousReperesVisuels();
       if (typeof window.effacerTousPOI === 'function') window.effacerTousPOI();
+      if (typeof window.effacerTousToursDePiste === 'function') window.effacerTousToursDePiste();
 
       // Détecter vol local (départ == arrivée) → triangle équilatéral ~10 nm
       const isVolLocal = (icaoDep === icaoArr) ||
@@ -228,6 +229,7 @@ function initFlightPlanIO() {
         supprimerSegmentsCarte();
         if (typeof window.effacerTousReperesVisuels === 'function') window.effacerTousReperesVisuels();
       if (typeof window.effacerTousPOI === 'function') window.effacerTousPOI();
+      if (typeof window.effacerTousToursDePiste === 'function') window.effacerTousToursDePiste();
 
         for (let i = 0; i < waypointsXML.length; i++) {
           const wp = waypointsXML[i];
@@ -379,6 +381,12 @@ function initFlightPlanIO() {
           window.chargerPOISnapshot(data.pois);
         }
 
+        // Tours de piste (clic droit aéroport) — reconstruits depuis les seuils
+        // et la déclinaison stockés (pas de requête).
+        if (typeof window.chargerToursDePiste === 'function') {
+          window.chargerToursDePiste(data.trafficPatterns);
+        }
+
         mettreAJourLogDeNav();
       } catch (err) {
         console.error('Erreur chargement .navxpv:', err);
@@ -457,6 +465,9 @@ function initFlightPlanIO() {
         // Points remarquables OSM chargés le long de la route (cache « par plan »
         // → reconsultables hors-ligne sans nouvelle requête Overpass).
         pois: (typeof window.serialiserPOI === 'function' ? window.serialiserPOI() : []),
+        // Tours de piste tracés (clic droit aéroport) — paramètres + seuils +
+        // déclinaison ; reconstruits au chargement sans requête.
+        trafficPatterns: (typeof window.serialiserToursDePiste === 'function' ? window.serialiserToursDePiste() : []),
       };
 
       const result = await window.api.sauvegarderNavXpv(planData);

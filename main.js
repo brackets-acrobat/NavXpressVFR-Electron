@@ -1713,8 +1713,28 @@ ipcMain.handle('simconnect-connecter', async () => {
       'knots',
       SCDataType.FLOAT64
     );
+    // Cap vrai (degrés) — utilisé par l'annonce vocale "vent arrière" du tour de
+    // piste (comparaison au cap vrai de la branche). Ordre = lecture.
+    handle.addToDataDefinition(
+      SC_POS_DEF_ID,
+      'PLANE HEADING DEGREES TRUE',
+      'degrees',
+      SCDataType.FLOAT64
+    );
+    // Altitude MSL (pieds) — pour la hauteur au-dessus de l'aérodrome (MSL −
+    // élévation terrain), indépendante du relief survolé, utilisée par l'annonce
+    // "vent arrière" (l'AGL fausse la comparaison au-dessus du relief). Dernier.
+    handle.addToDataDefinition(
+      SC_POS_DEF_ID,
+      'PLANE ALTITUDE',
+      'feet',
+      SCDataType.FLOAT64
+    );
 
-    // Souscription : 1 update toutes les 5 secondes pour la position
+    // Souscription : 1 update par seconde pour la position. Cadence relevée de
+    // 5 s → 1 s pour fiabiliser la détection "vent arrière" du tour de piste
+    // (fenêtre courte). L'afficheur de vitesse sol garde son propre rythme
+    // (setInterval 10 s) et l'alerte AGL est temporisée → pas d'effet de bord.
     handle.requestDataOnSimObject(
       SC_POS_REQ_ID,
       SC_POS_DEF_ID,
@@ -1722,7 +1742,7 @@ ipcMain.handle('simconnect-connecter', async () => {
       SCPeriod.SECOND,
       0,   // flags
       0,   // origin
-      4    // interval : 4 secondes sautées → 1 update toutes les 5 s
+      0    // interval 0 → 1 update chaque seconde
     );
 
     // --- Groupe TRACKING (carnet de vol) — toutes les 2 s ---
@@ -1811,7 +1831,9 @@ ipcMain.handle('simconnect-connecter', async () => {
           const lon = data.data.readFloat64();
           const altAgl = data.data.readFloat64();
           const groundSpeedKt = data.data.readFloat64();
-          broadcastPosition({ lat, lon, altAgl, groundSpeedKt });
+          const headingTrue = data.data.readFloat64();
+          const altMsl = data.data.readFloat64();
+          broadcastPosition({ lat, lon, altAgl, groundSpeedKt, headingTrue, altMsl });
         } else if (data.requestID === SC_TRACK_REQ_ID) {
           // Lecture exactement dans l'ordre de la définition ci-dessus
           const onGround = data.data.readInt32() !== 0;

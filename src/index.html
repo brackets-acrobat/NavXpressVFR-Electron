@@ -1163,6 +1163,10 @@
                     <span data-i18n="optTouchAnnounce">Annonce d'arrivée pour tour de piste / touché</span>
                     <input type="checkbox" class="toggle-switch" id="opt-touch-announce">
                 </label>
+                <label class="layer-toggle-row" for="opt-downwind-announce">
+                    <span data-i18n="optDownwindAnnounce">Annonce de vent arrière (tour de piste)</span>
+                    <input type="checkbox" class="toggle-switch" id="opt-downwind-announce">
+                </label>
                 <label class="layer-toggle-row" for="opt-final-arrival">
                     <span data-i18n="optFinalArrival">Son d'arrivée finale (cuckoo)</span>
                     <input type="checkbox" class="toggle-switch" id="opt-final-arrival">
@@ -1508,6 +1512,59 @@
         </div>
     </div>
 
+    <!-- Modale Tour de piste — clic droit sur un aéroport -->
+    <div id="traffic-pattern-overlay" class="modal-overlay">
+        <div class="modal-popup" style="width:440px;">
+            <h3 data-i18n="tpTitle"
+                style="margin:0 0 4px 0; color:#FF0000; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Tracer un tour de piste</h3>
+            <p id="tp-subtitle" style="color:#888; font-size:12px; margin:0 0 12px 0;"></p>
+
+            <div class="input-group" style="margin-bottom:10px;">
+                <label data-i18n="tpRunwayLabel">Piste / QFU</label>
+                <div id="tp-runway-list" class="tp-radio-list"></div>
+            </div>
+
+            <div class="input-group" style="margin-bottom:10px;">
+                <label data-i18n="tpHandLabel">Sens du circuit</label>
+                <div class="tp-radio-list">
+                    <label class="tp-radio-row"><input type="radio" name="tp-hand" value="left" checked>
+                        <span data-i18n="tpHandLeft">Main gauche</span></label>
+                    <label class="tp-radio-row"><input type="radio" name="tp-hand" value="right">
+                        <span data-i18n="tpHandRight">Main droite</span></label>
+                </div>
+            </div>
+
+            <div class="input-group" style="margin-bottom:10px;">
+                <label for="tp-upwind" data-i18n="tpUpwindLabel">Longueur montée initiale (NM)</label>
+                <input type="text" id="tp-upwind" inputmode="decimal" maxlength="5"
+                    autocomplete="off" spellcheck="false" placeholder="0.5">
+            </div>
+            <div class="input-group" style="margin-bottom:10px;">
+                <label for="tp-crosswind" data-i18n="tpCrosswindLabel">Longueur vent traversier (NM)</label>
+                <input type="text" id="tp-crosswind" inputmode="decimal" maxlength="5"
+                    autocomplete="off" spellcheck="false" placeholder="0.5">
+            </div>
+            <div class="input-group" style="margin-bottom:10px;">
+                <label for="tp-final" data-i18n="tpFinalLabel">Longueur de finale (NM)</label>
+                <input type="text" id="tp-final" inputmode="decimal" maxlength="5"
+                    autocomplete="off" spellcheck="false" placeholder="0.7">
+            </div>
+            <div class="input-group" style="margin-bottom:6px;">
+                <label for="tp-altitude" data-i18n="tpAltLabel">Altitude tour de piste (ft)</label>
+                <input type="text" id="tp-altitude" inputmode="numeric" maxlength="4"
+                    autocomplete="off" spellcheck="false" placeholder="1000">
+            </div>
+
+            <div id="tp-error" class="field-error"></div>
+            <div class="create-flight-actions">
+                <button id="btn-tp-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
+                <button id="btn-tp-validate" class="btn-primary" data-i18n="btnValidate"
+                    style="background:#FF0000; border-color:#FF0000;">Valider</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modale "Ajouter un repère visuel" — nom + description -->
     <div id="repere-add-overlay" class="modal-overlay">
         <div class="modal-popup" style="width:420px;">
@@ -1793,6 +1850,8 @@
     <script src="js/features/poi-overpass.js"></script>
     <script src="js/features/uncertainty-circle.js"></script>
     <script src="js/features/range-circle.js"></script>
+    <script src="js/features/traffic-pattern.js"></script>
+    <script src="js/features/traffic-pattern-voice.js"></script>
     <script src="js/features/agl-warning.js"></script>
     <script src="js/features/map-search.js"></script>
     <script src="js/features/map-coords.js"></script>

@@ -40,6 +40,7 @@ function initReset() {
     if (typeof window.effacerTousFlanquements === 'function') window.effacerTousFlanquements();
     if (typeof window.effacerTousPOI === 'function') window.effacerTousPOI();
     if (typeof window.effacerTousCerclesPortee === 'function') window.effacerTousCerclesPortee();
+    if (typeof window.effacerTousToursDePiste === 'function') window.effacerTousToursDePiste();
     actualiserAffichageDeclinaison();
     mettreAJourLogDeNav();
   }

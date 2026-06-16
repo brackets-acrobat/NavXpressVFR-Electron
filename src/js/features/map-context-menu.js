@@ -74,6 +74,40 @@ const MAP_CONTEXT_MENU_ITEMS = [
     },
   },
   {
+    id: 'traffic-pattern',
+    labelKey: 'mapCtxTrafficPattern',
+    // Clic droit sur un aéroport (pas une hélistation : pas de piste).
+    visible: () => !!(_mapCtxContext && _mapCtxContext.airport
+      && _mapCtxContext.airport.type !== 'heliport'),
+    action: (latlng, context) => {
+      if (context && context.airport && typeof window.demanderTourDePiste === 'function') {
+        window.demanderTourDePiste(context.airport);
+      }
+    },
+  },
+  {
+    id: 'traffic-pattern-delete',
+    labelKey: 'mapCtxTrafficPatternDelete',
+    // Clic droit sur la ligne d'un tour de piste → supprime CELUI-CI.
+    visible: () => !!(_mapCtxContext && _mapCtxContext.trafficPattern),
+    action: (latlng, context) => {
+      if (context && context.trafficPattern && typeof window.supprimerTourDePiste === 'function') {
+        window.supprimerTourDePiste(context.trafficPattern);
+      }
+    },
+  },
+  {
+    id: 'traffic-pattern-clear',
+    labelKey: 'mapCtxTrafficPatternClear',
+    // Ne s'affiche que si au moins un tour de piste est tracé.
+    visible: () => (typeof window.aDesToursDePiste === 'function') && window.aDesToursDePiste(),
+    action: () => {
+      if (typeof window.effacerTousToursDePiste === 'function') {
+        window.effacerTousToursDePiste();
+      }
+    },
+  },
+  {
     id: 'direct-to',
     labelKey: 'mapCtxDirectTo',
     action: (latlng) => {
