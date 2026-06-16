@@ -61,25 +61,44 @@ function initUpdater() {
     show();
   }
 
-  window.api.onUpdateAvailable((data) => {
+  // Handlers nommés : réutilisés par les events live ET par le rejeu de l'état
+  // courant (cas où le main a déjà émis l'event avant que ces écouteurs existent).
+  function onAvailable(data) {
     _version = (data && data.version) || '';
     showDownloading();
-  });
-
-  window.api.onUpdateProgress((data) => {
+  }
+  function onProgress(data) {
     // N'affiche la progression que si la bannière « prête » n'est pas déjà là.
     if (actionBtn.style.display === 'none') showDownloading(data && data.percent);
-  });
-
-  window.api.onUpdateDownloaded((data) => {
+  }
+  function onDownloaded(data) {
     if (data && data.version) _version = data.version;
     showReady();
-  });
-
-  window.api.onUpdateError(() => {
+  }
+  function onError() {
     // Échec réseau / pas de release : on n'embête pas l'utilisateur.
     hide();
-  });
+  }
+
+  window.api.onUpdateAvailable(onAvailable);
+  window.api.onUpdateProgress(onProgress);
+  window.api.onUpdateDownloaded(onDownloaded);
+  window.api.onUpdateError(onError);
+
+  // Rattrapage : si un event a déjà été émis avant l'attache des écouteurs
+  // ci-dessus (course au démarrage : MAJ trouvée/téléchargée très vite), on
+  // rejoue le dernier état mémorisé côté main.
+  if (typeof window.api.getUpdateState === 'function') {
+    Promise.resolve(window.api.getUpdateState()).then((state) => {
+      if (!state) return;
+      switch (state.channel) {
+        case 'update-available': onAvailable(state.payload); break;
+        case 'update-progress': onProgress(state.payload); break;
+        case 'update-downloaded': onDownloaded(state.payload); break;
+        case 'update-error': onError(); break;
+      }
+    }).catch(() => {});
+  }
 
   actionBtn.addEventListener('click', () => {
     actionBtn.disabled = true;

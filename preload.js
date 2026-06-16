@@ -116,6 +116,8 @@ contextBridge.exposeInMainWorld('api', {
         ipcRenderer.on('update-error', listener);
         return () => ipcRenderer.removeListener('update-error', listener);
     },
+    // Renderer → main : état courant de la MAJ (rattrape un event émis trop tôt).
+    getUpdateState: () => ipcRenderer.invoke('update-get-state'),
     // Renderer → main : « Redémarrer et installer ».
     installUpdate: () => ipcRenderer.invoke('update-install'),
 

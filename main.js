@@ -355,6 +355,8 @@ function createWindow() {
       }
     }, reste);
   });
+
+  return mainWindow;
 }
 
 // --- ÉCOUTEURS INTER-PROCESSUS (IPC) ---
@@ -2139,13 +2141,22 @@ ipcMain.handle('extraire-navaids-msfs', async (event) => {
 // N'a de sens qu'en version packagée (NSIS) : en développement, electron-updater
 // n'a pas de métadonnées à comparer → on court-circuite.
 // ============================================================
+// Dernier état du cycle de MAJ relayé au renderer. Mémorisé pour le rejouer si le
+// renderer attache ses écouteurs APRÈS l'émission (course au démarrage) : voir le
+// handler IPC 'update-get-state' interrogé par initUpdater().
+let _lastUpdateState = null;
+
 function broadcastUpdate(channel, payload) {
+  _lastUpdateState = { channel, payload };
   BrowserWindow.getAllWindows().forEach(w => {
     try { w.webContents.send(channel, payload); } catch (_) {}
   });
 }
 
-function setupAutoUpdater() {
+// Le renderer (initUpdater) le réclame au montage pour rattraper un event déjà émis.
+ipcMain.handle('update-get-state', () => _lastUpdateState);
+
+function setupAutoUpdater(win) {
   if (!app.isPackaged) {
     console.log('[update] Désactivé en développement (app non packagée).');
     return;
@@ -2174,10 +2185,16 @@ function setupAutoUpdater() {
     broadcastUpdate('update-error', { message: err && err.message ? err.message : String(err) });
   });
 
-  // Vérification au démarrage (le téléchargement suit automatiquement).
-  autoUpdater.checkForUpdates().catch(err => {
+  // Vérification au démarrage (le téléchargement suit automatiquement). On attend
+  // que le renderer ait fini de charger — donc posé ses écouteurs de MAJ — pour ne
+  // pas émettre 'update-available'/'update-downloaded' dans le vide (course au
+  // démarrage). Le rejeu via 'update-get-state' est le filet complémentaire.
+  const startCheck = () => autoUpdater.checkForUpdates().catch(err => {
     console.warn('[update] checkForUpdates a échoué :', err && err.message ? err.message : err);
   });
+  const wc = win && win.webContents;
+  if (wc && wc.isLoading()) wc.once('did-finish-load', startCheck);
+  else startCheck();
 }
 
 // Déclenché par le renderer (bouton « Redémarrer et installer »).
@@ -2257,13 +2274,13 @@ app.whenReady().then(() => {
     }
   );
 
-  createWindow();
+  const mainWindow = createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 
-  // Vérifie les mises à jour (GitHub Releases) une fois la fenêtre créée.
-  setupAutoUpdater();
+  // Vérifie les mises à jour (GitHub Releases) une fois le renderer chargé.
+  setupAutoUpdater(mainWindow);
 });
 
 app.on('window-all-closed', () => {
