@@ -3031,6 +3031,27 @@ tr:hover {
     color: #00bcd4;
 }
 
+/* Dropdown « Taille d'aéroport » : glissière de longueur de piste minimale */
+.airport-size-dropdown {
+    min-width: 210px;
+    padding: 12px 14px;
+}
+
+.airport-size-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #00bcd4;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.airport-size-slider {
+    width: 100%;
+    accent-color: #00bcd4;
+    cursor: pointer;
+    margin: 0;
+}
+
 .btn-poi-load {
     display: block;
     width: 100%;

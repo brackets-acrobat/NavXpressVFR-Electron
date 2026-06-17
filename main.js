@@ -946,6 +946,7 @@ function buildFromMsfs() {
         name: runway.le_ident + (runway.he_ident ? '/' + runway.he_ident : ''),
         headingDegT: runway.headingDegT,
         length_ft: runway.length_ft,
+        surface: runway.surface || '',
       } : null,
     });
   }

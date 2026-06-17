@@ -144,6 +144,9 @@ function initMap() {
     let heliportsEnabled = _opt.layerHeliportsEnabled !== false;
     let seaplanesEnabled = _opt.layerSeaplanesEnabled !== false;
     let navaidsEnabled = _opt.layerNavaidsEnabled !== false;
+    // Filtre « Taille d'aéroport » : longueur de piste minimale (ft) des
+    // aéroports terrestres affichés. 0 ft (= mini glissière) = tout afficher.
+    let airportMinRunwayFt = Number.isFinite(_opt.airportMinRunwayFt) ? _opt.airportMinRunwayFt : 0;
 
     function creerCoucheEspacesAeriens() {
       // La clé API est injectée automatiquement par le main process via
@@ -199,6 +202,20 @@ function initMap() {
       heliport: 6,
       seaplane_base: 6,
     };
+
+    // Couleurs du marqueur carte d'un aéroport selon la surface de sa piste
+    // principale. Même logique que le schéma (info-modals.rwySurfaceStyle) mais
+    // teintes vives, lisibles en petit cercle. Revêtu (asphalt/concrete/…) et
+    // surface absente → blanc/noir = aspect aéroport standard.
+    function surfaceMarkerColors(surface) {
+      const s = String(surface || '').toLowerCase();
+      if (/grass/.test(s)) return { fill: '#00d700', stroke: '#0a5e0a', line: '#0a5e0a' }; // herbe (short grass/grass) = vert
+      if (/dirt|gravel|sand|shale|coral|turf|earth|mud/.test(s)) return { fill: '#c07a00', stroke: '#5e3c00', line: '#5e3c00' }; // terre (dirt/gravel/sand/coral/shale/hard turf) = marron
+      if (/water/.test(s)) return { fill: '#2970ff', stroke: '#0a2a66', line: '#0d4d6e' }; // eau = bleu
+      if (/snow|ice/.test(s)) return { fill: '#33fff3', stroke: '#0a5e58', line: '#0a5e58' }; // neige/glace = cyan
+      if (/unknown/.test(s)) return { fill: '#9aa0a8', stroke: '#4b4f55', line: '#4b4f55' }; // surface inconnue = gris moyen
+      return { fill: '#fff', stroke: '#000', line: '#000' }; // revêtu / défaut = blanc
+    }
 
     // Construit l'icône SVG d'un aéroport (cercle + trait piste orienté)
     function makeAirportIcon(airport) {
@@ -256,12 +273,14 @@ function initMap() {
       // sur l'écran) → on soustrait 90° à la rotation.
       const lineExtent = r + 4;
       const rotation = heading - 90;
+      // Couleur du cercle + trait selon la surface de la piste principale.
+      const sc = surfaceMarkerColors(airport.runway && airport.runway.surface);
       const svg = `
         <svg viewBox="-${size / 2} -${size / 2} ${size} ${size}" width="${size}" height="${size}" style="overflow:visible;">
           ${hasRunway ? `<line x1="-${lineExtent}" y1="0" x2="${lineExtent}" y2="0"
-                stroke="#000" stroke-width="2.2" stroke-linecap="round"
+                stroke="${sc.line}" stroke-width="2.2" stroke-linecap="round"
                 transform="rotate(${rotation})"/>` : ''}
-          <circle cx="0" cy="0" r="${r}" fill="#fff" stroke="#000" stroke-width="1.6"/>
+          <circle cx="0" cy="0" r="${r}" fill="${sc.fill}" stroke="${sc.stroke}" stroke-width="1.6"/>
         </svg>
       `;
       return L.divIcon({
@@ -351,6 +370,10 @@ function initMap() {
         // Chaque type respecte son propre toggle
         const enabled = isHeli ? heliportsEnabled : isSeaplane ? seaplanesEnabled : airportsEnabled;
         if (!enabled) continue;
+        // Filtre « Taille d'aéroport » : masque les aéroports terrestres dont la
+        // piste principale est plus courte que le seuil (hélistations/hydrobases
+        // non concernées ; aéroport sans piste connue toujours affiché).
+        if (!isHeli && !isSeaplane && a.runway && a.runway.length_ft < airportMinRunwayFt) continue;
         const marker = L.marker([a.lat, lonVersVue(a.lon, bbox.west)], {
           icon: makeAirportIcon(a),
           interactive: true,
@@ -700,6 +723,63 @@ function initMap() {
       return wrapper;
     };
     btnLayersFilter.addTo(map);
+
+    // --- Bouton déroulant « Taille d'aéroport » (filtre longueur de piste min) ---
+    // Construit ici (accès closure à refreshAirportsOnMap / setAppOption) mais
+    // AJOUTÉ à la carte par ui.js APRÈS le cercle d'incertitude → apparaît à sa
+    // GAUCHE (corner topright en row-reverse). Glissière 100→15000 ft, pas 200 ft.
+    function addAirportSizeControl() {
+      const ctrl = L.control({ position: 'topright' });
+      ctrl.onAdd = function () {
+        const wrapper = L.DomUtil.create('div', 'layer-toggle-wrapper airport-size-wrapper');
+        L.DomEvent.disableClickPropagation(wrapper);
+        L.DomEvent.disableScrollPropagation(wrapper);
+
+        const btn = L.DomUtil.create('button', 'btn-layer-toggle', wrapper);
+        const dropdown = L.DomUtil.create('div', 'layer-dropdown airport-size-dropdown', wrapper);
+        dropdown.style.display = 'none';
+
+        const valLabel = L.DomUtil.create('div', 'airport-size-value', dropdown);
+        const slider = L.DomUtil.create('input', 'airport-size-slider', dropdown);
+        slider.type = 'range';
+        slider.min = '0';
+        slider.max = '15000';
+        slider.step = '200';
+        slider.value = String(airportMinRunwayFt);
+
+        function rebuild() {
+          btn.innerHTML = '<i class="ph-light ph-ruler"></i> '
+            + (currentLang === 'fr' ? "Taille d'aéroport" : 'Airport size') + ' ▾';
+          valLabel.textContent = (currentLang === 'fr' ? 'Piste min. : ' : 'Min. runway: ')
+            + airportMinRunwayFt + ' ft';
+        }
+        rebuild();
+        window._refreshAirportSizeDropdown = rebuild;
+
+        L.DomEvent.on(slider, 'click', e => e.stopPropagation());
+        L.DomEvent.on(slider, 'input', () => {
+          const v = parseInt(slider.value, 10);
+          airportMinRunwayFt = Number.isFinite(v) ? v : 0;
+          rebuild();
+          setAppOption('airportMinRunwayFt', airportMinRunwayFt);
+          refreshAirportsOnMap();
+        });
+
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          const wasOpen = dropdown.style.display !== 'none';
+          document.querySelectorAll('.layer-dropdown').forEach(d => { d.style.display = 'none'; });
+          dropdown.style.display = wasOpen ? 'none' : 'block';
+        });
+        document.addEventListener('click', e => {
+          if (!wrapper.contains(e.target)) dropdown.style.display = 'none';
+        });
+
+        return wrapper;
+      };
+      ctrl.addTo(map);
+    }
+    window._initAirportSizeFilter = addAirportSizeControl;
 
     console.log("Carte Leaflet initialisée avec succès.");
   } catch (mapError) {

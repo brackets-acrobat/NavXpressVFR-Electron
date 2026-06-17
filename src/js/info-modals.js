@@ -211,12 +211,13 @@ async function ouvrirInfoAeroport(ident) {
 // paved=true → revêtue (axe + piano keys) ; sinon surface naturelle.
 function rwySurfaceStyle(label) {
   const s = String(label || '').toLowerCase();
-  if (/grass|turf|forest/.test(s)) return { fill: '#34663a', edge: '#5c8a5f', paved: false }; // herbe = vert
-  if (/dirt|gravel|sand|shale|coral|earth|mud/.test(s)) return { fill: '#6e5436', edge: '#9a7b50', paved: false }; // terre = marron
+  if (/grass/.test(s)) return { fill: '#34663a', edge: '#5c8a5f', paved: false }; // herbe (short grass/grass) = vert
+  if (/dirt|gravel|sand|shale|coral|turf|earth|mud/.test(s)) return { fill: '#6e5436', edge: '#9a7b50', paved: false }; // terre (dirt/gravel/sand/coral/shale/hard turf) = marron
   if (/water/.test(s)) return { fill: '#2970ff', edge: '#7da6ff', paved: false }; // eau = bleu
-  if (/snow|ice/.test(s)) return { fill: '#aeb6bf', edge: '#dde3e9', paved: false }; // neige/glace
+  if (/snow|ice/.test(s)) return { fill: '#22b8cc', edge: '#8fe6f2', paved: false }; // neige/glace = cyan
+  if (!s || /unknown/.test(s)) return { fill: '#8a8f98', edge: '#c2c6cc', paved: false }; // surface inconnue = gris moyen
   // Par défaut : dur (concrete, asphalt, bitumin., tarmac, macadam, brick,
-  // steel mats, oil treated, planks, urban, inconnu…) → gris bitume.
+  // oil treated…) → gris bitume.
   return { fill: '#41464f', edge: '#cfd4db', paved: true };
 }
 

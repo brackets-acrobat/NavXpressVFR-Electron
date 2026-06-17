@@ -38,6 +38,8 @@ function initI18nToggle() {
       if (typeof window._refreshLayersDropdown === 'function') window._refreshLayersDropdown();
       // Rafraîchir le libellé du bouton « Cercle d'incertitude »
       if (typeof window._refreshUncertaintyBtn === 'function') window._refreshUncertaintyBtn();
+      // Rafraîchir le bouton/dropdown « Taille d'aéroport »
+      if (typeof window._refreshAirportSizeDropdown === 'function') window._refreshAirportSizeDropdown();
       // Rafraîchir le tooltip du bouton loupe « Rechercher »
       if (typeof window._refreshMapSearchBtn === 'function') window._refreshMapSearchBtn();
       // Rafraîchir le tooltip du badge de pause (état dans la nouvelle langue)

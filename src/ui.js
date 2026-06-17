@@ -111,6 +111,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Doit être appelé APRÈS initMap (le bouton est un contrôle Leaflet).
   initUncertaintyCircle();
 
+  // Filtre « Taille d'aéroport » : bouton déroulant carte (glissière longueur de
+  // piste min). Ajouté APRÈS le cercle d'incertitude pour apparaître à sa GAUCHE
+  // (corner topright en row-reverse). Défini par initMap (closure carte).
+  if (typeof window._initAirportSizeFilter === 'function') window._initAirportSizeFilter();
+
   // Cercle de portée : clic droit carte → modale rayon NM → cercle + point
   // central magenta. Expose window.ouvrirModaleCerclePortee (menu contextuel) et
   // window.effacerTousCerclesPortee (reset). Doit suivre initMap.
