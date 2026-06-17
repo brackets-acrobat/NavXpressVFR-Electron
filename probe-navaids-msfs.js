@@ -371,7 +371,7 @@ if (require.main === module) {
           `\r[${Math.round(p.elapsed)}s/${SECONDS}s] ` +
           `VOR:${p.vor}  NDB:${p.ndb}  WPT:${p.wpt}  ` +
           `(brut ${p.rawTotal}, ${p.ratePerSec.toFixed(0)}/s)  ` +
-          `${p.haveFix ? 'fix avion ✓' : 'fix avion …'}   `
+          `${p.haveFix ? 'fix avion' : 'fix avion …'}   `
         );
         break;
       case 'exception':
@@ -409,12 +409,12 @@ if (require.main === module) {
       console.log('  Lecture : "uniques" = navaids distincts vus ; "brut" = total reçu');
       console.log('  (doublons = ré-émissions) ; "rayon max" = portée effective de');
       console.log('  l\'API list autour de l\'avion ; freq/magvar = complétude des champs.');
-      if (s.file) console.log(`\n✅ Détail écrit : ${s.file}`);
+      if (s.file) console.log(`\nDétail écrit : ${s.file}`);
       console.log('──────────────────────────────────────────────');
       process.exit(0);
     })
     .catch((err) => {
-      console.log('\n❌ Connexion impossible :', err.message);
+      console.log('\nConnexion impossible :', err.message);
       console.log('   → MSFS 2024 est-il lancé avec un vol en cours ?');
       process.exit(1);
     });

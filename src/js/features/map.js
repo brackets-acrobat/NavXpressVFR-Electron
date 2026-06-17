@@ -62,11 +62,11 @@ function initMap() {
     });
 
     const layers = [
-      { key: 'satellite', layer: layerSatellite, label: '🛰️ Satellite' },
-      { key: 'topo', layer: layerTopo, label: '🗺️ Topo' },
-      { key: 'osm', layer: layerOSM, label: '🗺️ OSM' },
-      { key: 'positron', layer: layerCartoPositron, label: '🗺️ CARTO Positron' },
-      { key: 'dark', layer: layerCartoDark, label: '🌑 CARTO Dark Matter' },
+      { key: 'satellite', layer: layerSatellite, label: '<i class="ph-light ph-broadcast"></i> Satellite' },
+      { key: 'topo', layer: layerTopo, label: '<i class="ph-light ph-map-trifold"></i> Topo' },
+      { key: 'osm', layer: layerOSM, label: '<i class="ph-light ph-map-trifold"></i> OSM' },
+      { key: 'positron', layer: layerCartoPositron, label: '<i class="ph-light ph-map-trifold"></i> CARTO Positron' },
+      { key: 'dark', layer: layerCartoDark, label: '<i class="ph-light ph-moon"></i> CARTO Dark Matter' },
     ];
     // Fond restauré depuis les options (défaut OSM). map.js tourne après
     // chargerOptions() (awaité dans ui.js), donc window.appOptions est prêt.
@@ -89,11 +89,11 @@ function initMap() {
       dropdown.style.display = 'none';
 
       const options = [
-        { key: 'satellite', label: '🛰️ Satellite' },
-        { key: 'topo', label: '🗺️ Topo' },
-        { key: 'osm', label: '🗺️ OSM' },
-        { key: 'positron', label: '🗺️ Positron' },
-        { key: 'dark', label: '🌑 Dark Matter' },
+        { key: 'satellite', label: '<i class="ph-light ph-broadcast"></i> Satellite' },
+        { key: 'topo', label: '<i class="ph-light ph-map-trifold"></i> Topo' },
+        { key: 'osm', label: '<i class="ph-light ph-map-trifold"></i> OSM' },
+        { key: 'positron', label: '<i class="ph-light ph-map-trifold"></i> Positron' },
+        { key: 'dark', label: '<i class="ph-light ph-moon"></i> Dark Matter' },
       ];
 
       options.forEach(opt => {
@@ -603,7 +603,7 @@ function initMap() {
 
       // Construit (ou reconstruit, après changement de langue) le contenu
       function rebuild() {
-        btn.innerHTML = (currentLang === 'fr' ? '🗂️ Calques' : '🗂️ Layers') + ' ▾';
+        btn.innerHTML = '<i class="ph-light ph-stack"></i> ' + (currentLang === 'fr' ? 'Calques' : 'Layers') + ' ▾';
         dropdown.innerHTML = '';
         const items = [
           { id: 'airspaces', labelFr: 'Espaces aériens', labelEn: 'Airspaces', checked: airspacesVisible },
@@ -653,9 +653,9 @@ function initMap() {
           sep.textContent = currentLang === 'fr' ? 'Points remarquables' : 'Landmarks';
 
           const btnLoad = L.DomUtil.create('button', 'btn-poi-load', dropdown);
-          btnLoad.textContent = currentLang === 'fr'
-            ? '✨ Charger les POI'
-            : '✨ Load the POI';
+          btnLoad.innerHTML = currentLang === 'fr'
+            ? '<i class="ph-light ph-map-pin"></i> Charger les POI'
+            : '<i class="ph-light ph-map-pin"></i> Load the POI';
           L.DomEvent.on(btnLoad, 'click', e => {
             e.stopPropagation();
             if (typeof window.chargerPOIRoute === 'function') window.chargerPOIRoute();

@@ -142,7 +142,7 @@ function mettreAJourLogDeNav() {
       <td>${_renderWpName(ptA, i === 1)}</td>
       <td></td>
       <td>${_renderWpName(ptB)}</td>
-      <td><span class="alt-val">${altLeg}</span> <button class="btn-edit-alt" onclick="window.ouvrirModaleAltitude(${i})" title="${currentLang === 'fr' ? 'Modifier l\'altitude' : 'Edit altitude'}">✏️</button></td>
+      <td><span class="alt-val">${altLeg}</span> <button class="btn-edit-alt" onclick="window.ouvrirModaleAltitude(${i})" title="${currentLang === 'fr' ? 'Modifier l\'altitude' : 'Edit altitude'}"><i class="ph-light ph-pencil-simple" aria-hidden="true"></i></button></td>
       <td>${distanceNM.toFixed(1)}</td>
       <td>${Math.round(rvDeg).toString().padStart(3, '0')}°</td>
       <td>${Math.round(capMagDeg).toString().padStart(3, '0')}°</td>
@@ -216,7 +216,7 @@ function mettreAJourLogDeNav() {
     // côté (point tournant) en édition complète.
     const btnEdit = document.createElement('button');
     btnEdit.className = 'btn-edit-leg';
-    btnEdit.textContent = '✏️';
+    btnEdit.innerHTML = '<i class="ph-light ph-pencil-simple" aria-hidden="true"></i>';
     btnEdit.title = currentLang === 'fr' ? 'Éditer ce leg' : 'Edit this leg';
     btnEdit.addEventListener('click', () => ouvrirModaleEditLeg(i));
     row.querySelector('td:last-child').appendChild(btnEdit);
@@ -225,7 +225,7 @@ function mettreAJourLogDeNav() {
     const canDelete = flightPlan.length > 2;
     const btnDelete = document.createElement('button');
     btnDelete.className = 'btn-delete-leg';
-    btnDelete.textContent = '🗑️';
+    btnDelete.innerHTML = '<i class="ph-light ph-trash" aria-hidden="true"></i>';
     btnDelete.title = currentLang === 'fr' ? 'Supprimer ce leg' : 'Delete this leg';
     btnDelete.disabled = !canDelete;
     btnDelete.addEventListener('click', () => ouvrirModaleDeleteLeg(i));
@@ -273,12 +273,12 @@ function initCopyWaypoints() {
       }
     } catch (_) { /* ignore */ }
 
-    // Retour visuel : ✓ pendant ~1,2 s puis retour à l'icône.
+    // Retour visuel : coche pendant ~1,2 s puis retour à l'icône.
     if (btn._copyTimer) clearTimeout(btn._copyTimer);
-    btn.textContent = '✓';
+    btn.innerHTML = '<i class="ph-light ph-check" aria-hidden="true"></i>';
     btn.classList.add('copied');
     btn._copyTimer = setTimeout(() => {
-      btn.textContent = '📋';
+      btn.innerHTML = '<i class="ph-light ph-clipboard" aria-hidden="true"></i>';
       btn.classList.remove('copied');
       btn._copyTimer = null;
     }, 1200);

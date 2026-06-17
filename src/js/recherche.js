@@ -80,7 +80,7 @@ async function rechercherAeroport(icao, statusEl, latEl, lonEl, nameEl, latRadio
     if (!res || !res.found) {
       statusEl.className = 'search-status error';
       if (res && res.reason === 'no-data') {
-        statusEl.textContent = t('oaDataMissing');
+        statusEl.innerHTML = t('oaDataMissing');
       } else if (res && res.reason === 'no-coords') {
         statusEl.textContent = t('searchCoordsNotFound');
       } else {
@@ -177,7 +177,7 @@ async function rechercherMulti(opts) {
   if (resultsEl._searchReqId !== reqId) return;
   if (!res || !res.ok) {
     statusEl.className = 'search-status error';
-    statusEl.textContent = (res && res.reason === 'no-data') ? t('oaDataMissing') : t('searchNotFound');
+    statusEl.innerHTML = (res && res.reason === 'no-data') ? t('oaDataMissing') : t('searchNotFound');
     return;
   }
   if (!res.matches || res.matches.length === 0) {

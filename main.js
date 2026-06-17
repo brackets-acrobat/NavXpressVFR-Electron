@@ -1280,7 +1280,7 @@ function _parseAvwxArray(body) {
 }
 
 // ============================================================
-// 11ter. RECHERCHE METAR PAR CODE OACI (bouton « 🔍 METAR »)
+// 11ter. RECHERCHE METAR PAR CODE OACI (bouton « METAR »)
 // ------------------------------------------------------------
 // Distingue 3 cas via aviationweather.gov :
 //   - station offrant le service METAR + relevé dispo → { status:'available', raw, ... }
@@ -1656,7 +1656,7 @@ function broadcastSimTime(payload) {
 }
 
 // État de pause du simulateur (Pause_EX1). payload = { flags } (bitfield brut).
-// Le renderer (simclock.js) décode les bits pour afficher/masquer le badge ⏸.
+// Le renderer (simclock.js) décode les bits pour afficher/masquer le badge.
 // Émis seulement au changement d'état (anti-spam).
 let _lastPauseFlags = null;
 function broadcastSimPause(flags) {

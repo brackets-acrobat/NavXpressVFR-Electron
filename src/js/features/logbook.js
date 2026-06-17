@@ -15,7 +15,7 @@
 
 // ============================================================
 // NavXpressVFR — logbook.js (feature renderer)
-// Bouton « 📖 Carnet de vol » → modale liste des vols + modale détails.
+// Bouton « Carnet de vol » → modale liste des vols + modale détails.
 //
 // Données : window.api.logbookHistorique() → { ok, flights:[] }
 // (handler main 'logbook-historique' qui lit logbook/flights.jsonl).
@@ -267,7 +267,7 @@ function initLogbook() {
       }).join(' <span class="lb-route-arrow">→</span> ');
     }
     const mapBtn = hasRouteCoords
-      ? `<button type="button" class="lb-map-btn" title="${esc(_lbl('mapBtn'))}" aria-label="${esc(_lbl('mapBtn'))}">🗺️</button>`
+      ? `<button type="button" class="lb-map-btn" title="${esc(_lbl('mapBtn'))}" aria-label="${esc(_lbl('mapBtn'))}"><i class="ph-light ph-map-trifold" aria-hidden="true"></i></button>`
       : '';
 
     // Panneau « Touchers » (touch-and-go) : tableau n° / heure / VS / G.

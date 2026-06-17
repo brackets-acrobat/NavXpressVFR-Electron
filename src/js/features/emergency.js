@@ -15,7 +15,7 @@
 
 // ============================================================
 // NavXpressVFR — emergency.js
-// Atterrissage d'urgence : bouton ✈ rouge + modale de choix parmi les 3
+// Atterrissage d'urgence : bouton rouge + modale de choix parmi les 3
 // aéroports (dotés d'une piste) les plus proches de l'avion. Le choix validé
 // déclenche un Direct To « urgence » (window.activerDirectToUrgence, défini par
 // direct-to.js) → guidage + avertissements de déviation + annonce vocale

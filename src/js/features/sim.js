@@ -38,18 +38,18 @@ function initSim() {
     statusBadge.removeAttribute('data-i18n'); // on gère le texte manuellement
     switch (state) {
       case 'connected':
-        statusBadge.textContent = t('simConnected');
+        statusBadge.innerHTML = t('simConnected');
         statusBadge.style.backgroundColor = '#2e7d32'; // vert
         statusBadge.title = t('simClickToDisconnect');
         break;
       case 'connecting':
-        statusBadge.textContent = t('simConnecting');
+        statusBadge.innerHTML = t('simConnecting');
         statusBadge.style.backgroundColor = '#ef6c00'; // orange foncé
         statusBadge.title = '';
         break;
       case 'disconnected':
       default:
-        statusBadge.textContent = t('simDisconnectedClick');
+        statusBadge.innerHTML = t('simDisconnectedClick');
         statusBadge.style.backgroundColor = '#d32f2f'; // rouge
         statusBadge.title = t('simClickToConnect');
         break;
@@ -73,10 +73,10 @@ function initSim() {
           console.warn('Connexion MSFS échouée:', res && res.error);
           // Flash visuel rapide pour signaler l'erreur
           if (statusBadge) {
-            const prev = statusBadge.textContent;
-            statusBadge.textContent = t('simConnectFailed');
+            const prev = statusBadge.innerHTML;
+            statusBadge.innerHTML = t('simConnectFailed');
             setTimeout(() => {
-              if (_simState === 'disconnected') statusBadge.textContent = t('simDisconnectedClick');
+              if (_simState === 'disconnected') statusBadge.innerHTML = t('simDisconnectedClick');
             }, 2500);
           }
         }

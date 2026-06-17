@@ -15,7 +15,7 @@
 
 // ============================================================
 // NavXpressVFR — options.js
-// Bouton "⚙️ Options" du header + modale Options + état persistant.
+// Bouton "Options" du header + modale Options + état persistant.
 //
 // Persistance : fichier Documents/NavXpressVFR/options.json
 // (handlers IPC lire-options / sauvegarder-options dans main.js).
@@ -57,7 +57,7 @@ const DEFAULT_OPTIONS = {
   layerNavaidsEnabled: true,
   mapBaseLayer: 'osm', // 'satellite' | 'topo' | 'osm' | 'positron' | 'dark'
   // Mode nuit carte : assombrit uniquement les tuiles (.leaflet-tile-pane).
-  // false = jour (comportement inchangé). Géré par map-search.js (toggle 🌙).
+  // false = jour (comportement inchangé). Géré par map-search.js (toggle).
   mapNightMode: false,
 };
 

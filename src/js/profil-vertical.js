@@ -88,7 +88,7 @@ function renderProfileSummary(res) {
   let txt = `${t('vertProfileSummit')} ${s.summitFt} ft`;
   if (s.minMargin) txt += ` · ${t('vertProfileMinMargin')} ${s.minMargin.clearanceFt} ft`;
   const cls = s.anyBreach ? 'vp-summary vp-summary-warn' : 'vp-summary';
-  return `<div class="${cls}">${escapeHtml(txt)}${s.anyBreach ? ' ⚠' : ''}</div>`;
+  return `<div class="${cls}">${escapeHtml(txt)}${s.anyBreach ? ' <i class="ph-light ph-warning" aria-hidden="true"></i>' : ''}</div>`;
 }
 
 // Construit le SVG du profil (terrain rempli + altitude prévue + noms waypoints).

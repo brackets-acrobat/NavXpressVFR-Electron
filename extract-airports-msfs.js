@@ -806,16 +806,16 @@ if (require.main === module) {
             (s.failedIcaos.length > 60 ? ' …' : ''));
       }
       if (s.file) {
-        console.log(`\n✅ Fichier écrit : ${s.file}`);
+        console.log(`\nFichier écrit : ${s.file}`);
         console.log(`   Taille : ${(s.fileSize / 1e6).toFixed(1)} Mo`);
       } else {
-        console.log(`\n⚠️ Aucun fichier final écrit (rien à sauvegarder).`);
+        console.log(`\nAucun fichier final écrit (rien à sauvegarder).`);
       }
       console.log('──────────────────────────────────────────────');
       process.exit(0);
     })
     .catch((err) => {
-      console.log('\n❌ Connexion impossible :', err.message);
+      console.log('\nConnexion impossible :', err.message);
       console.log('   → MSFS 2024 est-il lancé avec un vol en cours ?');
       process.exit(1);
     });

@@ -15,7 +15,7 @@
 
 // ============================================================
 // NavXpressVFR — map-search.js
-// Bouton 🔍 « Rechercher » placé en BAS À GAUCHE de la carte. Au clic, ouvre
+// Bouton « Rechercher » placé en BAS À GAUCHE de la carte. Au clic, ouvre
 // une modale qui permet de chercher :
 //   - Aéroport par 'name' (libellé « Nom », sous-chaîne insensible casse/accents)
 //   - Aéroport par 'icao'  (libellé « Code ICAO », exact insensible casse)

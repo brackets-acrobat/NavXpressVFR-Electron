@@ -152,7 +152,7 @@ function initSimClock() {
     });
   }
 
-  // État de pause (Pause_EX1) → badge ⏸ + tooltip décrivant l'état.
+  // État de pause (Pause_EX1) → badge + tooltip décrivant l'état.
   if (window.api && typeof window.api.onSimPause === 'function') {
     window.api.onSimPause((data) => {
       if (!data) return;

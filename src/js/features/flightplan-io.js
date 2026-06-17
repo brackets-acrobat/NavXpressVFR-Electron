@@ -474,7 +474,7 @@ function initFlightPlanIO() {
       if (result && result.ok) {
         showToast(t('saveSuccess'), 'success');
       } else if (result && !result.canceled) {
-        showToast('❌ ' + (result.error || 'Erreur sauvegarde'), 'error');
+        showToast(result.error || 'Erreur sauvegarde', 'error');
       }
     });
   }

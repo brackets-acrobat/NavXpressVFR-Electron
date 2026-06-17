@@ -25,7 +25,7 @@ async function chargerCleOpenAIP() {
     const savedKey = await window.api.lireCleOpenAIP();
     if (savedKey) {
       OPENAIP_API_KEY = savedKey;
-      console.log("🔑 Clé OpenAIP chargée depuis le fichier de configuration.");
+      console.log("Clé OpenAIP chargée depuis le fichier de configuration.");
     }
   } catch (err) {
     console.warn("Impossible de lire la clé OpenAIP:", err);
@@ -50,9 +50,9 @@ function initOpenAIP() {
       // Réinitialiser la modale
       apiInput.value = '';
       apiInput.type = 'password';
-      btnApiVisibility.textContent = '👁️';
-      apiTestResult.textContent = '';
-      apiError.textContent = '';
+      btnApiVisibility.innerHTML = '<i class="ph-light ph-eye" aria-hidden="true"></i>';
+      apiTestResult.innerHTML = '';
+      apiError.innerHTML = '';
 
       // Si une clé existe déjà, afficher le hint et masquer la valeur
       if (OPENAIP_API_KEY) {
@@ -74,10 +74,10 @@ function initOpenAIP() {
     btnApiVisibility.addEventListener('click', () => {
       if (apiInput.type === 'password') {
         apiInput.type = 'text';
-        btnApiVisibility.textContent = '🙈';
+        btnApiVisibility.innerHTML = '<i class="ph-light ph-eye-slash" aria-hidden="true"></i>';
       } else {
         apiInput.type = 'password';
-        btnApiVisibility.textContent = '👁️';
+        btnApiVisibility.innerHTML = '<i class="ph-light ph-eye" aria-hidden="true"></i>';
       }
     });
   }
@@ -88,11 +88,11 @@ function initOpenAIP() {
       const keyToTest = apiInput.value.trim() || OPENAIP_API_KEY;
       if (!keyToTest) {
         apiTestResult.style.color = '#ff5252';
-        apiTestResult.textContent = t('apiEmptyKey');
+        apiTestResult.innerHTML = t('apiEmptyKey');
         return;
       }
       apiTestResult.style.color = '#aaa';
-      apiTestResult.textContent = t('apiTestLoading');
+      apiTestResult.innerHTML = t('apiTestLoading');
       btnApiTest.disabled = true;
       try {
         const resp = await fetch(
@@ -101,14 +101,14 @@ function initOpenAIP() {
         );
         if (resp.ok) {
           apiTestResult.style.color = '#00e676';
-          apiTestResult.textContent = t('apiTestOk');
+          apiTestResult.innerHTML = t('apiTestOk');
         } else {
           apiTestResult.style.color = '#ff5252';
-          apiTestResult.textContent = t('apiTestFail');
+          apiTestResult.innerHTML = t('apiTestFail');
         }
       } catch (err) {
         apiTestResult.style.color = '#ff5252';
-        apiTestResult.textContent = t('apiTestFail');
+        apiTestResult.innerHTML = t('apiTestFail');
       } finally {
         btnApiTest.disabled = false;
       }
@@ -133,27 +133,27 @@ function initOpenAIP() {
 
   async function doSaveApiKey(key) {
     apiError.style.color = '#aaa';
-    apiError.textContent = currentLang === 'fr' ? '⏳ Sauvegarde...' : '⏳ Saving...';
+    apiError.innerHTML = '<i class="ph-light ph-hourglass-medium" aria-hidden="true"></i> ' + (currentLang === 'fr' ? 'Sauvegarde...' : 'Saving...');
     try {
       const result = await window.api.sauvegarderCleOpenAIP(key);
       const ok = (result === true) || (result && result.ok === true);
       if (ok) {
         OPENAIP_API_KEY = key;
         apiError.style.color = '#00e676';
-        apiError.textContent = t('apiSaveSuccess');
+        apiError.innerHTML = t('apiSaveSuccess');
         setTimeout(() => {
           apiOverlay.classList.remove('visible');
-          apiError.textContent = '';
+          apiError.innerHTML = '';
         }, 1200);
       } else {
         const msg = result && result.error ? result.error : t('apiSaveError');
         apiError.style.color = '#ff5252';
-        apiError.textContent = '❌ ' + msg;
+        apiError.innerHTML = '<i class="ph-light ph-x-circle" aria-hidden="true"></i> ' +msg;
       }
     } catch (err) {
       console.error('doSaveApiKey error:', err);
       apiError.style.color = '#ff5252';
-      apiError.textContent = '❌ ' + err.message;
+      apiError.innerHTML = '<i class="ph-light ph-x-circle" aria-hidden="true"></i> ' +err.message;
     }
   }
 
@@ -185,7 +185,7 @@ function initOpenAIP() {
   if (btnApiValidate) {
     btnApiValidate.addEventListener('click', async () => {
       const newKey = apiInput.value.trim();
-      apiError.textContent = '';
+      apiError.innerHTML = '';
 
       // Champ vide + clé existante → fermer sans modifier
       if (!newKey && OPENAIP_API_KEY) {
@@ -194,7 +194,7 @@ function initOpenAIP() {
       }
       if (!newKey) {
         apiError.style.color = '#ff5252';
-        apiError.textContent = t('apiEmptyKey');
+        apiError.innerHTML = t('apiEmptyKey');
         return;
       }
 

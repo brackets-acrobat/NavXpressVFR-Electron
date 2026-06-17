@@ -18,7 +18,7 @@
 // Boîte METAR (départ / arrivée) à côté de la boîte chronomètre.
 // - Affiche le METAR BRUT de l'aéroport de départ et d'arrivée du plan
 //   (ou de la station émettrice la plus proche si le terrain n'en émet pas).
-// - Bouton œil 👁 à gauche de chaque METAR → modale « METAR décodé ».
+// - Bouton œil à gauche de chaque METAR → modale « METAR décodé ».
 // - Bouton ↻ pour rafraîchir manuellement.
 // - Auto-refresh quand le départ/arrivée du plan change (décorateur sur
 //   mettreAJourLogDeNav, comme logbook-bridge.js).
@@ -170,7 +170,7 @@ function initMetar() {
   if (els.mClose) els.mClose.addEventListener('click', closeModal);
   if (els.overlay) els.overlay.addEventListener('click', (e) => { if (e.target === els.overlay) closeModal(); });
 
-  // ---- Recherche METAR par code OACI (bouton 🔍 METAR) ----------------
+  // ---- Recherche METAR par code OACI (bouton METAR) ----------------
   const searchBtn     = document.getElementById('btn-metar-search');
   const searchOverlay = document.getElementById('metar-search-overlay');
   const searchClose   = document.getElementById('btn-metar-search-close');
@@ -204,7 +204,7 @@ function initMetar() {
       searchResult.innerHTML =
         `<div class="metar-search-station">${head}</div>` +
         `<div class="metar-row">` +
-          `<button class="metar-eye" id="metar-search-eye" type="button" title="${esc(t('metarEyeTitle'))}">👁</button>` +
+          `<button class="metar-eye" id="metar-search-eye" type="button" title="${esc(t('metarEyeTitle'))}"><i class="ph-light ph-eye" aria-hidden="true"></i></button>` +
           `<span class="metar-raw">${esc(res.raw)}</span>` +
         `</div>`;
       const eye = document.getElementById('metar-search-eye');

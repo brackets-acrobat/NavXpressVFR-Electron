@@ -555,6 +555,56 @@ h1 {
     line-height: 1.2;
 }
 
+/* Taille uniforme de TOUTES les icônes Phosphor de l'application */
+.ph-light {
+    font-size: 16px;
+}
+
+/* Exceptions : icônes volontairement plus grandes (conteneurs dédiés) */
+.btn-fuel .fuel-btn-icon i {
+    font-size: 22px;
+}
+.btn-emergency .emergency-icon i {
+    font-size: 22px;
+}
+.btn-direct-to .dt-icon i {
+    font-size: 18px;
+}
+.btn-profil .profil-icon i {
+    font-size: 22px;
+}
+.btn-conversions .conv-icon i {
+    font-size: 22px;
+}
+.btn-options i {
+    font-size: 22px;
+    color: #f5ce4d;
+}
+.btn-help i {
+    font-size: 22px;
+    color: #f5ce4d;
+}
+
+/* Couleur des icônes des deux lignes de boutons du haut + ligne carburant/
+   conversion/profil/carnet/METAR (profil = SVG en currentColor, conv = glyphe texte) */
+#top-buttons .btn-secondary i,
+#top-buttons-row2 .btn-secondary i,
+.btn-fuel .fuel-btn-icon,
+.btn-conversions .conv-icon,
+.btn-profil .profil-icon,
+.btn-logbook i,
+.btn-metar-search i {
+    color: #f5ce4d;
+}
+
+/* Espace entre l'icône et le texte (Carnet de vol, METAR, et les 4 boutons
+   d'import données/clé OpenAIP de la 2e ligne du haut) */
+.btn-logbook i,
+.btn-metar-search i,
+#top-buttons-row2 .btn-secondary i {
+    margin-right: 5px;
+}
+
 #top-buttons-row2 {
     display: flex;
     flex-direction: row;
@@ -644,7 +694,9 @@ h1 {
 
 /* Chronomètre : largeur fixe 375px. METAR : prend toute la largeur restante. */
 #chrono-metar-row>#chrono-timer-box {
-    flex: 0 0 365px;
+    /* Largeur = contenu (2 boutons par item depuis la fusion play/pause) ;
+       la boîte METAR récupère tout l'espace restant. */
+    flex: 0 0 auto;
 }
 
 #chrono-metar-row>#metar-box {
@@ -681,12 +733,14 @@ h1 {
     background-color: #1a1a1a;
     border: 1px solid #2d2d2d;
     border-radius: 6px;
-    padding: 10px 14px;
+    /* Contenu calé à gauche (padding gauche 14px inchangé) ; +40px à DROITE
+       seulement → boîte élargie de 40px sans déplacer le contenu. */
+    padding: 10px 54px 10px 14px;
     display: flex;
     flex-direction: column;
     gap: 8px;
     box-sizing: border-box;
-    /* La largeur est gérée par #chrono-metar-row (flex 1 1 0 = 50%). */
+    /* Largeur = contenu (auto), gérée par #chrono-metar-row ; METAR prend le reste. */
 }
 
 /* -------------------------------------------------- */
@@ -777,7 +831,7 @@ h1 {
 }
 
 /* -------------------------------------------------- */
-/* Modale Recherche METAR (bouton 🔍 METAR)           */
+/* Modale Recherche METAR (bouton METAR)              */
 /* -------------------------------------------------- */
 #metar-search-popup {
     position: relative;
@@ -1244,10 +1298,10 @@ h1 {
     flex: 0 0 auto;
     display: flex;
     gap: 4px;
-    /* Décalage visuel de 10px vers la gauche (sans bouger le reste : les
+    /* Décalage visuel de 17px vers la gauche (sans bouger le reste : les
        boutons restent dans le flux, seul leur rendu est décalé). */
     position: relative;
-    left: -10px;
+    left: -17px;
 }
 
 .chrono-btn {
@@ -1273,14 +1327,13 @@ h1 {
     border-color: #4a4a4a;
 }
 
-.chrono-btn-start:hover {
+/* Bouton bascule fusionné : icône colorée selon l'état (play vert / pause orange) */
+.chrono-btn-toggle .ph-play {
     color: #00e676;
-    border-color: #00e676;
 }
 
-.chrono-btn-stop:hover {
+.chrono-btn-toggle .ph-pause {
     color: #ffb300;
-    border-color: #ffb300;
 }
 
 .chrono-btn-reset:hover {
@@ -1376,7 +1429,7 @@ h1 {
 .btn-emergency .emergency-icon {
     font-size: 22px;
     line-height: 1;
-    /* L'avion ✈ pointe par défaut vers le haut-droite : on le redresse. */
+    /* L'avion pointe par défaut vers le haut-droite : on le redresse. */
     transform: rotate(-45deg);
 }
 
@@ -2715,8 +2768,8 @@ tr:hover {
     font-size: 13px;
     padding: 0 0 0 5px;
     line-height: 1;
-    opacity: 0.5;
-    transition: opacity 0.2s;
+    opacity: 1;
+    color: #5fecff;
     vertical-align: middle;
 }
 
@@ -3055,8 +3108,9 @@ tr:hover {
     font-size: 14px;
     padding: 2px 4px;
     border-radius: 4px;
-    opacity: 0.6;
-    transition: opacity 0.15s, background-color 0.15s;
+    opacity: 1;
+    color: #ff0000;
+    transition: background-color 0.15s;
 }
 
 .btn-delete-leg:hover:not(:disabled) {
@@ -3079,8 +3133,9 @@ tr:hover {
     font-size: 14px;
     padding: 2px 4px;
     border-radius: 4px;
-    opacity: 0.6;
-    transition: opacity 0.15s, background-color 0.15s;
+    opacity: 1;
+    color: #5fecff;
+    transition: background-color 0.15s;
     margin-right: 2px;
 }
 
@@ -4364,5 +4419,7 @@ tr:hover {
 }
 
 .btn-paste-coords::before {
-    content: "📋 ";
+    content: "\e196";
+    font-family: "Phosphor-Light";
+    margin-right: 5px;
 }

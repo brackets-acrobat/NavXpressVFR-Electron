@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+    <link rel="stylesheet" href="vendor/phosphor/style.css" />
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -34,14 +35,15 @@
                     <!-- Badge état de pause (Pause_EX1). Masqué hors pause.
                          Le tooltip (title) décrit l'état précis, posé par simclock.js. -->
                     <span id="sim-pause-badge" class="sim-pause-badge" style="display:none;">
-                        ⏸ <span data-i18n="pauseBadgeLabel">PAUSE</span>
+                        <i class="ph-light ph-pause" aria-hidden="true"></i> <span
+                            data-i18n="pauseBadgeLabel">PAUSE</span>
                     </span>
                 </div>
                 <div class="header-right">
-                    <button type="button" class="btn-help" id="btn-about"
-                        data-i18n-title="btnAboutTooltip" title="À propos" aria-label="À propos">?</button>
-                    <button type="button" class="btn-options" id="btn-options"
-                        data-i18n="btnOptions" data-i18n-title="btnOptionsTooltip" title="Options">⚙️ Options</button>
+                    <button type="button" class="btn-help" id="btn-about" data-i18n-title="btnAboutTooltip"
+                        title="À propos" aria-label="À propos"><i class="ph-light ph-question-mark" aria-hidden="true"></i></button>
+                    <button type="button" class="btn-options" id="btn-options" data-i18n-title="btnOptionsTooltip"
+                        title="Options"><i class="ph-light ph-gear-six" aria-hidden="true"></i></button>
                     <button type="button" class="status-badge" id="sim-status" title="" data-i18n="simDisconnected">MSFS
                         Déconnecté</button>
                     <!-- Bouton toggle bilingue FR / EN -->
@@ -108,25 +110,33 @@
                     <!-- Colonne droite : boutons + boite ajouter waypoint -->
                     <div id="top-right-col">
                         <div id="top-buttons">
-                            <button id="btn-create-flight" class="btn-secondary" data-i18n="btnCreate">🗺️ Créer plan de
-                                vol</button>
-                            <button id="btn-new-flight" class="btn-secondary" data-i18n="btnNew">✨ Nouveau</button>
-                            <button id="btn-load-flight" class="btn-secondary" data-i18n="btnLoadFlight">📥 Charger plan
-                                de vol</button>
-                            <button id="btn-import-lnm" class="btn-secondary" data-i18n="btnImport">📂 Importer
-                                LNMPLN</button>
-                            <button id="btn-save-flight" class="btn-secondary" data-i18n="btnSave">💾
-                                Sauvegarder</button>
+                            <button id="btn-create-flight" class="btn-secondary"><i class="ph-light ph-map-trifold"
+                                    aria-hidden="true"></i> <span data-i18n="btnCreate">Créer plan de
+                                    vol</span></button>
+                            <button id="btn-new-flight" class="btn-secondary"><i class="ph-light ph-file"
+                                    aria-hidden="true"></i> <span data-i18n="btnNew">Nouveau</span></button>
+                            <button id="btn-load-flight" class="btn-secondary"><i class="ph-light ph-folder-open"
+                                    aria-hidden="true"></i> <span data-i18n="btnLoadFlight">Charger plan
+                                    de vol</span></button>
+                            <button id="btn-import-lnm" class="btn-secondary"><i class="ph-light ph-file-arrow-down"
+                                    aria-hidden="true"></i> <span data-i18n="btnImport">Importer
+                                    LNMPLN</span></button>
+                            <button id="btn-save-flight" class="btn-secondary"><i class="ph-light ph-floppy-disk"
+                                    aria-hidden="true"></i> <span data-i18n="btnSave">Sauvegarder</span></button>
                         </div>
                         <div id="top-buttons-row2">
-                            <button id="btn-api-openaip" class="btn-secondary btn-api" data-i18n="btnApiOpenAIP">🔑
-                                Ajouter API OpenAIP</button>
-                            <button id="btn-import-msfs" class="btn-secondary btn-msfs"
-                                data-i18n="btnImportMsfs">🛫 Importer Aéroports MSFS 2024</button>
-                            <button id="btn-import-elevation" class="btn-secondary btn-elevation"
-                                data-i18n="btnImportElevation">⛰️ Importer données d'élévation</button>
-                            <button id="btn-import-navaids" class="btn-secondary btn-navaids"
-                                data-i18n="btnImportNavaids">🛰️ Importer Navaids MSFS 2024</button>
+                            <button id="btn-api-openaip" class="btn-secondary btn-api"><i class="ph-light ph-key"
+                                    aria-hidden="true"></i> <span data-i18n="btnApiOpenAIP">Ajouter API
+                                    OpenAIP</span></button>
+                            <button id="btn-import-msfs" class="btn-secondary btn-msfs"><i
+                                    class="ph-light ph-airplane-takeoff" aria-hidden="true"></i>
+                                <span data-i18n="btnImportMsfs">Importer Aéroports MSFS 2024</span></button>
+                            <button id="btn-import-elevation" class="btn-secondary btn-elevation"><i
+                                    class="ph-light ph-mountains" aria-hidden="true"></i>
+                                <span data-i18n="btnImportElevation">Importer données d'élévation</span></button>
+                            <button id="btn-import-navaids" class="btn-secondary btn-navaids"><i
+                                    class="ph-light ph-broadcast" aria-hidden="true"></i>
+                                <span data-i18n="btnImportNavaids">Importer Navaids MSFS 2024</span></button>
                         </div>
 
                         <!-- Ligne de boutons : Carburant / Réservoir / Conversions / Profil /
@@ -134,7 +144,8 @@
                         <div class="dt-conv-row">
                             <button id="btn-fuel" class="btn-fuel" data-i18n-title="fuelBtnTooltip"
                                 title="Emport carburant">
-                                <span class="fuel-btn-icon" aria-hidden="true">⛽</span>
+                                <span class="fuel-btn-icon" aria-hidden="true"><i
+                                        class="ph-light ph-gas-pump"></i></span>
                             </button>
                             <button id="btn-tank-switch" class="btn-tank-switch" data-i18n-title="tankBtnTooltip"
                                 title="Changement de réservoir">
@@ -143,36 +154,37 @@
                             </button>
                             <button id="btn-conversions" class="btn-conversions" data-i18n-title="convBtnTooltip"
                                 title="Conversions d'unités">
-                                <span class="conv-icon" aria-hidden="true">⇄</span>
+                                <span class="conv-icon" aria-hidden="true"><i class="ph-light ph-arrows-left-right"></i></span>
                             </button>
-                            <button id="btn-profil-toggle" class="btn-profil"
-                                data-i18n-title="profileToggleTooltip"
+                            <button id="btn-profil-toggle" class="btn-profil" data-i18n-title="profileToggleTooltip"
                                 title="Afficher / Masquer le profil vertical">
                                 <span class="profil-icon" aria-hidden="true">
-                                    <svg width="24" height="24" viewBox="0 0 24 24">
-                                        <path d="M2 20 L9 8 L13 14 L17 9 L22 20 Z" fill="currentColor" />
-                                    </svg>
+                                    <i class="ph-light ph-mountains"></i>
                                 </span>
                             </button>
                             <button id="btn-direct-to" class="btn-direct-to" disabled
                                 data-i18n-title="dtBtnTooltipDisabled" title="Direct To — MSFS doit être connecté">
-                                <span class="dt-icon" aria-hidden="true">D&nbsp;➤</span>
+                                <span class="dt-icon" aria-hidden="true">D&nbsp;<i
+                                        class="ph-light ph-arrow-right"></i></span>
                             </button>
                             <!-- Carnet de vol : même hauteur que les autres, largeur = texte -->
-                            <button id="btn-logbook" class="btn-secondary btn-logbook"
-                                data-i18n="btnLogbook">📖 Carnet de vol</button>
+                            <button id="btn-logbook" class="btn-secondary btn-logbook"><i class="ph-light ph-book"
+                                    aria-hidden="true"></i>
+                                <span data-i18n="btnLogbook">Carnet de vol</span></button>
                             <!-- Recherche METAR par code OACI (même style que Carnet de vol) -->
                             <button id="btn-metar-search" class="btn-secondary btn-metar-search" type="button"
-                                data-i18n="btnMetarSearch" data-i18n-title="metarSearchTooltip"
-                                title="Rechercher METAR">🔍 METAR</button>
+                                data-i18n-title="metarSearchTooltip" title="Rechercher METAR"><i
+                                    class="ph-light ph-magnifying-glass" aria-hidden="true"></i> <span
+                                    data-i18n="btnMetarSearch">METAR</span></button>
                             <!-- Atterrissage d'urgence : avion rouge (actif en vol uniquement) -->
                             <button id="btn-emergency" class="btn-emergency" type="button" disabled
                                 data-i18n-title="emergencyBtnTooltip" title="Atterrissage d'urgence">
-                                <span class="emergency-icon" aria-hidden="true">✈</span>
+                                <span class="emergency-icon" aria-hidden="true"><i
+                                        class="ph-light ph-airplane"></i></span>
                             </button>
                         </div>
 
-                        <!-- Boîte Chronomètre + boîte METAR, côte à côte (largeurs égales 50/50). -->
+                        <!-- Boîte Chronomètre + boîte METAR, côte à côte (chrono = largeur contenu, METAR remplit le reste). -->
                         <div id="chrono-metar-row">
                             <div id="chrono-timer-box">
                                 <!-- Chronomètre MM:SS -->
@@ -180,10 +192,9 @@
                                     <div class="chrono-label" data-i18n="chronoLabel">Chronomètre</div>
                                     <div class="chrono-display" id="chrono-display">00:00</div>
                                     <div class="chrono-buttons">
-                                        <button class="chrono-btn chrono-btn-start" id="chrono-start"
-                                            data-i18n-title="chronoStart" title="Démarrer">▶</button>
-                                        <button class="chrono-btn chrono-btn-stop" id="chrono-stop"
-                                            data-i18n-title="chronoStop" title="Arrêter">⏸</button>
+                                        <button class="chrono-btn chrono-btn-toggle" id="chrono-toggle"
+                                            data-i18n-title="chronoStart" title="Démarrer"><i class="ph-light ph-play"
+                                                aria-hidden="true"></i></button>
                                         <button class="chrono-btn chrono-btn-reset" id="chrono-reset"
                                             data-i18n-title="chronoReset" title="Remise à zéro">↺</button>
                                     </div>
@@ -193,10 +204,9 @@
                                     <div class="chrono-label" data-i18n="timerLabel">Timer</div>
                                     <div class="chrono-display" id="timer-display">00:00:00</div>
                                     <div class="chrono-buttons">
-                                        <button class="chrono-btn chrono-btn-start" id="timer-start"
-                                            data-i18n-title="chronoStart" title="Démarrer">▶</button>
-                                        <button class="chrono-btn chrono-btn-stop" id="timer-stop"
-                                            data-i18n-title="chronoStop" title="Arrêter">⏸</button>
+                                        <button class="chrono-btn chrono-btn-toggle" id="timer-toggle"
+                                            data-i18n-title="chronoStart" title="Démarrer"><i class="ph-light ph-play"
+                                                aria-hidden="true"></i></button>
                                         <button class="chrono-btn chrono-btn-reset" id="timer-reset"
                                             data-i18n-title="chronoReset" title="Remise à zéro">↺</button>
                                     </div>
@@ -206,18 +216,20 @@
                             <div id="metar-box">
                                 <div id="metar-box-head">
                                     <span data-i18n="metarTitle">METAR</span>
-                                    <button id="btn-metar-refresh" type="button"
-                                        data-i18n-title="metarRefreshTitle" title="Rafraîchir les METAR">↻</button>
+                                    <button id="btn-metar-refresh" type="button" data-i18n-title="metarRefreshTitle"
+                                        title="Rafraîchir les METAR">↻</button>
                                 </div>
                                 <div class="metar-row">
                                     <button class="metar-eye" id="metar-dep-eye" type="button" disabled
-                                        data-i18n-title="metarEyeTitle" title="Décoder ce METAR">👁</button>
+                                        data-i18n-title="metarEyeTitle" title="Décoder ce METAR"><i
+                                            class="ph-light ph-eye" aria-hidden="true"></i></button>
                                     <span class="metar-label" data-i18n="metarDep">Départ</span>
                                     <span class="metar-raw" id="metar-dep-raw">—</span>
                                 </div>
                                 <div class="metar-row">
                                     <button class="metar-eye" id="metar-arr-eye" type="button" disabled
-                                        data-i18n-title="metarEyeTitle" title="Décoder ce METAR">👁</button>
+                                        data-i18n-title="metarEyeTitle" title="Décoder ce METAR"><i
+                                            class="ph-light ph-eye" aria-hidden="true"></i></button>
                                     <span class="metar-label" data-i18n="metarArr">Arrivée</span>
                                     <span class="metar-raw" id="metar-arr-raw">—</span>
                                 </div>
@@ -231,7 +243,7 @@
                         <span data-i18n="navLog">Log de Navigation (Legs)</span>
                         <button id="btn-copy-waypoints" class="btn-copy-waypoints"
                             data-i18n-title="copyWaypointsTooltip" title="Copier les points tournants"
-                            style="display:none;">📋</button>
+                            style="display:none;"><i class="ph-light ph-clipboard" aria-hidden="true"></i></button>
                     </h3>
                     <div class="table-container">
                         <table id="nav-log-table">
@@ -273,7 +285,8 @@
                 <div class="config-section" id="vertical-profile-section">
                     <h3 data-i18n="vertProfileTitle">Profil vertical</h3>
                     <div id="vertical-profile-graph">
-                        <div class="vp-empty" data-i18n="vertProfileEmpty">Créez un plan de vol pour afficher le profil vertical.</div>
+                        <div class="vp-empty" data-i18n="vertProfileEmpty">Créez un plan de vol pour afficher le profil
+                            vertical.</div>
                     </div>
                 </div>
 
@@ -360,8 +373,10 @@
 
             <!-- Départ -->
             <div style="margin-bottom:16px;">
-                <h4 style="color:#00bcd4; font-size:12px; text-transform:uppercase; margin:0 0 10px 0;"
-                    data-i18n="editLegDep">🛫 Point de départ</h4>
+                <h4 style="color:#00bcd4; font-size:12px; text-transform:uppercase; margin:0 0 10px 0;">
+                    <i class="ph-light ph-airplane-takeoff" aria-hidden="true"></i> <span data-i18n="editLegDep">Point
+                        de départ</span>
+                </h4>
                 <div class="insert-wp-name-row" style="margin-bottom:8px;">
                     <input type="text" id="edit-leg-dep-name" class="insert-wp-name-input" autocomplete="off"
                         spellcheck="false" placeholder="Nom / Ident">
@@ -406,8 +421,10 @@
 
             <!-- Arrivée -->
             <div style="margin-bottom:16px;">
-                <h4 style="color:#00bcd4; font-size:12px; text-transform:uppercase; margin:0 0 10px 0;"
-                    data-i18n="editLegArr">🛬 Point d'arrivée</h4>
+                <h4 style="color:#00bcd4; font-size:12px; text-transform:uppercase; margin:0 0 10px 0;">
+                    <i class="ph-light ph-airplane-landing" aria-hidden="true"></i> <span data-i18n="editLegArr">Point
+                        d'arrivée</span>
+                </h4>
                 <div class="insert-wp-name-row" style="margin-bottom:8px;">
                     <input type="text" id="edit-leg-arr-name" class="insert-wp-name-input" autocomplete="off"
                         spellcheck="false" placeholder="Nom / Ident">
@@ -527,7 +544,8 @@
 
             <!-- Section Départ -->
             <div class="cf-section">
-                <h4 data-i18n="createFlightDep">🛫 Départ</h4>
+                <h4><i class="ph-light ph-airplane-takeoff" aria-hidden="true"></i> <span
+                        data-i18n="createFlightDep">Départ</span></h4>
                 <div class="cf-search-row">
                     <input type="text" id="create-icao-dep" maxlength="8" class="input-icao" placeholder="LFQM"
                         autocomplete="off" spellcheck="false">
@@ -562,7 +580,8 @@
 
             <!-- Section Arrivée -->
             <div class="cf-section">
-                <h4 data-i18n="createFlightArr">🛬 Arrivée</h4>
+                <h4><i class="ph-light ph-airplane-landing" aria-hidden="true"></i> <span
+                        data-i18n="createFlightArr">Arrivée</span></h4>
                 <div class="cf-search-row">
                     <input type="text" id="create-icao-arr" maxlength="8" class="input-icao" placeholder="LFMN"
                         autocomplete="off" spellcheck="false">
@@ -656,7 +675,7 @@
     <!-- Popup d'avertissement custom -->
     <div id="warning-overlay">
         <div id="warning-popup">
-            <div id="warning-icon">⚠️</div>
+            <div id="warning-icon"><i class="ph-light ph-warning"></i></div>
             <div id="warning-message"></div>
             <button id="warning-close" class="btn-primary">OK</button>
         </div>
@@ -715,7 +734,8 @@
                         style="flex:1; letter-spacing:0.05em;" autocomplete="off" spellcheck="false"
                         data-i18n-placeholder="apiModalPlaceholder" placeholder="Collez votre clé API ici">
                     <button id="btn-api-toggle-visibility" class="btn-secondary"
-                        style="padding:6px 10px; flex-shrink:0;" title="Afficher / Masquer">👁️</button>
+                        style="padding:6px 10px; flex-shrink:0;" title="Afficher / Masquer"><i class="ph-light ph-eye"
+                            aria-hidden="true"></i></button>
                 </div>
             </div>
 
@@ -759,15 +779,15 @@
             <h3 data-i18n="navaidsConfirmTitle"
                 style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
                 Avez-vous lancé MSFS 2024 ?</h3>
-            <p data-i18n="navaidsConfirmMsg"
-                style="color:#e0e0e0; font-size:14px; margin:0 0 16px 0; line-height:1.6;"></p>
+            <p data-i18n="navaidsConfirmMsg" style="color:#e0e0e0; font-size:14px; margin:0 0 16px 0; line-height:1.6;">
+            </p>
             <p id="navaids-check-status"
                 style="font-size:13px; margin:0 0 18px 0; min-height:18px; text-align:center; color:#aaa;"></p>
             <div class="create-flight-actions">
                 <button id="btn-navaids-confirm-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
                 <button id="btn-navaids-confirm-ok" class="btn-primary"
-                    style="background:#00bcd4; border-color:#00bcd4; color:#121212;"
-                    data-i18n="btnMsfsCheck">Vérifier MSFS 2024</button>
+                    style="background:#00bcd4; border-color:#00bcd4; color:#121212;" data-i18n="btnMsfsCheck">Vérifier
+                    MSFS 2024</button>
             </div>
         </div>
     </div>
@@ -778,15 +798,15 @@
             <h3 data-i18n="msfsConfirmTitle"
                 style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
                 Avez-vous lancé MSFS 2024 ?</h3>
-            <p data-i18n="msfsConfirmMsg"
-                style="color:#e0e0e0; font-size:14px; margin:0 0 16px 0; line-height:1.6;"></p>
+            <p data-i18n="msfsConfirmMsg" style="color:#e0e0e0; font-size:14px; margin:0 0 16px 0; line-height:1.6;">
+            </p>
             <p id="msfs-check-status"
                 style="font-size:13px; margin:0 0 18px 0; min-height:18px; text-align:center; color:#aaa;"></p>
             <div class="create-flight-actions">
                 <button id="btn-msfs-confirm-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
                 <button id="btn-msfs-confirm-ok" class="btn-primary"
-                    style="background:#00bcd4; border-color:#00bcd4; color:#121212;"
-                    data-i18n="btnMsfsCheck">Vérifier MSFS 2024</button>
+                    style="background:#00bcd4; border-color:#00bcd4; color:#121212;" data-i18n="btnMsfsCheck">Vérifier
+                    MSFS 2024</button>
             </div>
         </div>
     </div>
@@ -797,20 +817,23 @@
             <h3 data-i18n="msfsProgressTitle"
                 style="margin:0 0 6px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
                 Extraction aéroports MSFS 2024</h3>
-            <p id="msfs-progress-phase"
-                style="color:#aaa; font-size:12px; margin:0 0 14px 0;" data-i18n="msfsPhaseConnecting">Connexion au simulateur…</p>
+            <p id="msfs-progress-phase" style="color:#aaa; font-size:12px; margin:0 0 14px 0;"
+                data-i18n="msfsPhaseConnecting">Connexion au simulateur…</p>
 
             <div id="msfs-progress-bar-wrap"
                 style="background:#0e0e0e; border:1px solid #2a2a2a; border-radius:6px; height:10px; overflow:hidden; margin-bottom:6px;">
                 <div id="msfs-progress-bar-fill"
                     style="background:#00bcd4; height:100%; width:0%; transition:width 0.25s ease;"></div>
             </div>
-            <p id="msfs-progress-count" style="color:#888; font-size:12px; margin:0 0 14px 0; text-align:right;">0 / 0</p>
+            <p id="msfs-progress-count" style="color:#888; font-size:12px; margin:0 0 14px 0; text-align:right;">0 / 0
+            </p>
 
             <div id="msfs-progress-stats"
-                style="color:#888; font-size:12px; margin:0 0 14px 0; min-height:18px; font-family:'Consolas','Monaco',monospace;"></div>
+                style="color:#888; font-size:12px; margin:0 0 14px 0; min-height:18px; font-family:'Consolas','Monaco',monospace;">
+            </div>
 
-            <div id="msfs-progress-summary" style="color:#888; font-size:12px; margin:0 0 14px 0; min-height:18px;"></div>
+            <div id="msfs-progress-summary" style="color:#888; font-size:12px; margin:0 0 14px 0; min-height:18px;">
+            </div>
 
             <div class="create-flight-actions">
                 <button id="btn-msfs-progress-close" class="btn-primary" data-i18n="btnClose" disabled>Fermer</button>
@@ -824,23 +847,27 @@
             <h3 data-i18n="navaidsProgressTitle"
                 style="margin:0 0 6px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
                 Extraction navaids MSFS 2024</h3>
-            <p id="navaids-progress-phase"
-                style="color:#aaa; font-size:12px; margin:0 0 14px 0;" data-i18n="msfsPhaseConnecting">Connexion au simulateur…</p>
+            <p id="navaids-progress-phase" style="color:#aaa; font-size:12px; margin:0 0 14px 0;"
+                data-i18n="msfsPhaseConnecting">Connexion au simulateur…</p>
 
             <div id="navaids-progress-bar-wrap"
                 style="background:#0e0e0e; border:1px solid #2a2a2a; border-radius:6px; height:10px; overflow:hidden; margin-bottom:6px;">
                 <div id="navaids-progress-bar-fill"
                     style="background:#00bcd4; height:100%; width:0%; transition:width 0.25s ease;"></div>
             </div>
-            <p id="navaids-progress-count" style="color:#888; font-size:12px; margin:0 0 14px 0; text-align:right;">0 / 0</p>
+            <p id="navaids-progress-count" style="color:#888; font-size:12px; margin:0 0 14px 0; text-align:right;">0 /
+                0</p>
 
             <div id="navaids-progress-stats"
-                style="color:#888; font-size:12px; margin:0 0 14px 0; min-height:18px; font-family:'Consolas','Monaco',monospace;"></div>
+                style="color:#888; font-size:12px; margin:0 0 14px 0; min-height:18px; font-family:'Consolas','Monaco',monospace;">
+            </div>
 
-            <div id="navaids-progress-summary" style="color:#888; font-size:12px; margin:0 0 14px 0; min-height:18px;"></div>
+            <div id="navaids-progress-summary" style="color:#888; font-size:12px; margin:0 0 14px 0; min-height:18px;">
+            </div>
 
             <div class="create-flight-actions">
-                <button id="btn-navaids-progress-close" class="btn-primary" data-i18n="btnClose" disabled>Fermer</button>
+                <button id="btn-navaids-progress-close" class="btn-primary" data-i18n="btnClose"
+                    disabled>Fermer</button>
             </div>
         </div>
     </div>
@@ -851,12 +878,11 @@
             <h3 data-i18n="elevConfirmTitle"
                 style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
                 Re-télécharger les données ?</h3>
-            <p data-i18n="elevConfirmMsg"
-                style="color:#e0e0e0; font-size:14px; margin:0 0 22px 0; line-height:1.6;"></p>
+            <p data-i18n="elevConfirmMsg" style="color:#e0e0e0; font-size:14px; margin:0 0 22px 0; line-height:1.6;">
+            </p>
             <div class="create-flight-actions">
                 <button id="btn-elev-confirm-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
-                <button id="btn-elev-confirm-ok" class="btn-primary"
-                    data-i18n="elevConfirmBtn">Re-télécharger</button>
+                <button id="btn-elev-confirm-ok" class="btn-primary" data-i18n="elevConfirmBtn">Re-télécharger</button>
             </div>
         </div>
     </div>
@@ -985,7 +1011,7 @@
                         <button class="chrono-btn chrono-btn-start" id="tank-start" data-i18n-title="chronoStart"
                             title="Démarrer">▶</button>
                         <button class="chrono-btn chrono-btn-stop" id="tank-stop" data-i18n-title="chronoStop"
-                            title="Arrêter">⏸</button>
+                            title="Arrêter"><i class="ph-light ph-pause" aria-hidden="true"></i></button>
                         <button class="chrono-btn chrono-btn-reset" id="tank-reset" data-i18n-title="chronoReset"
                             title="Remise à zéro">↺</button>
                     </div>
@@ -1175,7 +1201,8 @@
                     <span data-i18n="optSoundVolume">Volume des sons</span>
                     <span style="display:flex; align-items:center; gap:8px;">
                         <input type="range" id="opt-sound-volume" min="0" max="100" step="5" style="width:120px;">
-                        <span id="opt-sound-volume-val" style="min-width:40px; text-align:right; color:#00bcd4;">100 %</span>
+                        <span id="opt-sound-volume-val" style="min-width:40px; text-align:right; color:#00bcd4;">100
+                            %</span>
                     </span>
                 </div>
                 <label class="layer-toggle-row" for="opt-logbook-enabled">
@@ -1189,7 +1216,8 @@
                 <label class="layer-toggle-row" for="opt-hard-nav">
                     <span>
                         <span data-i18n="optHardNav">Navigation en mode difficile</span>
-                        <a href="#" id="link-show-margins" class="margins-link" data-i18n="optHardNavSeeMargins">(voir les marges)</a>
+                        <a href="#" id="link-show-margins" class="margins-link" data-i18n="optHardNavSeeMargins">(voir
+                            les marges)</a>
                     </span>
                     <input type="checkbox" class="toggle-switch" id="opt-hard-nav">
                 </label>
@@ -1208,18 +1236,29 @@
                 style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px; text-align:center;">
                 À propos</h3>
             <div style="font-size:13px; line-height:1.6;">
-                <p style="margin:0 0 10px 0; text-align:center; font-weight:700; font-size:16px; color:#00bcd4;">NavXpressVFR</p>
-                <p style="margin:0 0 10px 0;" data-i18n="aboutTagline">Assistant de vol VFR, un outil de navigation à l'estime, libre et gratuit pour Microsoft Flight Simulator 2024.</p>
-                <p style="margin:0 0 10px 0;" data-i18n="aboutLicense">Ce logiciel est distribué sous licence GPL3 ou ultérieure.</p>
-                <p style="margin:0 0 10px 0;" data-i18n-html="aboutSource">Le code source de cette application est disponible sur <a class="ap-info-link" href="https://github.com/brackets-acrobat/NavXpressVFR-Electron" target="_blank" rel="noopener">GitHub</a>.</p>
+                <p style="margin:0 0 10px 0; text-align:center; font-weight:700; font-size:16px; color:#00bcd4;">
+                    NavXpressVFR</p>
+                <p style="margin:0 0 10px 0;" data-i18n="aboutTagline">Assistant de vol VFR, un outil de navigation à
+                    l'estime, libre et gratuit pour Microsoft Flight Simulator 2024.</p>
+                <p style="margin:0 0 10px 0;" data-i18n="aboutLicense">Ce logiciel est distribué sous licence GPL3 ou
+                    ultérieure.</p>
+                <p style="margin:0 0 10px 0;" data-i18n-html="aboutSource">Le code source de cette application est
+                    disponible sur <a class="ap-info-link"
+                        href="https://github.com/brackets-acrobat/NavXpressVFR-Electron" target="_blank"
+                        rel="noopener">GitHub</a>.</p>
                 <p style="margin:0 0 10px 0;" data-i18n="aboutCopyright">Copyright 2026 Cyril MILANI.</p>
                 <hr style="border:none; border-top:1px solid #3d3d3d; margin:12px 0;">
                 <p style="margin:0 0 6px 0; font-weight:700;">Little Navmap / atools — Alexander Barthel (albar965)</p>
-                <p style="margin:0 0 6px 0;" data-i18n="aboutCreditsFormat">Le format lnmpln est issu du logiciel Little Navmap.</p>
-                <p style="margin:0 0 8px 0;" data-i18n-html="aboutCreditsMethod">L'extraction des navaids depuis MSFS 2024 (<code>extract-navaids-msfs.js</code>) s'inspire directement de la méthode du projet atools / Little Navmap d'Alexander Barthel.</p>
+                <p style="margin:0 0 6px 0;" data-i18n="aboutCreditsFormat">Le format lnmpln est issu du logiciel Little
+                    Navmap.</p>
+                <p style="margin:0 0 8px 0;" data-i18n-html="aboutCreditsMethod">L'extraction des navaids depuis MSFS
+                    2024 (<code>extract-navaids-msfs.js</code>) s'inspire directement de la méthode du projet atools /
+                    Little Navmap d'Alexander Barthel.</p>
                 <ul style="margin:0; padding-left:18px;">
-                    <li>atools : <a class="ap-info-link" href="https://github.com/albar965/atools" target="_blank" rel="noopener">https://github.com/albar965/atools</a></li>
-                    <li>Little Navmap : <a class="ap-info-link" href="https://github.com/albar965/littlenavmap" target="_blank" rel="noopener">https://github.com/albar965/littlenavmap</a></li>
+                    <li>atools : <a class="ap-info-link" href="https://github.com/albar965/atools" target="_blank"
+                            rel="noopener">https://github.com/albar965/atools</a></li>
+                    <li>Little Navmap : <a class="ap-info-link" href="https://github.com/albar965/littlenavmap"
+                            target="_blank" rel="noopener">https://github.com/albar965/littlenavmap</a></li>
                 </ul>
             </div>
             <div class="create-flight-actions" style="margin-top:16px;">
@@ -1235,28 +1274,36 @@
                 style="margin:0 0 12px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
                 Marges de navigation</h3>
             <p data-i18n="marginsIntro" style="font-size:13px; line-height:1.5; margin:0 0 14px 0; color:#bbb;">
-                Le mode difficile resserre les marges de déclenchement des alertes et de validation des points pour corser la navigation.</p>
+                Le mode difficile resserre les marges de déclenchement des alertes et de validation des points pour
+                corser la navigation.</p>
             <table style="width:100%; border-collapse:collapse; font-size:13px;">
                 <thead>
                     <tr style="border-bottom:1px solid #00bcd4;">
-                        <th data-i18n="marginsColParam" style="text-align:left; padding:6px 8px; color:#00bcd4;">Paramètre</th>
-                        <th data-i18n="marginsColNormal" style="text-align:center; padding:6px 8px; color:#00bcd4;">Mode normal</th>
-                        <th data-i18n="marginsColHard" style="text-align:center; padding:6px 8px; color:#00bcd4;">Mode difficile</th>
+                        <th data-i18n="marginsColParam" style="text-align:left; padding:6px 8px; color:#00bcd4;">
+                            Paramètre</th>
+                        <th data-i18n="marginsColNormal" style="text-align:center; padding:6px 8px; color:#00bcd4;">Mode
+                            normal</th>
+                        <th data-i18n="marginsColHard" style="text-align:center; padding:6px 8px; color:#00bcd4;">Mode
+                            difficile</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr style="border-bottom:1px solid #333;">
                         <td data-i18n="marginsRowDeviation" style="padding:6px 8px;">Couloir de déviation latérale</td>
                         <td data-i18n="marginsDevNormal" style="text-align:center; padding:6px 8px;">1,2 NM</td>
-                        <td data-i18n="marginsDevHard" style="text-align:center; padding:6px 8px; color:#ffa726;">0,7 NM</td>
+                        <td data-i18n="marginsDevHard" style="text-align:center; padding:6px 8px; color:#ffa726;">0,7 NM
+                        </td>
                     </tr>
                     <tr style="border-bottom:1px solid #333;">
-                        <td data-i18n="marginsRowWaypoint" style="padding:6px 8px;">Arrivée waypoint / toucher / bascule de leg</td>
+                        <td data-i18n="marginsRowWaypoint" style="padding:6px 8px;">Arrivée waypoint / toucher / bascule
+                            de leg</td>
                         <td data-i18n="marginsWpNormal" style="text-align:center; padding:6px 8px;">1,5 NM</td>
-                        <td data-i18n="marginsWpHard" style="text-align:center; padding:6px 8px; color:#ffa726;">1,0 NM</td>
+                        <td data-i18n="marginsWpHard" style="text-align:center; padding:6px 8px; color:#ffa726;">1,0 NM
+                        </td>
                     </tr>
                     <tr>
-                        <td data-i18n="marginsRowSuspension" style="padding:6px 8px;">Zone de suspension (tour de piste)</td>
+                        <td data-i18n="marginsRowSuspension" style="padding:6px 8px;">Zone de suspension (tour de piste)
+                        </td>
                         <td data-i18n="marginsSuspNormal" style="text-align:center; padding:6px 8px;">2 NM</td>
                         <td data-i18n="marginsSuspHard" style="text-align:center; padding:6px 8px;">2 NM</td>
                     </tr>
@@ -1272,7 +1319,8 @@
     <div id="logbook-overlay" class="modal-overlay">
         <div id="logbook-popup" class="modal-popup">
             <button id="btn-logbook-close" class="airport-info-close" aria-label="Fermer">×</button>
-            <h3 class="logbook-h3" data-i18n="logbookTitle">📖 Carnet de vol</h3>
+            <h3 class="logbook-h3"><i class="ph-light ph-book" aria-hidden="true"></i> <span
+                    data-i18n="logbookTitle">Carnet de vol</span></h3>
             <div id="logbook-table-wrap">
                 <table id="logbook-table">
                     <thead>
@@ -1320,7 +1368,8 @@
             <p id="logbook-end-question" data-i18n="lbEndQuestion">L'avion semble être au parking. Le
                 vol est-il terminé ?</p>
             <div id="logbook-end-summary"></div>
-            <div class="create-flight-actions" style="margin-top:18px; display:flex; gap:10px; justify-content:flex-end;">
+            <div class="create-flight-actions"
+                style="margin-top:18px; display:flex; gap:10px; justify-content:flex-end;">
                 <button id="btn-logbook-end-no" class="btn-secondary" data-i18n="lbEndNo">Non, continuer</button>
                 <button id="btn-logbook-end-yes" class="btn-primary" data-i18n="lbEndYes">Oui, enregistrer</button>
             </div>
@@ -1344,20 +1393,21 @@
     <div id="landing-rate-overlay" class="modal-overlay">
         <div id="landing-rate-popup" class="modal-popup">
             <h3 class="logbook-h3" data-i18n="lrTitle">Atterrissage</h3>
-            <div id="landing-rate-value"><span id="landing-rate-vs">—</span><span class="landing-rate-unit">ft/min</span></div>
+            <div id="landing-rate-value"><span id="landing-rate-vs">—</span><span
+                    class="landing-rate-unit">ft/min</span></div>
             <div id="landing-rate-vslabel" class="landing-rate-sub" data-i18n="lrVsLabel">Vitesse verticale</div>
             <div id="landing-rate-g" class="landing-rate-g"></div>
         </div>
     </div>
 
-    <!-- Modale Recherche METAR (bouton 🔍 METAR) -->
+    <!-- Modale Recherche METAR (bouton METAR) -->
     <div id="metar-search-overlay" class="modal-overlay">
         <div id="metar-search-popup" class="modal-popup">
             <button id="btn-metar-search-close" class="airport-info-close" aria-label="Fermer">×</button>
             <h3 class="logbook-h3" data-i18n="metarSearchTitle">Rechercher un METAR</h3>
             <div id="metar-search-form">
-                <input type="text" id="metar-search-input" maxlength="6" size="6" autocomplete="off"
-                    spellcheck="false" data-i18n-placeholder="metarSearchPlaceholder" placeholder="LFPG">
+                <input type="text" id="metar-search-input" maxlength="6" size="6" autocomplete="off" spellcheck="false"
+                    data-i18n-placeholder="metarSearchPlaceholder" placeholder="LFPG">
                 <button id="btn-metar-search-go" class="btn-primary" data-i18n="btnSearch">Rechercher</button>
             </div>
             <div id="metar-search-result"></div>
@@ -1378,10 +1428,13 @@
     <!-- Modale "Tour de piste / Toucher prévu ?" -->
     <div id="ask-pattern-overlay" class="modal-overlay">
         <div class="modal-popup" style="width:380px;">
-            <h3 data-i18n="patternModalTitle" style="margin:0 0 6px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Tour de piste / Toucher</h3>
+            <h3 data-i18n="patternModalTitle"
+                style="margin:0 0 6px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
+                Tour de piste / Toucher</h3>
             <p style="color:#e0e0e0; font-size:13px; margin:0 0 14px 0; line-height:1.6;">
                 <span data-i18n="patternModalQuestion">Effectuer un tour de piste / toucher à</span>
-                <strong id="ask-pattern-code" style="color:#00bcd4; font-family:'Consolas','Monaco',monospace;">XXXX</strong> ?
+                <strong id="ask-pattern-code"
+                    style="color:#00bcd4; font-family:'Consolas','Monaco',monospace;">XXXX</strong> ?
             </p>
             <div class="create-flight-actions">
                 <button id="btn-ask-pattern-no" class="btn-secondary" data-i18n="btnNo">Non</button>
@@ -1404,11 +1457,13 @@
                 <div class="dt-airport-label" data-i18n="dtAirportSectionTitle">Aéroport hors plan (ICAO)</div>
                 <div class="cf-search-row">
                     <input type="text" id="dt-airport-icao" maxlength="8" class="input-icao"
-                        data-i18n-placeholder="dtAirportPlaceholder" placeholder="ex: LFLY"
-                        autocomplete="off" spellcheck="false">
-                    <button id="btn-dt-airport-search" class="btn-search" data-i18n="dtBtnSearchAirport">Rechercher</button>
+                        data-i18n-placeholder="dtAirportPlaceholder" placeholder="ex: LFLY" autocomplete="off"
+                        spellcheck="false">
+                    <button id="btn-dt-airport-search" class="btn-search"
+                        data-i18n="dtBtnSearchAirport">Rechercher</button>
                 </div>
-                <div id="dt-airport-status" class="search-status" style="display:block; margin-top:6px; min-height:16px;"></div>
+                <div id="dt-airport-status" class="search-status"
+                    style="display:block; margin-top:6px; min-height:16px;"></div>
             </div>
 
             <div class="dt-or-separator" data-i18n="dtOrSeparator">— ou —</div>
@@ -1475,9 +1530,11 @@
     <!-- Modale Atterrissage d'urgence — choix parmi les 3 aéroports les plus proches -->
     <div id="emergency-overlay" class="modal-overlay">
         <div class="modal-popup" style="width:520px;">
-            <h3 data-i18n="emergencyModalTitle"
+            <h3
                 style="margin:0 0 6px 0; color:#d32f2f; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
-                ✈ Atterrissage d'urgence</h3>
+                <i class="ph-light ph-airplane" aria-hidden="true"></i> <span
+                    data-i18n="emergencyModalTitle">Atterrissage d'urgence</span>
+            </h3>
             <p data-i18n="emergencyModalHint" style="color:#888; font-size:12px; margin:0 0 14px 0;">
                 Sélectionnez l'aéroport de déroutement :</p>
             <div id="emergency-list" class="emergency-list"></div>
@@ -1500,8 +1557,8 @@
                 Saisissez le rayon du cercle :</p>
             <div class="input-group">
                 <label for="range-circle-radius" data-i18n="rangeCircleRadiusLabel">Rayon (NM)</label>
-                <input type="text" id="range-circle-radius" inputmode="decimal" maxlength="6"
-                    autocomplete="off" spellcheck="false" placeholder="10">
+                <input type="text" id="range-circle-radius" inputmode="decimal" maxlength="6" autocomplete="off"
+                    spellcheck="false" placeholder="10">
             </div>
             <div id="range-circle-error" class="field-error"></div>
             <div class="create-flight-actions">
@@ -1537,23 +1594,23 @@
 
             <div class="input-group" style="margin-bottom:10px;">
                 <label for="tp-upwind" data-i18n="tpUpwindLabel">Longueur montée initiale (NM)</label>
-                <input type="text" id="tp-upwind" inputmode="decimal" maxlength="5"
-                    autocomplete="off" spellcheck="false" placeholder="0.5">
+                <input type="text" id="tp-upwind" inputmode="decimal" maxlength="5" autocomplete="off"
+                    spellcheck="false" placeholder="0.5">
             </div>
             <div class="input-group" style="margin-bottom:10px;">
                 <label for="tp-crosswind" data-i18n="tpCrosswindLabel">Longueur vent traversier (NM)</label>
-                <input type="text" id="tp-crosswind" inputmode="decimal" maxlength="5"
-                    autocomplete="off" spellcheck="false" placeholder="0.5">
+                <input type="text" id="tp-crosswind" inputmode="decimal" maxlength="5" autocomplete="off"
+                    spellcheck="false" placeholder="0.5">
             </div>
             <div class="input-group" style="margin-bottom:10px;">
                 <label for="tp-final" data-i18n="tpFinalLabel">Longueur de finale (NM)</label>
-                <input type="text" id="tp-final" inputmode="decimal" maxlength="5"
-                    autocomplete="off" spellcheck="false" placeholder="0.7">
+                <input type="text" id="tp-final" inputmode="decimal" maxlength="5" autocomplete="off" spellcheck="false"
+                    placeholder="0.7">
             </div>
             <div class="input-group" style="margin-bottom:6px;">
                 <label for="tp-altitude" data-i18n="tpAltLabel">Altitude tour de piste (ft)</label>
-                <input type="text" id="tp-altitude" inputmode="numeric" maxlength="4"
-                    autocomplete="off" spellcheck="false" placeholder="1000">
+                <input type="text" id="tp-altitude" inputmode="numeric" maxlength="4" autocomplete="off"
+                    spellcheck="false" placeholder="1000">
             </div>
 
             <div id="tp-error" class="field-error"></div>
@@ -1573,14 +1630,12 @@
                 Ajouter un repère visuel</h3>
             <div class="input-group" style="margin-bottom:14px;">
                 <label data-i18n="repereNameLabel">Nom du repère</label>
-                <input type="text" id="repere-add-name" maxlength="60"
-                    data-i18n-placeholder="repereNamePlaceholder" placeholder="ex: Château d'eau"
-                    autocomplete="off" spellcheck="false">
+                <input type="text" id="repere-add-name" maxlength="60" data-i18n-placeholder="repereNamePlaceholder"
+                    placeholder="ex: Château d'eau" autocomplete="off" spellcheck="false">
             </div>
             <div class="input-group">
                 <label data-i18n="repereDescLabel">Description</label>
-                <textarea id="repere-add-desc" rows="4" maxlength="500"
-                    data-i18n-placeholder="repereDescPlaceholder"
+                <textarea id="repere-add-desc" rows="4" maxlength="500" data-i18n-placeholder="repereDescPlaceholder"
                     placeholder="Description du repère visuel" spellcheck="false"></textarea>
             </div>
             <div id="repere-add-error" class="field-error"></div>
@@ -1600,14 +1655,12 @@
                 Repère visuel</div>
             <div class="input-group" style="margin-bottom:14px;">
                 <label data-i18n="repereNameLabel">Nom du repère</label>
-                <input type="text" id="repere-info-name" maxlength="60"
-                    data-i18n-placeholder="repereNamePlaceholder" placeholder="ex: Château d'eau"
-                    autocomplete="off" spellcheck="false">
+                <input type="text" id="repere-info-name" maxlength="60" data-i18n-placeholder="repereNamePlaceholder"
+                    placeholder="ex: Château d'eau" autocomplete="off" spellcheck="false">
             </div>
             <div class="input-group">
                 <label data-i18n="repereDescLabel">Description</label>
-                <textarea id="repere-info-desc" rows="4" maxlength="500"
-                    data-i18n-placeholder="repereDescPlaceholder"
+                <textarea id="repere-info-desc" rows="4" maxlength="500" data-i18n-placeholder="repereDescPlaceholder"
                     placeholder="Description du repère visuel" spellcheck="false"></textarea>
             </div>
             <div id="repere-info-error" class="field-error"></div>
@@ -1625,12 +1678,11 @@
          par la × ou par un clic ailleurs dans l'appli (overlay = fond pleine fenêtre). -->
     <div id="uncertainty-cooldown-overlay" class="modal-overlay">
         <div class="modal-popup" style="width:440px; border-color:#ffb300; position:relative;">
-            <button class="airport-info-close" id="btn-uncertainty-cooldown-close"
-                title="Fermer">×</button>
+            <button class="airport-info-close" id="btn-uncertainty-cooldown-close" title="Fermer">×</button>
             <div style="display:flex; align-items:center; gap:14px; padding-right:18px;">
-                <div style="font-size:28px; line-height:1;">⏱️</div>
-                <div id="uncertainty-cooldown-msg"
-                    style="color:#e0e0e0; font-size:14px; line-height:1.5;"></div>
+                <div style="font-size:28px; line-height:1;"><i class="ph-light ph-timer" style="font-size:28px;"></i>
+                </div>
+                <div id="uncertainty-cooldown-msg" style="color:#e0e0e0; font-size:14px; line-height:1.5;"></div>
             </div>
         </div>
     </div>
@@ -1662,11 +1714,10 @@
                 <strong id="flanquement-vor-ident" style="color:#ce93d8;">—</strong>
                 <span data-i18n="flanquementSubtitleTo">vers&nbsp;:</span>
             </p>
-            <div id="flanquement-empty" class="dt-wp-empty" style="display:none; color:#888; font-size:13px; padding:8px 4px;"
-                data-i18n="flanquementEmpty">
+            <div id="flanquement-empty" class="dt-wp-empty"
+                style="display:none; color:#888; font-size:13px; padding:8px 4px;" data-i18n="flanquementEmpty">
                 Aucun point tournant ni repère visuel dans le plan de vol.</div>
-            <div id="flanquement-list" class="dt-wp-list"
-                style="max-height:280px; overflow-y:auto;"></div>
+            <div id="flanquement-list" class="dt-wp-list" style="max-height:280px; overflow-y:auto;"></div>
             <div id="flanquement-error" class="field-error"></div>
             <div class="create-flight-actions">
                 <button id="btn-flanquement-cancel" class="btn-secondary" data-i18n="btnCancel">Annuler</button>
@@ -1730,8 +1781,8 @@
             <div class="coords-point-copy-row">
                 <button id="btn-coords-point-copy" class="coords-copy-btn" type="button"
                     data-i18n-title="coordsCopyTooltip" title="Copier les coordonnées" aria-label="Copier">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                     </svg>
@@ -1750,9 +1801,11 @@
     <div id="map-search-overlay" class="modal-overlay">
         <div id="map-search-popup" class="modal-popup">
             <button class="airport-info-close" id="btn-map-search-close" title="Fermer">×</button>
-            <h3 id="map-search-title" data-i18n="mapSearchTitle"
+            <h3 id="map-search-title"
                 style="margin:0 0 14px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">
-                🔍 Rechercher</h3>
+                <i class="ph-light ph-magnifying-glass" aria-hidden="true"></i> <span
+                    data-i18n="mapSearchTitle">Rechercher</span>
+            </h3>
 
             <!-- Choix entité (Aéroport / Navaid) -->
             <div class="ms-field">
@@ -1786,8 +1839,7 @@
 
             <!-- Input + bouton -->
             <div class="ms-search-row">
-                <input type="text" id="ms-input" class="ms-input"
-                       autocomplete="off" spellcheck="false">
+                <input type="text" id="ms-input" class="ms-input" autocomplete="off" spellcheck="false">
                 <button id="btn-ms-search" class="btn-search" data-i18n="btnSearch">Rechercher</button>
             </div>
 
@@ -1809,8 +1861,8 @@
         <span id="update-banner-text" class="update-banner-text"></span>
         <button type="button" id="update-banner-action" class="update-banner-btn" style="display:none;"
             data-i18n="updateInstallBtn">Redémarrer et installer</button>
-        <button type="button" id="update-banner-close" class="update-banner-close"
-            data-i18n-title="updateCloseTooltip" title="Plus tard" aria-label="Plus tard">×</button>
+        <button type="button" id="update-banner-close" class="update-banner-close" data-i18n-title="updateCloseTooltip"
+            title="Plus tard" aria-label="Plus tard">×</button>
     </div>
 
     <!-- i18n chargé AVANT tous les modules -->

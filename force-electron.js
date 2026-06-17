@@ -26,7 +26,7 @@ async function main() {
     const pathTxt = path.join(__dirname, 'node_modules', 'electron', 'path.txt');
     await fs.writeFile(pathTxt, 'electron.exe');
 
-    console.log("🎯 Electron a été installé manuellement avec succès !");
+    console.log("Electron a été installé manuellement avec succès !");
   } catch (err) {
     console.error("Erreur lors de l'installation forcée :", err);
   }

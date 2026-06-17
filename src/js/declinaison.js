@@ -45,7 +45,7 @@ async function calculerDeclinaisonCentroide() {
         valDecl = -valDecl;
       }
       declinaisonMoyenneGlobale = valDecl;
-      console.log(`🧭 Déclinaison magnétique moyenne : ${declinaisonMoyenneGlobale.toFixed(2)}°`);
+      console.log(`Déclinaison magnétique moyenne : ${declinaisonMoyenneGlobale.toFixed(2)}°`);
     } else {
       console.warn("Résultat déclinaison invalide, repli sur 0.0°");
       declinaisonMoyenneGlobale = 0.0;

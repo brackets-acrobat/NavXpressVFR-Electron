@@ -26,28 +26,39 @@ function initTimers() {
   let chrono = null;
   let timer = null;
 
+  // Bouton bascule play/pause fusionné : un seul bouton dont l'icône reflète
+  // l'état (play au repos → pause en marche). Le reset reste un bouton séparé.
+  function wireToggle(sw, toggleBtn, resetBtn) {
+    if (!toggleBtn) return;
+    const icon = toggleBtn.querySelector('i');
+    function sync() {
+      const on = sw.running;
+      if (icon) icon.className = on ? 'ph-light ph-pause' : 'ph-light ph-play';
+      const key = on ? 'chronoStop' : 'chronoStart';
+      toggleBtn.setAttribute('data-i18n-title', key); // langue : applyI18n relit cette clé
+      if (typeof t === 'function') toggleBtn.title = t(key);
+    }
+    toggleBtn.addEventListener('click', () => { sw.running ? sw.stop() : sw.start(); sync(); });
+    if (resetBtn) resetBtn.addEventListener('click', () => { sw.reset(); sync(); });
+    sync();
+  }
+
   const chronoDisplay = document.getElementById('chrono-display');
   if (chronoDisplay) {
+    // start/stop non passés : un seul bouton toggle géré ci-dessous ; StopWatch ne
+    // sert plus qu'à griser le reset quand il n'y a rien à remettre à zéro.
     chrono = new StopWatch(chronoDisplay, 'mmss', {
-      start: document.getElementById('chrono-start'),
-      stop: document.getElementById('chrono-stop'),
       reset: document.getElementById('chrono-reset'),
     });
-    document.getElementById('chrono-start')?.addEventListener('click', () => chrono.start());
-    document.getElementById('chrono-stop')?.addEventListener('click', () => chrono.stop());
-    document.getElementById('chrono-reset')?.addEventListener('click', () => chrono.reset());
+    wireToggle(chrono, document.getElementById('chrono-toggle'), document.getElementById('chrono-reset'));
   }
 
   const timerDisplay = document.getElementById('timer-display');
   if (timerDisplay) {
     timer = new StopWatch(timerDisplay, 'hhmmss', {
-      start: document.getElementById('timer-start'),
-      stop: document.getElementById('timer-stop'),
       reset: document.getElementById('timer-reset'),
     });
-    document.getElementById('timer-start')?.addEventListener('click', () => timer.start());
-    document.getElementById('timer-stop')?.addEventListener('click', () => timer.stop());
-    document.getElementById('timer-reset')?.addEventListener('click', () => timer.reset());
+    wireToggle(timer, document.getElementById('timer-toggle'), document.getElementById('timer-reset'));
   }
 
   // --- Gel pendant la pause simulateur (ESC / Pause_EX1) ---

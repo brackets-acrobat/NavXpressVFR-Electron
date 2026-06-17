@@ -174,7 +174,7 @@ function initDirectTo() {
     if (!res || !res.found) {
       dtAirportStatus.className = 'search-status error';
       if (res && res.reason === 'no-data') {
-        dtAirportStatus.textContent = t('oaDataMissing');
+        dtAirportStatus.innerHTML = t('oaDataMissing');
       } else {
         dtAirportStatus.textContent = t('dtAirportNotFound');
       }

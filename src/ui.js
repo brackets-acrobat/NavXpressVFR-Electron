@@ -81,15 +81,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initConversions();
 
-  // Bouton ⚙️ Options du header + modale (vide pour l'instant).
+  // Bouton Options du header + modale (vide pour l'instant).
   initOptions();
 
-  // Bouton 📖 Carnet de vol (à droite de la boîte chronomètre).
+  // Bouton Carnet de vol (à droite de la boîte chronomètre).
   initLogbook();
 
   initDirectTo();
 
-  // Atterrissage d'urgence : bouton ✈ rouge + modale 3 aéroports les plus
+  // Atterrissage d'urgence : bouton rouge + modale 3 aéroports les plus
   // proches. Doit suivre initDirectTo (utilise window.activerDirectToUrgence).
   initEmergency();
 
@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // onDonneesPosition et lit le global `toursDePiste`. Doit suivre initTrafficPattern.
   initTrafficPatternVoice();
 
-  // Bouton 🔍 « Rechercher » en bas à gauche de la carte. Doit être appelé
+  // Bouton « Rechercher » en bas à gauche de la carte. Doit être appelé
   // APRÈS initMap (contrôle Leaflet) — utilise window.api.rechercheModale.
   initMapSearch();
 

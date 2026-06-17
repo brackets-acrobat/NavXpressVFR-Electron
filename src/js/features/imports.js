@@ -50,7 +50,7 @@ function initImports() {
 
   function openNavaidsConfirm() {
     applyI18nIn(navaidsConfirmOverlay);
-    if (navaidsCheckStatus) { navaidsCheckStatus.textContent = ''; navaidsCheckStatus.style.color = '#aaa'; }
+    if (navaidsCheckStatus) { navaidsCheckStatus.innerHTML = ''; navaidsCheckStatus.style.color = '#aaa'; }
     if (btnNavaidsConfirmOk) btnNavaidsConfirmOk.disabled = false;
     if (btnNavaidsConfirmCancel) btnNavaidsConfirmCancel.disabled = false;
     navaidsConfirmOverlay.classList.add('visible');
@@ -66,7 +66,7 @@ function initImports() {
     if (navaidsProgressBarFill) navaidsProgressBarFill.style.width = '0%';
     if (navaidsProgressCount) navaidsProgressCount.textContent = '0 / 0';
     if (navaidsProgressStats) navaidsProgressStats.textContent = '';
-    if (navaidsProgressSummary) { navaidsProgressSummary.textContent = ''; navaidsProgressSummary.style.color = '#888'; }
+    if (navaidsProgressSummary) { navaidsProgressSummary.innerHTML = ''; navaidsProgressSummary.style.color = '#888'; }
     if (navaidsProgressPhase) { navaidsProgressPhase.style.color = '#aaa'; navaidsProgressPhase.textContent = t('msfsPhaseConnecting'); }
     if (btnNavaidsProgressClose) btnNavaidsProgressClose.disabled = true;
     navaidsProgressOverlay.classList.add('visible');
@@ -120,17 +120,17 @@ function initImports() {
     if (result && result.ok && result.summary && result.summary.file) {
       if (navaidsProgressSummary) {
         navaidsProgressSummary.style.color = '#00e676';
-        navaidsProgressSummary.textContent = t('navaidsExtractDone')(result.summary.navaids);
+        navaidsProgressSummary.innerHTML = t('navaidsExtractDone')(result.summary.navaids);
       }
     } else if (result && result.ok && result.summary) {
       if (navaidsProgressSummary) {
         navaidsProgressSummary.style.color = '#ffb300';
-        navaidsProgressSummary.textContent = t('navaidsExtractEmpty');
+        navaidsProgressSummary.innerHTML = t('navaidsExtractEmpty');
       }
     } else {
       if (navaidsProgressSummary) {
         navaidsProgressSummary.style.color = '#ff5252';
-        navaidsProgressSummary.textContent = t('navaidsExtractError')((result && result.error) || '?');
+        navaidsProgressSummary.innerHTML = t('navaidsExtractError')((result && result.error) || '?');
       }
     }
   }
@@ -146,7 +146,7 @@ function initImports() {
       _navaidsChecking = true;
       btnNavaidsConfirmOk.disabled = true;
       if (btnNavaidsConfirmCancel) btnNavaidsConfirmCancel.disabled = true;
-      if (navaidsCheckStatus) { navaidsCheckStatus.style.color = '#00bcd4'; navaidsCheckStatus.textContent = t('msfsCheckChecking'); }
+      if (navaidsCheckStatus) { navaidsCheckStatus.style.color = '#00bcd4'; navaidsCheckStatus.innerHTML = t('msfsCheckChecking'); }
 
       let res = { running: false };
       try { res = await window.api.msfsVerifierLancement(); }
@@ -157,10 +157,10 @@ function initImports() {
       if (btnNavaidsConfirmCancel) btnNavaidsConfirmCancel.disabled = false;
 
       if (res && res.running) {
-        if (navaidsCheckStatus) { navaidsCheckStatus.style.color = '#00e676'; navaidsCheckStatus.textContent = t('msfsCheckRunning')(res.app || 'MSFS'); }
+        if (navaidsCheckStatus) { navaidsCheckStatus.style.color = '#00e676'; navaidsCheckStatus.innerHTML = t('msfsCheckRunning')(res.app || 'MSFS'); }
         startNavaidsExtraction();
       } else {
-        if (navaidsCheckStatus) { navaidsCheckStatus.style.color = '#ff5252'; navaidsCheckStatus.textContent = t('msfsCheckNotRunning'); }
+        if (navaidsCheckStatus) { navaidsCheckStatus.style.color = '#ff5252'; navaidsCheckStatus.innerHTML = t('msfsCheckNotRunning'); }
       }
     });
   }
@@ -199,7 +199,7 @@ function initImports() {
     elevProgressBarFill.style.width = '0%';
     elevProgressBarFill.style.background = '#00bcd4';
     elevProgressSize.textContent = '—';
-    elevProgressSummary.textContent = '';
+    elevProgressSummary.innerHTML = '';
     elevProgressSummary.style.color = '#888';
     btnElevProgressClose.disabled = true;
     elevProgressOverlay.classList.add('visible');
@@ -240,7 +240,7 @@ function initImports() {
         elevProgressPhase.textContent = '';
         elevProgressBarFill.style.background = '#ff5252';
         elevProgressSummary.style.color = '#ff5252';
-        elevProgressSummary.textContent = t('elevProgressError') + ' — ' + (data.error || '');
+        elevProgressSummary.innerHTML = t('elevProgressError') + ' — ' + (data.error || '');
         btnElevProgressClose.disabled = false;
       }
     });
@@ -250,7 +250,7 @@ function initImports() {
     } catch (err) {
       console.error('Import élévation échec:', err);
       elevProgressSummary.style.color = '#ff5252';
-      elevProgressSummary.textContent = '❌ ' + err.message;
+      elevProgressSummary.innerHTML = '<i class="ph-light ph-x-circle" aria-hidden="true"></i> ' + err.message;
       btnElevProgressClose.disabled = false;
     } finally {
       _elevImportInProgress = false;
@@ -309,7 +309,7 @@ function initImports() {
 
   function openMsfsConfirm() {
     applyI18nIn(msfsConfirmOverlay);
-    if (msfsCheckStatus) { msfsCheckStatus.textContent = ''; msfsCheckStatus.style.color = '#aaa'; }
+    if (msfsCheckStatus) { msfsCheckStatus.innerHTML = ''; msfsCheckStatus.style.color = '#aaa'; }
     if (btnMsfsConfirmOk) btnMsfsConfirmOk.disabled = false;
     if (btnMsfsConfirmCancel) btnMsfsConfirmCancel.disabled = false;
     msfsConfirmOverlay.classList.add('visible');
@@ -338,7 +338,7 @@ function initImports() {
       if (btnMsfsConfirmCancel) btnMsfsConfirmCancel.disabled = true;
       if (msfsCheckStatus) {
         msfsCheckStatus.style.color = '#00bcd4';
-        msfsCheckStatus.textContent = t('msfsCheckChecking');
+        msfsCheckStatus.innerHTML = t('msfsCheckChecking');
       }
 
       let res = { running: false };
@@ -355,14 +355,14 @@ function initImports() {
       if (res && res.running) {
         if (msfsCheckStatus) {
           msfsCheckStatus.style.color = '#00e676';
-          msfsCheckStatus.textContent = t('msfsCheckRunning')(res.app || 'MSFS');
+          msfsCheckStatus.innerHTML = t('msfsCheckRunning')(res.app || 'MSFS');
         }
         // MSFS détecté : on enchaîne sur l'extraction in-app + modale de progression.
         startMsfsExtraction();
       } else {
         if (msfsCheckStatus) {
           msfsCheckStatus.style.color = '#ff5252';
-          msfsCheckStatus.textContent = t('msfsCheckNotRunning');
+          msfsCheckStatus.innerHTML = t('msfsCheckNotRunning');
         }
       }
     });
@@ -392,7 +392,7 @@ function initImports() {
     if (msfsProgressBarFill) msfsProgressBarFill.style.width = '0%';
     if (msfsProgressCount) msfsProgressCount.textContent = '0 / 0';
     if (msfsProgressStatsEl) msfsProgressStatsEl.textContent = '';
-    if (msfsProgressSummary) { msfsProgressSummary.textContent = ''; msfsProgressSummary.style.color = '#888'; }
+    if (msfsProgressSummary) { msfsProgressSummary.innerHTML = ''; msfsProgressSummary.style.color = '#888'; }
     if (msfsProgressPhase) { msfsProgressPhase.style.color = '#aaa'; msfsProgressPhase.textContent = t('msfsPhaseConnecting'); }
     if (btnMsfsProgressClose) btnMsfsProgressClose.disabled = true;
     msfsProgressOverlay.classList.add('visible');
@@ -454,17 +454,17 @@ function initImports() {
     if (result && result.ok && result.summary && result.summary.file) {
       if (msfsProgressSummary) {
         msfsProgressSummary.style.color = '#00e676';
-        msfsProgressSummary.textContent = t('msfsExtractDone')(result.summary.written);
+        msfsProgressSummary.innerHTML = t('msfsExtractDone')(result.summary.written);
       }
     } else if (result && result.ok && result.summary) {
       if (msfsProgressSummary) {
         msfsProgressSummary.style.color = '#ffb300';
-        msfsProgressSummary.textContent = t('msfsExtractEmpty');
+        msfsProgressSummary.innerHTML = t('msfsExtractEmpty');
       }
     } else {
       if (msfsProgressSummary) {
         msfsProgressSummary.style.color = '#ff5252';
-        msfsProgressSummary.textContent = t('msfsExtractError')((result && result.error) || '?');
+        msfsProgressSummary.innerHTML = t('msfsExtractError')((result && result.error) || '?');
       }
     }
   }

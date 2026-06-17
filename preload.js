@@ -148,7 +148,7 @@ contextBridge.exposeInMainWorld('api', {
     // MÉTÉO METAR (aviationweather.gov) — { icao, lat, lon } → METAR brut
     // de l'aéroport ou de la station émettrice la plus proche.
     metarAeroport: (payload) => ipcRenderer.invoke('metar-aeroport', payload),
-    // RECHERCHE METAR par code OACI (bouton 🔍 METAR) → distingue
+    // RECHERCHE METAR par code OACI (bouton METAR) → distingue
     // disponible / aucun relevé / aucun service METAR.
     metarRecherche: (icao) => ipcRenderer.invoke('metar-recherche', icao),
 

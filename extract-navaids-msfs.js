@@ -409,6 +409,6 @@ if (require.main === module){
     console.log('\n\n──────────────────────────────');
     console.log(`Fin (${s.reason}). Aéroports: ${s.airports}`);
     console.log(`Navaids écrits: ${s.navaids}`); console.log('Par type:', JSON.stringify(s.byType));
-    console.log(s.file?`✅ ${s.file}`:'⚠️ pas de fichier'); process.exit(0);
-  }).catch(e=>{ console.log('\n❌',e.message); console.log('   → MSFS 2024 lancé avec un vol ?'); process.exit(1); });
+    console.log(s.file?`${s.file}`:'pas de fichier'); process.exit(0);
+  }).catch(e=>{ console.log('\n',e.message); console.log('   → MSFS 2024 lancé avec un vol ?'); process.exit(1); });
 }
