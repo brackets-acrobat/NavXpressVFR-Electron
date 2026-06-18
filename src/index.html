@@ -715,6 +715,38 @@
         </div>
     </div>
 
+    <!-- Modale de confirmation : supprimer UN tour de piste (clic droit sur sa ligne) -->
+    <div id="confirm-delete-tp-overlay"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.70); z-index:9999; align-items:center; justify-content:center;">
+        <div
+            style="background:#1a1a1a; border:1px solid #00bcd4; border-radius:10px; padding:28px 32px; width:340px; box-shadow:0 8px 40px rgba(0,0,0,0.7);">
+            <h3 style="margin:0 0 16px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;"
+                data-i18n="confirmDeleteTpTitle">Supprimer ce tour de piste</h3>
+            <p style="color:#e0e0e0; font-size:14px; margin:0 0 20px 0;" data-i18n="confirmDeleteTp"></p>
+            <div style="display:flex; gap:10px;">
+                <button id="btn-confirm-delete-tp-cancel" class="btn-secondary" style="flex:1; text-align:center;"
+                    data-i18n="btnCancel">Annuler</button>
+                <button id="btn-confirm-delete-tp-ok" class="btn-primary" style="flex:2; margin-bottom:0;">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale de confirmation : effacer tous les tours de piste (clic droit carte) -->
+    <div id="confirm-clear-tp-overlay"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.70); z-index:9999; align-items:center; justify-content:center;">
+        <div
+            style="background:#1a1a1a; border:1px solid #00bcd4; border-radius:10px; padding:28px 32px; width:340px; box-shadow:0 8px 40px rgba(0,0,0,0.7);">
+            <h3 style="margin:0 0 16px 0; color:#00bcd4; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;"
+                data-i18n="confirmClearTpTitle">Effacer les tours de piste</h3>
+            <p style="color:#e0e0e0; font-size:14px; margin:0 0 20px 0;" data-i18n="confirmClearTp"></p>
+            <div style="display:flex; gap:10px;">
+                <button id="btn-confirm-clear-tp-cancel" class="btn-secondary" style="flex:1; text-align:center;"
+                    data-i18n="btnCancel">Annuler</button>
+                <button id="btn-confirm-clear-tp-ok" class="btn-primary" style="flex:2; margin-bottom:0;">OK</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modale Clé API OpenAIP -->
     <div id="api-openaip-overlay" class="modal-overlay">
         <div id="api-openaip-popup" class="modal-popup">
@@ -1321,6 +1353,14 @@
             <button id="btn-logbook-close" class="airport-info-close" aria-label="Fermer">×</button>
             <h3 class="logbook-h3"><i class="ph-light ph-book" aria-hidden="true"></i> <span
                     data-i18n="logbookTitle">Carnet de vol</span></h3>
+            <div id="logbook-stats" class="logbook-stats">
+                <span class="logbook-stat"><span data-i18n="lbStatsHours">Total heures de vol :</span>
+                    <span id="logbook-stat-hours" class="logbook-stat-val">—</span></span>
+                <span class="logbook-stat"><span data-i18n="lbStatsDistance">Total distance (nm) :</span>
+                    <span id="logbook-stat-distance" class="logbook-stat-val">—</span></span>
+                <button type="button" id="btn-logbook-stats" class="lb-details-btn"
+                    data-i18n="lbColStats">Statistiques</button>
+            </div>
             <div id="logbook-table-wrap">
                 <table id="logbook-table">
                     <thead>
@@ -1338,6 +1378,30 @@
                 <div id="logbook-empty" class="logbook-empty" data-i18n="lbEmpty" style="display:none;">Aucun
                     vol enregistré pour l'instant.</div>
             </div>
+        </div>
+    </div>
+
+    <!-- Modale Statistiques du carnet -->
+    <div id="logbook-stats-overlay" class="modal-overlay">
+        <div id="logbook-stats-popup" class="modal-popup">
+            <button id="btn-logbook-stats-close" class="airport-info-close" aria-label="Fermer">×</button>
+            <h3 class="logbook-h3"><i class="ph-light ph-chart-bar" aria-hidden="true"></i> <span
+                    data-i18n="lbColStats">Statistiques</span></h3>
+            <div id="logbook-stats-body"></div>
+            <div id="logbook-stats-footer">
+                <button type="button" id="btn-logbook-stats-map" class="lb-details-btn"
+                    data-i18n="lbStatsMapBtn">Voir la carte</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Carte des aéroports visités (stats) -->
+    <div id="logbook-stats-map-overlay" class="modal-overlay">
+        <div id="logbook-stats-map-popup" class="modal-popup">
+            <button id="btn-logbook-stats-map-close" class="airport-info-close" aria-label="Fermer">×</button>
+            <h3 class="logbook-h3"><i class="ph-light ph-map-pin" aria-hidden="true"></i> <span
+                    data-i18n="lbStatsMapTitle">Aéroports visités</span></h3>
+            <div id="logbook-stats-map"></div>
         </div>
     </div>
 

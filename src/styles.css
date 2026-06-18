@@ -3243,10 +3243,138 @@ tr:hover {
     flex-shrink: 0;
 }
 
+/* Bandeau de statistiques (totaux) sous le titre du carnet */
+.logbook-stats {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 32px;
+    margin: 0 0 14px 0;
+    flex-shrink: 0;
+    font-size: 13px;
+    color: #e0e0e0;
+}
+
+.logbook-stat-val {
+    color: #00bcd4;
+    font-weight: 600;
+}
+
+/* Bouton Statistiques : sur la ligne des totaux, centré sur la colonne Détails.
+   Sorti du flux (absolu) pour ne pas décaler les totaux ; le centre horizontal
+   (left) est calculé en JS d'après la position réelle de la colonne. */
+#logbook-stats #btn-logbook-stats {
+    position: absolute;
+    top: 50%;
+    left: 100%;
+    transform: translate(-50%, -50%);
+}
+
 /* Zone scrollable de la liste */
 #logbook-table-wrap {
     overflow-y: auto;
     overflow-x: hidden;
+}
+
+/* ===== Modale Statistiques ============================================= */
+#logbook-stats-popup {
+    position: relative;
+    width: 760px;
+    max-width: 94vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#logbook-stats-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    column-count: 2;
+    column-gap: 28px;
+}
+
+.lb-stats-group {
+    break-inside: avoid;
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 18px;
+}
+
+.lb-stats-group-title {
+    margin: 0 0 8px 0;
+    padding-bottom: 5px;
+    color: #00bcd4;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.lb-stats-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 18px;
+    padding: 3px 0;
+    font-size: 13px;
+}
+
+.lb-stats-label {
+    color: #aaa;
+    flex-shrink: 0;
+}
+
+/* Variante empilée : la valeur passe SOUS le libellé (ex. listes Top 3) */
+.lb-stats-row.lb-stats-row-stack {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+}
+
+.lb-stats-row-stack .lb-stats-value {
+    text-align: left;
+    padding-left: 12px;
+}
+
+.lb-stats-value {
+    color: #e0e0e0;
+    font-weight: 600;
+    text-align: right;
+}
+
+.lb-stats-value .lb-stats-sub {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-weight: 600;
+}
+
+.lb-stats-sub-val {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* Bouton « Voir la carte » : centré sur la moitié DROITE (padding-left:50% +
+   justify-center). Positionné en absolu ; son « top » est calé en JS sur la
+   ligne « Aéroport le plus fréquenté ». left/right = padding horizontal du popup
+   (32px) pour conserver exactement le même centrage horizontal qu'avant. */
+#logbook-stats-footer {
+    position: absolute;
+    left: 32px;
+    right: 32px;
+    padding-left: 50%;
+    display: flex;
+    justify-content: center;
+    transform: translateY(-50%);
+}
+
+.lb-stats-value .lb-stats-muted {
+    color: #888;
+    font-weight: 400;
 }
 
 #logbook-table {
@@ -3260,7 +3388,7 @@ tr:hover {
     top: 0;
     background-color: #141414;
     color: #00bcd4;
-    text-align: left;
+    text-align: center;
     padding: 8px 10px;
     border-bottom: 1px solid #2a2a2a;
     font-weight: 600;
@@ -3271,6 +3399,7 @@ tr:hover {
     padding: 7px 10px;
     border-bottom: 1px solid #232323;
     color: #e0e0e0;
+    text-align: center;
     vertical-align: middle;
 }
 
@@ -3484,6 +3613,22 @@ tr:hover {
     max-width: 94vw;
     display: flex;
     flex-direction: column;
+}
+
+#logbook-stats-map-popup {
+    position: relative;
+    width: 900px;
+    max-width: 94vw;
+    display: flex;
+    flex-direction: column;
+}
+
+#logbook-stats-map {
+    width: 100%;
+    height: 64vh;
+    min-height: 360px;
+    border-radius: 6px;
+    overflow: hidden;
 }
 
 #logbook-route-map {

@@ -470,6 +470,57 @@ function initTrafficPattern() {
     _syncZoom();
   }
 
+  // Modale de confirmation avant la suppression d'UN tour de piste (déclenchée
+  // par l'item "Supprimer ce tour de piste" du clic droit sur sa ligne). On
+  // mémorise l'entrée ciblée car le bouton OK ne porte pas le contexte.
+  const confirmDeleteOverlay = document.getElementById('confirm-delete-tp-overlay');
+  const btnDeleteOk = document.getElementById('btn-confirm-delete-tp-ok');
+  const btnDeleteCancel = document.getElementById('btn-confirm-delete-tp-cancel');
+  let _pendingDelete = null;
+  function _fermerConfirmSuppr() {
+    if (confirmDeleteOverlay) confirmDeleteOverlay.style.display = 'none';
+    _pendingDelete = null;
+  }
+  function _demanderSupprimer(entry) {
+    if (!entry) return;
+    if (!confirmDeleteOverlay) { _supprimer(entry); return; }
+    _pendingDelete = entry;
+    confirmDeleteOverlay.style.display = 'flex';
+  }
+  if (btnDeleteOk) btnDeleteOk.addEventListener('click', () => {
+    const e = _pendingDelete;
+    _fermerConfirmSuppr();
+    if (e) _supprimer(e);
+  });
+  if (btnDeleteCancel) btnDeleteCancel.addEventListener('click', _fermerConfirmSuppr);
+  if (confirmDeleteOverlay) {
+    confirmDeleteOverlay.addEventListener('click', e => { if (e.target === confirmDeleteOverlay) _fermerConfirmSuppr(); });
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && confirmDeleteOverlay && confirmDeleteOverlay.style.display === 'flex') _fermerConfirmSuppr();
+  });
+
+  // Modale de confirmation avant l'effacement de TOUS les tours de piste
+  // (déclenchée par l'item "Effacer les tours de piste" du menu contextuel).
+  // Le reset global, lui, appelle _effacerTous() directement : il a déjà sa
+  // propre confirmation.
+  const confirmClearOverlay = document.getElementById('confirm-clear-tp-overlay');
+  const btnClearOk = document.getElementById('btn-confirm-clear-tp-ok');
+  const btnClearCancel = document.getElementById('btn-confirm-clear-tp-cancel');
+  function _fermerConfirm() { if (confirmClearOverlay) confirmClearOverlay.style.display = 'none'; }
+  function _demanderEffacerTous() {
+    if (!confirmClearOverlay) { _effacerTous(); return; }
+    confirmClearOverlay.style.display = 'flex';
+  }
+  if (btnClearOk) btnClearOk.addEventListener('click', () => { _fermerConfirm(); _effacerTous(); });
+  if (btnClearCancel) btnClearCancel.addEventListener('click', _fermerConfirm);
+  if (confirmClearOverlay) {
+    confirmClearOverlay.addEventListener('click', e => { if (e.target === confirmClearOverlay) _fermerConfirm(); });
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && confirmClearOverlay && confirmClearOverlay.style.display === 'flex') _fermerConfirm();
+  });
+
   // Sérialisation pour le .navxpv (sans les objets Leaflet).
   function _serialiser() {
     return toursDePiste.map(e => ({
@@ -537,7 +588,9 @@ function initTrafficPattern() {
 
   window.demanderTourDePiste = _ouvrir;
   window.supprimerTourDePiste = _supprimer;
+  window.demanderSupprimerTourDePiste = _demanderSupprimer;
   window.effacerTousToursDePiste = _effacerTous;
+  window.demanderEffacerTousToursDePiste = _demanderEffacerTous;
   window.aDesToursDePiste = () => toursDePiste.length > 0;
   window.serialiserToursDePiste = _serialiser;
   window.chargerToursDePiste = _charger;

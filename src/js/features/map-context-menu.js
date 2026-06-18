@@ -91,8 +91,8 @@ const MAP_CONTEXT_MENU_ITEMS = [
     // Clic droit sur la ligne d'un tour de piste → supprime CELUI-CI.
     visible: () => !!(_mapCtxContext && _mapCtxContext.trafficPattern),
     action: (latlng, context) => {
-      if (context && context.trafficPattern && typeof window.supprimerTourDePiste === 'function') {
-        window.supprimerTourDePiste(context.trafficPattern);
+      if (context && context.trafficPattern && typeof window.demanderSupprimerTourDePiste === 'function') {
+        window.demanderSupprimerTourDePiste(context.trafficPattern);
       }
     },
   },
@@ -102,8 +102,8 @@ const MAP_CONTEXT_MENU_ITEMS = [
     // Ne s'affiche que si au moins un tour de piste est tracé.
     visible: () => (typeof window.aDesToursDePiste === 'function') && window.aDesToursDePiste(),
     action: () => {
-      if (typeof window.effacerTousToursDePiste === 'function') {
-        window.effacerTousToursDePiste();
+      if (typeof window.demanderEffacerTousToursDePiste === 'function') {
+        window.demanderEffacerTousToursDePiste();
       }
     },
   },

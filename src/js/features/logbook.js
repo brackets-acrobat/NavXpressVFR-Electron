@@ -58,6 +58,42 @@ const LB_LABELS = {
     touchMarker: 'Toucher', vpRelief: 'Relief', vpAircraft: 'Avion',
     vpAlt: 'Alt (ft)', vpDist: 'Dist (NM)',
     vpNoTrack: 'Tracé effectif non disponible (vol enregistré avant cette version).',
+    // Modale Statistiques
+    stEmpty: 'Aucun vol enregistré pour établir des statistiques.',
+    stG1: 'Vue d\'ensemble', stG2: 'Durées, distances & activité', stG3: 'Aéroports',
+    stG4: 'Appareils', stG5: 'Atterrissages', stG6: 'Précision',
+    stTotalFlights: 'Nombre total de vols',
+    stTotalHours: 'Total heures de vol',
+    stTotalDist: 'Total distance parcourue (nm)',
+    stAvgTime: 'Temps de vol moyen',
+    stAvgDist: 'Distance moyenne par vol (nm)',
+    stLongestTime: 'Vol le plus long (temps)',
+    stLongestDist: 'Vol le plus long (distance)',
+    stShortestTime: 'Vol le plus court (temps)',
+    stShortestDist: 'Vol le plus court (distance)',
+    stFlightsPerMonth: 'Vols par mois (moy.)',
+    stFlightsPerYear: 'Vols par an (moy.)',
+    stHoursPerMonth: 'Heures par mois (moy.)',
+    stHoursPerYear: 'Heures par an (moy.)',
+    stBusiestMonth: 'Mois le plus actif',
+    stAirportsVisited: 'Aéroports différents visités',
+    stBusiestAirport: 'Aéroport le plus fréquenté',
+    stCountries: 'Pays visités',
+    stAircraftUsed: 'Avions utilisés',
+    stTopAcHours: 'Top 3 avions (heures de vol)',
+    stTopAcFlights: 'Top 3 avions (nombre de vols)',
+    stSoftest: 'Atterrissage le plus doux (ft/min)',
+    stHardest: 'Atterrissage le plus dur (ft/min)',
+    stAvgVs: 'VS moyenne atterrissages (ft/min)',
+    stTotalTng: 'Total touchers',
+    stAvgPrec: 'Précision moyenne',
+    stBestPrec: 'Meilleur score de précision',
+    stWorstPrec: 'Pire score de précision',
+    stFlightsUnit: 'vols', stHoursUnit: 'h',
+    // Carte des aéroports visités (tooltips)
+    stMapDepartures: 'Nombre de décollages :',
+    stMapLandings: 'Nombre d\'atterrissages :',
+    stMapTouchers: 'Nombre de touchers effectués :',
   },
   en: {
     secAircraft: 'Aircraft', secDep: 'Departure', secArr: 'Arrival', secTimes: 'Times',
@@ -80,6 +116,42 @@ const LB_LABELS = {
     touchMarker: 'Touchdown', vpRelief: 'Terrain', vpAircraft: 'Aircraft',
     vpAlt: 'Alt (ft)', vpDist: 'Dist (NM)',
     vpNoTrack: 'Actual track unavailable (flight recorded before this version).',
+    // Statistics modal
+    stEmpty: 'No flights recorded yet to compute statistics.',
+    stG1: 'Overview', stG2: 'Durations, distances & activity', stG3: 'Airports',
+    stG4: 'Aircraft', stG5: 'Landings', stG6: 'Precision',
+    stTotalFlights: 'Total number of flights',
+    stTotalHours: 'Total flight time',
+    stTotalDist: 'Total distance flown (nm)',
+    stAvgTime: 'Average flight time',
+    stAvgDist: 'Average distance per flight (nm)',
+    stLongestTime: 'Longest flight (time)',
+    stLongestDist: 'Longest flight (distance)',
+    stShortestTime: 'Shortest flight (time)',
+    stShortestDist: 'Shortest flight (distance)',
+    stFlightsPerMonth: 'Flights per month (avg)',
+    stFlightsPerYear: 'Flights per year (avg)',
+    stHoursPerMonth: 'Hours per month (avg)',
+    stHoursPerYear: 'Hours per year (avg)',
+    stBusiestMonth: 'Busiest month',
+    stAirportsVisited: 'Different airports visited',
+    stBusiestAirport: 'Most visited airport',
+    stCountries: 'Countries visited',
+    stAircraftUsed: 'Aircraft used',
+    stTopAcHours: 'Top 3 aircraft (flight hours)',
+    stTopAcFlights: 'Top 3 aircraft (number of flights)',
+    stSoftest: 'Softest landing (ft/min)',
+    stHardest: 'Hardest landing (ft/min)',
+    stAvgVs: 'Average landing VS (ft/min)',
+    stTotalTng: 'Total touch-and-go',
+    stAvgPrec: 'Average precision',
+    stBestPrec: 'Best precision score',
+    stWorstPrec: 'Worst precision score',
+    stFlightsUnit: 'flights', stHoursUnit: 'h',
+    // Visited-airports map (tooltips)
+    stMapDepartures: 'Departures:',
+    stMapLandings: 'Landings:',
+    stMapTouchers: 'Touch-and-go landings:',
   },
 };
 
@@ -92,6 +164,17 @@ function initLogbook() {
   const emptyEl = document.getElementById('logbook-empty');
   const tableEl = document.getElementById('logbook-table');
   const btnClose = document.getElementById('btn-logbook-close');
+  const statHoursEl = document.getElementById('logbook-stat-hours');
+  const statDistEl = document.getElementById('logbook-stat-distance');
+  const btnStats = document.getElementById('btn-logbook-stats');
+  const statsOverlay = document.getElementById('logbook-stats-overlay');
+  const statsBody = document.getElementById('logbook-stats-body');
+  const btnStatsClose = document.getElementById('btn-logbook-stats-close');
+  const btnStatsMap = document.getElementById('btn-logbook-stats-map');
+  const smOverlay = document.getElementById('logbook-stats-map-overlay');
+  const btnSmClose = document.getElementById('btn-logbook-stats-map-close');
+  let _statsMap = null;        // instance Leaflet de la carte des aéroports visités
+  let _statsMapLayer = null;   // L.layerGroup des points (rouge/jaune/orange)
 
   const detailOverlay = document.getElementById('logbook-detail-overlay');
   const detailBody = document.getElementById('logbook-detail-body');
@@ -188,6 +271,54 @@ function initLogbook() {
     </tr>`;
   }
 
+  // Distance grand-cercle parcourue (NM) d'un vol, calculée le long du tracé
+  // effectif échantillonné (`f.track`). Les vols enregistrés avant l'ajout du
+  // tracé (pas de `track`) comptent pour 0 NM.
+  function _flightDistanceNm(f) {
+    const track = (f && Array.isArray(f.track)) ? f.track : [];
+    let d = 0;
+    for (let i = 1; i < track.length; i++) {
+      const p = track[i - 1], q = track[i];
+      if (Number.isFinite(p.lat) && Number.isFinite(p.lon)
+        && Number.isFinite(q.lat) && Number.isFinite(q.lon)) {
+        d += _haversineNm(p.lat, p.lon, q.lat, q.lon);
+      }
+    }
+    return d;
+  }
+
+  // Met à jour le bandeau de totaux (heures de vol + distance) sous le titre.
+  function _renderStats(flights) {
+    let totalMin = 0, totalNm = 0;
+    flights.forEach(f => {
+      const m = f.totals && f.totals.flightMinutes;
+      if (Number.isFinite(m)) totalMin += m;
+      totalNm += _flightDistanceNm(f);
+    });
+    if (statHoursEl) statHoursEl.textContent = _fmtDuration(totalMin);
+    if (statDistEl) statDistEl.textContent = Math.round(totalNm).toLocaleString(_loc());
+  }
+
+  // Centre horizontalement le bouton Statistiques sur la colonne Détails. La
+  // largeur des colonnes étant dynamique, on lit la position réelle de l'en-tête
+  // de la dernière colonne et on place le bouton (absolu) à son centre. Carnet
+  // vide (tableau masqué) → repli aligné à droite de la barre.
+  function _positionStatsBtn() {
+    if (!btnStats) return;
+    const statsBar = document.getElementById('logbook-stats');
+    if (!statsBar) return;
+    const th = tableEl ? tableEl.querySelector('thead th:last-child') : null;
+    if (!th || (tableEl && tableEl.style.display === 'none')) {
+      btnStats.style.left = '100%';
+      btnStats.style.transform = 'translate(-100%, -50%)';
+      return;
+    }
+    const barRect = statsBar.getBoundingClientRect();
+    const thRect = th.getBoundingClientRect();
+    btnStats.style.left = (thRect.left + thRect.width / 2 - barRect.left) + 'px';
+    btnStats.style.transform = 'translate(-50%, -50%)';
+  }
+
   async function _openList() {
     if (!window.api || typeof window.api.logbookHistorique !== 'function') {
       showToast(t('lbReadError'), 'error', 3000);
@@ -197,6 +328,7 @@ function initLogbook() {
       const res = await window.api.logbookHistorique();
       const flights = (res && Array.isArray(res.flights)) ? res.flights : [];
       _flights = flights.slice().sort((a, b) => _flightTs(b) - _flightTs(a));
+      _renderStats(_flights);
 
       if (_flights.length === 0) {
         tbody.innerHTML = '';
@@ -208,6 +340,8 @@ function initLogbook() {
         tbody.innerHTML = _flights.map((f, i) => _rowHtml(f, i)).join('');
       }
       if (overlay) overlay.classList.add('visible');
+      // Layout prêt → centrer le bouton Statistiques sur la colonne Détails.
+      requestAnimationFrame(_positionStatsBtn);
     } catch (err) {
       console.error('[Carnet de vol] Lecture KO :', err);
       showToast(t('lbReadError'), 'error', 3000);
@@ -276,8 +410,8 @@ function initLogbook() {
       + `<th>${esc(_lbl('colVs'))}</th><th>${esc(_lbl('colG'))}</th></tr>`;
     const tngBody = tng.length
       ? tng.map((tg, i) =>
-          `<tr><td>${i + 1}</td><td>${esc(_fmtSimTime(tg.sim, tg.ts))}</td>`
-          + `<td>${esc(tg.verticalSpeedFpm)} ft/min</td><td>${esc(tg.gForceMax)} G</td></tr>`).join('')
+        `<tr><td>${i + 1}</td><td>${esc(_fmtSimTime(tg.sim, tg.ts))}</td>`
+        + `<td>${esc(tg.verticalSpeedFpm)} ft/min</td><td>${esc(tg.gForceMax)} G</td></tr>`).join('')
       : `<tr><td colspan="4" class="lb-muted">${esc(_lbl('noTouches'))}</td></tr>`;
 
     // Panneau « Atterrissage final » : heure / VS / G (une ligne).
@@ -285,7 +419,7 @@ function initLogbook() {
       + `<th>${esc(_lbl('colVs'))}</th><th>${esc(_lbl('colG'))}</th></tr>`;
     const landBody = land
       ? `<tr><td>${esc(_fmtSimTime(land.sim, land.ts))}</td>`
-        + `<td>${esc(land.verticalSpeedFpm)} ft/min</td><td>${esc(land.gForceMax)} G</td></tr>`
+      + `<td>${esc(land.verticalSpeedFpm)} ft/min</td><td>${esc(land.gForceMax)} G</td></tr>`
       : `<tr><td colspan="3" class="lb-muted">${esc(_lbl('noLanding'))}</td></tr>`;
 
     let html = '<div class="lb-pg">';
@@ -307,33 +441,33 @@ function initLogbook() {
     //   L4 (arrivée) : Vers · Atterrissage · Freins On · Temps block
     html += '<div class="lb-pg-row">'
       + '<div class="lb-pg-grid4">'
-      +   _pgField(_lbl('from'), depIcao)
-      +   _pgField(_lbl('brakesOff'), esc(tOffBlock))
-      +   _pgField(_lbl('takeoff'), esc(tTakeoff))
-      +   _pgField(_lbl('flightTime'), esc(_fmtDuration(tot.flightMinutes)))
-      +   _pgField(_lbl('to'), arrIcao)
-      +   _pgField(_lbl('landing'), esc(tLanding))
-      +   _pgField(_lbl('brakesOn'), esc(tOnBlock))
-      +   _pgField(_lbl('blockTime'), esc(_fmtDuration(tot.blockMinutes)))
+      + _pgField(_lbl('from'), depIcao)
+      + _pgField(_lbl('brakesOff'), esc(tOffBlock))
+      + _pgField(_lbl('takeoff'), esc(tTakeoff))
+      + _pgField(_lbl('flightTime'), esc(_fmtDuration(tot.flightMinutes)))
+      + _pgField(_lbl('to'), arrIcao)
+      + _pgField(_lbl('landing'), esc(tLanding))
+      + _pgField(_lbl('brakesOn'), esc(tOnBlock))
+      + _pgField(_lbl('blockTime'), esc(_fmtDuration(tot.blockMinutes)))
       + '</div>'
       + '</div>';
 
     // Ligne 4 : Route textuelle + bouton carte
     html += '<div class="lb-pg-row">'
       + '<div class="lb-pg-field lb-pg-wide"><label>' + esc(_lbl('secRoute')) + '</label>'
-      +   '<div class="lb-pg-route-line">'
-      +     `<span class="lb-pg-val lb-route">${routeHtml}</span>`
-      +     mapBtn
-      +   '</div>'
+      + '<div class="lb-pg-route-line">'
+      + `<span class="lb-pg-val lb-route">${routeHtml}</span>`
+      + mapBtn
+      + '</div>'
       + '</div>'
       + '</div>';
 
     // Ligne 5 : deux panneaux côte à côte (Touchers | Atterrissage final)
     html += '<div class="lb-pg-row lb-pg-bottom">'
       + `<div class="lb-pg-panel"><h4>${esc(_lbl('secTouches'))}</h4>`
-      +   `<table class="lb-pg-table">${tngHead}${tngBody}</table></div>`
+      + `<table class="lb-pg-table">${tngHead}${tngBody}</table></div>`
       + `<div class="lb-pg-panel"><h4>${esc(_lbl('secLanding'))}</h4>`
-      +   `<table class="lb-pg-table">${landHead}${landBody}</table></div>`
+      + `<table class="lb-pg-table">${landHead}${landBody}</table></div>`
       + '</div>';
 
     // Direct To effectués pendant le vol (conservé, affiché seulement si présent)
@@ -584,8 +718,375 @@ function initLogbook() {
     if (rmOverlay) rmOverlay.classList.remove('visible');
   }
 
+  // --- Statistiques -----------------------------------------------------
+  // Code ICAO assaini (null si inconnu / placeholder).
+  function _cleanIcao(icao) {
+    const c = (icao == null ? '' : String(icao)).trim().toUpperCase();
+    if (!c || c === '—' || c === 'UNKN' || c === '????') return null;
+    return c;
+  }
+
+  // « Pays » approximatif déduit du préfixe ICAO. La plupart des pays = 2 lettres
+  // (LF=France, EG=UK…) ; quelques zones utilisent une seule lettre régionale
+  // (K=USA, C=Canada, Y=Australie). Approximation suffisante pour un compteur.
+  function _country(icao) {
+    const c = _cleanIcao(icao);
+    if (!c) return null;
+    return /^[KCY]/.test(c) ? c[0] : c.slice(0, 2);
+  }
+
+  // Étiquette « DEP→ARR » d'un vol (— si inconnu).
+  function _routeLabel(f) {
+    const dep = _cleanIcao(f.departure && f.departure.icao) || '—';
+    const arr = _cleanIcao(f.arrival && f.arrival.icao) || '—';
+    return `${dep}→${arr}`;
+  }
+
+  // Agrège tous les indicateurs affichés dans la modale Statistiques.
+  function _computeStats(flights) {
+    const n = flights.length;
+    const _fm = (f) => (f.totals && Number.isFinite(f.totals.flightMinutes)) ? f.totals.flightMinutes : 0;
+    let totalMin = 0, totalNm = 0;
+    flights.forEach(f => { totalMin += _fm(f); totalNm += _flightDistanceNm(f); });
+
+    // Extrêmes (temps > 0 / distance > 0 pour ignorer les vols incomplets).
+    let longT = null, shortT = null, longD = null, shortD = null;
+    flights.forEach(f => {
+      const m = _fm(f), d = _flightDistanceNm(f), label = _routeLabel(f);
+      if (m > 0) {
+        if (!longT || m > longT.v) longT = { v: m, label };
+        if (!shortT || m < shortT.v) shortT = { v: m, label };
+      }
+      if (d > 0) {
+        if (!longD || d > longD.v) longD = { v: d, label };
+        if (!shortD || d < shortD.v) shortD = { v: d, label };
+      }
+    });
+
+    // Temporel : comptes par mois/an + amplitude active (1er → dernier vol).
+    const monthCount = {};
+    let minTs = Infinity, maxTs = -Infinity;
+    flights.forEach(f => {
+      const ts = _flightTs(f);
+      if (!ts) return;
+      if (ts < minTs) minTs = ts;
+      if (ts > maxTs) maxTs = ts;
+      const dt = new Date(ts);
+      const ym = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0');
+      monthCount[ym] = (monthCount[ym] || 0) + 1;
+    });
+    let spanMonths = 1, spanYears = 1;
+    if (Number.isFinite(minTs) && Number.isFinite(maxTs) && maxTs >= minTs) {
+      const a = new Date(minTs), b = new Date(maxTs);
+      spanMonths = Math.max(1, (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()) + 1);
+      spanYears = Math.max(1, b.getFullYear() - a.getFullYear() + 1);
+    }
+    let busiestMonth = null;
+    Object.keys(monthCount).forEach(k => {
+      if (!busiestMonth || monthCount[k] > busiestMonth.v) busiestMonth = { k, v: monthCount[k] };
+    });
+
+    // Aéroports (départ + arrivée).
+    const apCount = {};
+    flights.forEach(f => {
+      [f.departure && f.departure.icao, f.arrival && f.arrival.icao].forEach(ic => {
+        const c = _cleanIcao(ic);
+        if (c) apCount[c] = (apCount[c] || 0) + 1;
+      });
+    });
+    let busiestAirport = null;
+    Object.keys(apCount).forEach(k => {
+      if (!busiestAirport || apCount[k] > busiestAirport.v) busiestAirport = { k, v: apCount[k] };
+    });
+    const countries = new Set();
+    Object.keys(apCount).forEach(k => { const c = _country(k); if (c) countries.add(c); });
+
+    // Appareils (par titre SimVar).
+    const acMin = {}, acCount = {};
+    flights.forEach(f => {
+      const t = (f.aircraft && f.aircraft.title) ? f.aircraft.title : null;
+      if (!t) return;
+      acMin[t] = (acMin[t] || 0) + _fm(f);
+      acCount[t] = (acCount[t] || 0) + 1;
+    });
+    const topAcHours = Object.keys(acMin).map(t => ({ t, v: acMin[t] })).sort((a, b) => b.v - a.v).slice(0, 3);
+    const topAcFlights = Object.keys(acCount).map(t => ({ t, v: acCount[t] })).sort((a, b) => b.v - a.v).slice(0, 3);
+
+    // Atterrissages (VS en ft/min, négatif = descente). Doux = |VS| min.
+    let softest = null, hardest = null, vsSum = 0, vsN = 0, tng = 0;
+    flights.forEach(f => {
+      const land = f.landing;
+      const vs = land ? Number(land.verticalSpeedFpm) : NaN;
+      if (Number.isFinite(vs)) {
+        const mag = Math.abs(vs);
+        if (!softest || mag < softest.mag) softest = { vs, mag };
+        if (!hardest || mag > hardest.mag) hardest = { vs, mag };
+        vsSum += vs; vsN++;
+      }
+      tng += Array.isArray(f.touchAndGoLandings) ? f.touchAndGoLandings.length : (Number(f.touchAndGoCount) || 0);
+    });
+
+    // Précision.
+    const precs = flights.map(f => f.precision).filter(p => Number.isFinite(p));
+
+    return {
+      n, totalMin, totalNm,
+      avgMin: n ? totalMin / n : 0, avgNm: n ? totalNm / n : 0,
+      longT, shortT, longD, shortD,
+      flightsPerMonth: n / spanMonths, flightsPerYear: n / spanYears,
+      hoursPerMonth: (totalMin / 60) / spanMonths, hoursPerYear: (totalMin / 60) / spanYears,
+      busiestMonth,
+      airportsVisited: Object.keys(apCount).length, busiestAirport, countries: countries.size,
+      aircraftUsed: Object.keys(acCount).length, topAcHours, topAcFlights,
+      softest, hardest, avgVs: vsN ? vsSum / vsN : null, totalTng: tng,
+      avgPrec: precs.length ? precs.reduce((a, b) => a + b, 0) / precs.length : null,
+      bestPrec: precs.length ? Math.max(...precs) : null,
+      worstPrec: precs.length ? Math.min(...precs) : null,
+    };
+  }
+
+  // Construit le HTML de la modale Statistiques à partir de l'agrégat.
+  function _renderStatsHtml(s) {
+    const dash = '<span class="lb-stats-muted">—</span>';
+    const nm = (x) => Math.round(x).toLocaleString(_loc());
+    const fmtMonth = (m) => {
+      if (!m) return dash;
+      const [y, mo] = m.k.split('-').map(Number);
+      const name = new Date(y, mo - 1, 1).toLocaleDateString(_loc(), { month: 'long', year: 'numeric' });
+      return `<span class="lb-stats-muted">${esc(name)}</span> ${m.v} ${esc(_lbl('stFlightsUnit'))}`;
+    };
+    const fmtExtremeT = (e) => e ? `<span class="lb-stats-muted">${esc(e.label)}</span> ${esc(_fmtDuration(e.v))}` : dash;
+    const fmtExtremeD = (e) => e ? `<span class="lb-stats-muted">${esc(e.label)}</span> ${nm(e.v)} nm` : dash;
+    const fmtTopList = (arr, valFn) => arr.length
+      ? arr.map((it, i) => `<span class="lb-stats-sub"><span class="lb-stats-muted">${i + 1}. ${esc(it.t)}</span><span class="lb-stats-sub-val">${esc(valFn(it.v))}</span></span>`).join('')
+      : dash;
+
+    const row = (k, valHtml, stack, id) => `<div class="lb-stats-row${stack ? ' lb-stats-row-stack' : ''}"${id ? ` id="${id}"` : ''}><span class="lb-stats-label">${esc(_lbl(k))}</span><span class="lb-stats-value">${valHtml}</span></div>`;
+    const group = (titleKey, rows) => `<div class="lb-stats-group"><h4 class="lb-stats-group-title">${esc(_lbl(titleKey))}</h4>${rows.join('')}</div>`;
+
+    const g1 = group('stG1', [
+      row('stTotalFlights', String(s.n)),
+      row('stTotalHours', esc(_fmtDuration(s.totalMin))),
+      row('stTotalDist', nm(s.totalNm)),
+    ]);
+    const g2 = group('stG2', [
+      row('stAvgTime', esc(_fmtDuration(Math.round(s.avgMin)))),
+      row('stAvgDist', nm(s.avgNm)),
+      row('stLongestTime', fmtExtremeT(s.longT)),
+      row('stLongestDist', fmtExtremeD(s.longD)),
+      row('stShortestTime', fmtExtremeT(s.shortT)),
+      row('stShortestDist', fmtExtremeD(s.shortD)),
+      row('stFlightsPerMonth', s.flightsPerMonth.toFixed(1)),
+      row('stFlightsPerYear', s.flightsPerYear.toFixed(1)),
+      row('stHoursPerMonth', s.hoursPerMonth.toFixed(1) + ' ' + esc(_lbl('stHoursUnit'))),
+      row('stHoursPerYear', s.hoursPerYear.toFixed(1) + ' ' + esc(_lbl('stHoursUnit'))),
+      row('stBusiestMonth', fmtMonth(s.busiestMonth)),
+    ]);
+    const g3 = group('stG3', [
+      row('stAirportsVisited', String(s.airportsVisited)),
+      row('stBusiestAirport', s.busiestAirport ? `<span class="lb-stats-muted">${s.busiestAirport.v} ${esc(_lbl('stFlightsUnit'))}</span> ${esc(s.busiestAirport.k)}` : dash, false, 'lb-stat-busiest-row'),
+      row('stCountries', String(s.countries)),
+    ]);
+    const g4 = group('stG4', [
+      row('stTopAcHours', fmtTopList(s.topAcHours, (v) => _fmtDuration(v)), true),
+      row('stTopAcFlights', fmtTopList(s.topAcFlights, (v) => `${v} ${_lbl('stFlightsUnit')}`), true),
+      row('stAircraftUsed', String(s.aircraftUsed)),
+    ]);
+    const g5 = group('stG5', [
+      row('stSoftest', s.softest ? `${Math.round(s.softest.vs)} ft/min` : dash),
+      row('stHardest', s.hardest ? `${Math.round(s.hardest.vs)} ft/min` : dash),
+      row('stAvgVs', s.avgVs != null ? `${Math.round(s.avgVs)} ft/min` : dash),
+      row('stTotalTng', String(s.totalTng)),
+    ]);
+    const g6 = group('stG6', [
+      row('stAvgPrec', s.avgPrec != null ? `${Math.round(s.avgPrec)} %` : dash),
+      row('stBestPrec', s.bestPrec != null ? `${s.bestPrec} %` : dash),
+      row('stWorstPrec', s.worstPrec != null ? `${s.worstPrec} %` : dash),
+    ]);
+    return g1 + g2 + g3 + g4 + g5 + g6;
+  }
+
+  function _closeStats() { if (statsOverlay) statsOverlay.classList.remove('visible'); }
+
+  // Trouve l'aéroport déjà agrégé proche de (lat,lon) — fusion par PROXIMITÉ
+  // (< 1.5 NM) pour réunir un même terrain quelle que soit la source de ses
+  // coordonnées (départ/arrivée résolus vs aéroport le plus proche d'un toucher).
+  // Crée l'entrée si aucune ne correspond.
+  function _findOrCreateAirport(list, lat, lon, icao, name) {
+    for (const a of list) {
+      if (_haversineNm(a.lat, a.lon, lat, lon) < 1.5) {
+        if (!a.icao && icao) a.icao = icao;
+        if (!a.name && name) a.name = name;
+        return a;
+      }
+    }
+    const a = { lat, lon, icao: icao || '', name: name || '', dep: 0, arr: 0, touch: 0 };
+    list.push(a);
+    return a;
+  }
+
+  // Tooltip d'un point de la carte des aéroports visités.
+  function _statsMapTooltip(a, visited, touched) {
+    const head = esc(a.icao || a.name || '');
+    const lines = [];
+    if (visited) {
+      lines.push(`${esc(_lbl('stMapDepartures'))} ${a.dep}`);
+      lines.push(`${esc(_lbl('stMapLandings'))} ${a.arr}`);
+    }
+    if (touched) lines.push(`${esc(_lbl('stMapTouchers'))} ${a.touch}`);
+    return (head ? `<b>${head}</b><br>` : '') + lines.join('<br>');
+  }
+
+  // Ouvre la carte des aéroports visités : fond CARTO Positron + un point par
+  // aéroport. Rouge = décollage/atterrissage, jaune = touchers, orange = les
+  // deux. Tooltip au survol avec les comptes.
+  async function _openStatsMap() {
+    if (typeof L === 'undefined' || !smOverlay) return;
+
+    // Source des vols (réutilise la liste déjà chargée si dispo).
+    let flights = (Array.isArray(_flights) && _flights.length) ? _flights : null;
+    if (!flights) {
+      try {
+        const res = await window.api.logbookHistorique();
+        flights = (res && Array.isArray(res.flights)) ? res.flights : [];
+      } catch (_) { flights = []; }
+    }
+
+    // Agrégation des aéroports (départs + arrivées = points "visités").
+    const airports = [];
+    flights.forEach(f => {
+      const d = f.departure;
+      if (d && Number.isFinite(d.lat) && Number.isFinite(d.lon)) {
+        _findOrCreateAirport(airports, d.lat, d.lon, _cleanIcao(d.icao), d.name).dep++;
+      }
+      const a = f.arrival;
+      if (a && Number.isFinite(a.lat) && Number.isFinite(a.lon)) {
+        _findOrCreateAirport(airports, a.lat, a.lon, _cleanIcao(a.icao), a.name).arr++;
+      }
+    });
+
+    // Touchers — deux cas :
+    //  • toucher GÉOLOCALISÉ (vols récents) → résolu vers l'aéroport le plus
+    //    proche (asynchrone, plus bas) ;
+    //  • toucher SANS position (vols anciens : ni lat/lon sur le toucher, ni
+    //    tracé) → rattaché aux waypoints « tour de piste » (pattern) de la route :
+    //    ils portent ident + coordonnées et marquent justement où les
+    //    touch-and-go ont été faits. Répartition en ordre (round-robin si le
+    //    nombre de touchers diffère du nombre de waypoints pattern).
+    const positionedTouchers = [];
+    flights.forEach(f => {
+      const tgs = Array.isArray(f.touchAndGoLandings) ? f.touchAndGoLandings : [];
+      if (!tgs.length) return;
+      const patternWps = (Array.isArray(f.route) ? f.route : [])
+        .filter(wp => wp && wp.pattern && Number.isFinite(wp.lat) && Number.isFinite(wp.lon));
+      let patIdx = 0;
+      tgs.forEach(t => {
+        if (Number.isFinite(t.lat) && Number.isFinite(t.lon)) {
+          positionedTouchers.push(t);
+        } else if (patternWps.length) {
+          const wp = patternWps[patIdx % patternWps.length];
+          patIdx++;
+          _findOrCreateAirport(airports, wp.lat, wp.lon, _cleanIcao(wp.ident), wp.name).touch++;
+        }
+      });
+    });
+    if (positionedTouchers.length && window.api && typeof window.api.aeroportsProches === 'function') {
+      const resolved = await Promise.all(positionedTouchers.map(t =>
+        window.api.aeroportsProches({ lat: t.lat, lon: t.lon, limit: 1 })
+          .then(r => (r && r.ok && r.airports && r.airports[0]) ? r.airports[0] : null)
+          .catch(() => null)
+      ));
+      resolved.forEach(ap => {
+        if (ap && Number.isFinite(ap.lat) && Number.isFinite(ap.lon)) {
+          _findOrCreateAirport(airports, ap.lat, ap.lon, _cleanIcao(ap.code || ap.ident), ap.name).touch++;
+        }
+      });
+    }
+
+    smOverlay.classList.add('visible');
+
+    // La modale vient d'apparaître → le container a une taille : on (ré)initialise
+    // Leaflet au tick suivant (même pattern que la carte du tracé).
+    setTimeout(() => {
+      if (!_statsMap) {
+        _statsMap = L.map('logbook-stats-map', { zoomControl: true });
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: 'abcd', maxZoom: 20,
+        }).addTo(_statsMap);
+        _statsMapLayer = L.layerGroup().addTo(_statsMap);
+      }
+      _statsMap.invalidateSize();
+      _statsMapLayer.clearLayers();
+
+      const allLatLngs = [];
+      airports.forEach(a => {
+        const visited = (a.dep + a.arr) > 0;
+        const touched = a.touch > 0;
+        const color = (visited && touched) ? '#ff8c00' : (visited ? '#ff0000' : '#ffd700');
+        const m = L.circleMarker([a.lat, a.lon], {
+          radius: 5, fillColor: color, color: '#000000',
+          weight: 1, opacity: 1, fillOpacity: 1,
+        }).addTo(_statsMapLayer);
+        m.bindTooltip(_statsMapTooltip(a, visited, touched), { direction: 'top' });
+        allLatLngs.push([a.lat, a.lon]);
+      });
+
+      if (allLatLngs.length === 1) _statsMap.setView(allLatLngs[0], 9);
+      else if (allLatLngs.length) _statsMap.fitBounds(L.latLngBounds(allLatLngs), { padding: [40, 40] });
+      else _statsMap.setView([46.6, 2.5], 5);   // repli (France) si aucun point
+    }, 30);
+  }
+
+  function _closeStatsMap() { if (smOverlay) smOverlay.classList.remove('visible'); }
+
+  // Cale verticalement le bouton « Voir la carte » sur la ligne « Aéroport le
+  // plus fréquenté » (position horizontale inchangée, gérée en CSS).
+  function _positionStatsMapBtn() {
+    const footer = document.getElementById('logbook-stats-footer');
+    const popup = document.getElementById('logbook-stats-popup');
+    const rowEl = document.getElementById('lb-stat-busiest-row');
+    if (!footer || !popup || !rowEl) return;
+    const popupRect = popup.getBoundingClientRect();
+    const rowRect = rowEl.getBoundingClientRect();
+    footer.style.top = (rowRect.top + rowRect.height / 2 - popupRect.top - popup.clientTop) + 'px';
+  }
+
+  // Ouvre la modale Statistiques. Réutilise la liste déjà chargée (_flights) si
+  // disponible (le bouton n'apparaît que dans la modale liste, déjà ouverte) ;
+  // repli sur un chargement direct sinon.
+  function _openStats() {
+    if (!statsOverlay || !statsBody) return;
+    const render = (flights) => {
+      const has = flights.length > 0;
+      statsBody.innerHTML = has
+        ? _renderStatsHtml(_computeStats(flights))
+        : `<div class="logbook-empty">${esc(_lbl('stEmpty'))}</div>`;
+      const footer = document.getElementById('logbook-stats-footer');
+      if (footer) footer.style.display = has ? 'flex' : 'none';
+      statsOverlay.classList.add('visible');
+      if (has) requestAnimationFrame(_positionStatsMapBtn);
+    };
+    if (Array.isArray(_flights) && _flights.length) { render(_flights); return; }
+    if (window.api && typeof window.api.logbookHistorique === 'function') {
+      window.api.logbookHistorique()
+        .then(res => render((res && Array.isArray(res.flights)) ? res.flights : []))
+        .catch(() => render([]));
+    } else { render([]); }
+  }
+
   // --- Câblage ----------------------------------------------------------
   btn.addEventListener('click', _openList);
+  if (btnStats) btnStats.addEventListener('click', _openStats);
+  if (btnStatsClose) btnStatsClose.addEventListener('click', _closeStats);
+  if (btnStatsMap) btnStatsMap.addEventListener('click', _openStatsMap);
+  if (btnSmClose) btnSmClose.addEventListener('click', _closeStatsMap);
+  if (smOverlay) smOverlay.addEventListener('click', (e) => { if (e.target === smOverlay) _closeStatsMap(); });
+  if (statsOverlay) statsOverlay.addEventListener('click', (e) => { if (e.target === statsOverlay) _closeStats(); });
+  window.addEventListener('resize', () => {
+    if (overlay && overlay.classList.contains('visible')) _positionStatsBtn();
+    if (statsOverlay && statsOverlay.classList.contains('visible')) _positionStatsMapBtn();
+  });
 
   // Délégation : un seul listener pour tous les boutons Détails.
   if (tbody) {
@@ -642,6 +1143,8 @@ function initLogbook() {
     if (e.key !== 'Escape') return;
     if (rmOverlay && rmOverlay.classList.contains('visible')) _closeRouteMap();
     else if (detailOverlay && detailOverlay.classList.contains('visible')) _closeDetail();
+    else if (smOverlay && smOverlay.classList.contains('visible')) _closeStatsMap();
+    else if (statsOverlay && statsOverlay.classList.contains('visible')) _closeStats();
     else if (overlay && overlay.classList.contains('visible')) _closeList();
   });
 
